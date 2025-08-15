@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+
+{% block title %}Lista de Requerimentos{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-file-signature text-info"></i> Lista de Requerimentos</h1>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-filter me-1"></i>Filtros
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="?fase=protocolado">Protocolados</a></li>
+                        <li><a class="dropdown-item" href="?fase=em_andamento">Em Andamento</a></li>
+                        <li><a class="dropdown-item" href="?fase=deferido">Deferidos</a></li>
+                        <li><a class="dropdown-item" href="?fase=indeferido">Indeferidos</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="?">Todos</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ requerimentos.count }}</h4>
+                    <small>Total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-secondary text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ protocolados_count }}</h4>
+                    <small>Protocolados</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ em_andamento_count }}</h4>
+                    <small>Em Andamento</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ deferidos_count }}</h4>
+                    <small>Deferidos</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ indeferidos_count }}</h4>
+                    <small>Indeferidos</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">R$ {{ valor_total|floatformat:2 }}</h4>
+                    <small>Valor Total</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Requerimentos Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Requerimentos Cadastrados
+                        <span class="badge bg-light text-dark ms-2">{{ requerimentos.count }}</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if requerimentos %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>Precatório</th>
+                                        <th>Tipo de Pedido</th>
+                                        <th class="text-end">Valor</th>
+                                        <th class="text-center">Deságio</th>
+                                        <th class="text-center">Fase</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for requerimento in requerimentos %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                                    <i class="fas fa-user text-white"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold">{{ requerimento.cliente.nome }}</div>
+                                                    <div class="text-muted small">
+                                                        <i class="fas fa-id-card me-1"></i>
+                                                        CPF: {{ requerimento.cliente.cpf }}
+                                                    </div>
+                                                    {% if requerimento.cliente.prioridade %}
+                                                        <span class="badge bg-warning text-dark small">
+                                                            <i class="fas fa-exclamation me-1"></i>Prioridade
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <a href="{% url 'precatorio_detalhe' requerimento.precatorio.cnj %}" class="text-decoration-none">
+                                                    <div class="fw-bold text-primary">{{ requerimento.precatorio.cnj }}</div>
+                                                </a>
+                                                <div class="text-muted small">
+                                                    <i class="fas fa-building me-1"></i>
+                                                    {{ requerimento.precatorio.origem|truncatechars:30 }}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info text-white">
+                                                {{ requerimento.get_pedido_display }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="fw-bold text-success">
+                                                R$ {{ requerimento.valor|floatformat:2 }}
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-warning text-dark">
+                                                {{ requerimento.desagio|floatformat:2 }}%
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if requerimento.fase == 'deferido' %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i>{{ requerimento.fase|capfirst }}
+                                                </span>
+                                            {% elif requerimento.fase == 'indeferido' %}
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-times me-1"></i>{{ requerimento.fase|capfirst }}
+                                                </span>
+                                            {% elif requerimento.fase == 'em andamento' %}
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fas fa-clock me-1"></i>Em Andamento
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">
+                                                    <i class="fas fa-file me-1"></i>{{ requerimento.fase|capfirst }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-file-signature fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Nenhum requerimento encontrado</h5>
+                            <p class="text-muted">
+                                Os requerimentos são criados dentro dos detalhes de cada precatório.
+                            </p>
+                            <div class="mt-4">
+                                <a href="{% url 'precatorios' %}" class="btn btn-primary">
+                                    <i class="fas fa-file-alt me-1"></i>Ver Precatórios
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    {% if requerimentos %}
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-signature fa-2x text-info mb-3"></i>
+                    <h5 class="card-title">Total de Requerimentos</h5>
+                    <h3 class="text-info">{{ requerimentos.count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="fas fa-money-bill-wave fa-2x text-success mb-3"></i>
+                    <h5 class="card-title">Valor Total</h5>
+                    <h3 class="text-success">R$ {{ valor_total|floatformat:2 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="fas fa-percentage fa-2x text-warning mb-3"></i>
+                    <h5 class="card-title">Deságio Médio</h5>
+                    <h3 class="text-warning">{{ desagio_medio|floatformat:2 }}%</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Initialize tooltips -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .table tbody tr:hover {
+        background-color: rgba(0,123,255,0.1);
+    }
+    
+    .badge {
+        font-size: 0.75em;
+        font-weight: 600;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.75rem;
+    }
+    
+    .text-muted {
+        color: #6c757d !important;
+    }
+    
+    .fw-bold {
+        font-weight: 700 !important;
+    }
+</style>
+{% endblock %}

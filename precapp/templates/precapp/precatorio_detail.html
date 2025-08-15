@@ -1,0 +1,1323 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhes do Precatório - {{ precatorio.cnj }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-file-alt text-primary me-2"></i>
+                    Detalhes do Precatório
+                </h2>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'precatorios' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Voltar à Lista
+                    </a>
+                    {% if not is_editing %}
+                        <a href="?edit=true" class="btn btn-warning">
+                            <i class="fas fa-edit me-1"></i>Editar
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+    </div>
+</div>
+
+<!-- Precatorio Information Card -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Informações do Precatório
+                    {% if precatorio.quitado %}
+                        <span class="badge bg-success ms-2">
+                            <i class="fas fa-check me-1"></i>Quitado
+                        </span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark ms-2">
+                            <i class="fas fa-clock me-1"></i>Pendente
+                        </span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if is_editing or request.GET.edit %}
+                    <!-- Edit Mode -->
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="edit_precatorio" value="1">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.cnj.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-hashtag me-1"></i>{{ form.cnj.label }}</strong>
+                                </label>
+                                {{ form.cnj }}
+                                {% if form.cnj.help_text %}
+                                    <div class="form-text">{{ form.cnj.help_text }}</div>
+                                {% endif %}
+                                {% if form.cnj.errors %}
+                                    <div class="text-danger mt-1">{{ form.cnj.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.origem.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-building me-1"></i>{{ form.origem.label }}</strong>
+                                </label>
+                                {{ form.origem }}
+                                {% if form.origem.help_text %}
+                                    <div class="form-text">{{ form.origem.help_text }}</div>
+                                {% endif %}
+                                {% if form.origem.errors %}
+                                    <div class="text-danger mt-1">{{ form.origem.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.data_oficio.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-calendar me-1"></i>{{ form.data_oficio.label }}</strong>
+                                </label>
+                                {{ form.data_oficio }}
+                                {% if form.data_oficio.errors %}
+                                    <div class="text-danger mt-1">{{ form.data_oficio.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.orcamento.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-calendar-alt me-1"></i>{{ form.orcamento.label }}</strong>
+                                </label>
+                                {{ form.orcamento }}
+                                {% if form.orcamento.errors %}
+                                    <div class="text-danger mt-1">{{ form.orcamento.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.valor_de_face.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-money-bill-wave me-1"></i>{{ form.valor_de_face.label }}</strong>
+                                </label>
+                                {{ form.valor_de_face }}
+                                {% if form.valor_de_face.help_text %}
+                                    <div class="form-text">{{ form.valor_de_face.help_text }}</div>
+                                {% endif %}
+                                {% if form.valor_de_face.errors %}
+                                    <div class="text-danger mt-1">{{ form.valor_de_face.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.ultima_atualizacao.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-chart-line me-1"></i>{{ form.ultima_atualizacao.label }}</strong>
+                                </label>
+                                {{ form.ultima_atualizacao }}
+                                {% if form.ultima_atualizacao.help_text %}
+                                    <div class="form-text">{{ form.ultima_atualizacao.help_text }}</div>
+                                {% endif %}
+                                {% if form.ultima_atualizacao.errors %}
+                                    <div class="text-danger mt-1">{{ form.ultima_atualizacao.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.data_ultima_atualizacao.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-calendar-check me-1"></i>{{ form.data_ultima_atualizacao.label }}</strong>
+                                </label>
+                                {{ form.data_ultima_atualizacao }}
+                                {% if form.data_ultima_atualizacao.errors %}
+                                    <div class="text-danger mt-1">{{ form.data_ultima_atualizacao.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Percentage Fields -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.percentual_contratuais_assinado.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-percentage me-1"></i>{{ form.percentual_contratuais_assinado.label }}</strong>
+                                </label>
+                                {{ form.percentual_contratuais_assinado }}
+                                {% if form.percentual_contratuais_assinado.help_text %}
+                                    <div class="form-text">{{ form.percentual_contratuais_assinado.help_text }}</div>
+                                {% endif %}
+                                {% if form.percentual_contratuais_assinado.errors %}
+                                    <div class="text-danger mt-1">{{ form.percentual_contratuais_assinado.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.percentual_contratuais_apartado.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-percentage me-1"></i>{{ form.percentual_contratuais_apartado.label }}</strong>
+                                </label>
+                                {{ form.percentual_contratuais_apartado }}
+                                {% if form.percentual_contratuais_apartado.help_text %}
+                                    <div class="form-text">{{ form.percentual_contratuais_apartado.help_text }}</div>
+                                {% endif %}
+                                {% if form.percentual_contratuais_apartado.errors %}
+                                    <div class="text-danger mt-1">{{ form.percentual_contratuais_apartado.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.percentual_sucumbenciais.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-percentage me-1"></i>{{ form.percentual_sucumbenciais.label }}</strong>
+                                </label>
+                                {{ form.percentual_sucumbenciais }}
+                                {% if form.percentual_sucumbenciais.help_text %}
+                                    <div class="form-text">{{ form.percentual_sucumbenciais.help_text }}</div>
+                                {% endif %}
+                                {% if form.percentual_sucumbenciais.errors %}
+                                    <div class="text-danger mt-1">{{ form.percentual_sucumbenciais.errors.0 }}</div>
+                                {% endif %}
+            </div>
+            
+            <div class="col-md-12 mb-3">
+                                <div class="row">
+                                    <div class="col-md-4 mb-2">
+                                        <div class="form-check">
+                                            {{ form.quitado }}
+                                            <label class="form-check-label" for="{{ form.quitado.id_for_label }}">
+                                                <i class="fas fa-check-circle me-1"></i>{{ form.quitado.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <div class="form-check">
+                                            {{ form.prioridade_deferida }}
+                                            <label class="form-check-label" for="{{ form.prioridade_deferida.id_for_label }}">
+                                                <i class="fas fa-star me-1"></i>{{ form.prioridade_deferida.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <div class="form-check">
+                                            {{ form.acordo_deferido }}
+                                            <label class="form-check-label" for="{{ form.acordo_deferido.id_for_label }}">
+                                                <i class="fas fa-handshake me-1"></i>{{ form.acordo_deferido.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="{% url 'precatorio_detalhe' precatorio.cnj %}" class="btn btn-secondary me-2">
+                                <i class="fas fa-times me-1"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>Salvar Alterações
+                            </button>
+                        </div>
+                    </form>
+                {% else %}
+                    <!-- View Mode -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-hashtag me-1"></i>CNJ:</strong><br>
+                            <span class="text-primary fs-5">{{ precatorio.cnj }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-building me-1"></i>CNJ de Origem:</strong><br>
+                            <span class="text-muted">{{ precatorio.origem }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-calendar me-1"></i>Data do Ofício:</strong><br>
+                            <span class="text-muted">{{ precatorio.data_oficio|date:"d/m/Y" }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-calendar-alt me-1"></i>Ano do Orçamento:</strong><br>
+                            <span class="text-muted">{{ precatorio.orcamento }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-money-bill-wave me-1"></i>Valor de Face:</strong><br>
+                            <span class="text-success fs-5 fw-bold">R$ {{ precatorio.valor_de_face|floatformat:2 }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-chart-line me-1"></i>Última Atualização Monetária:</strong><br>
+                            <span class="text-success fs-5 fw-bold">R$ {{ precatorio.ultima_atualizacao|floatformat:2 }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-calendar-check me-1"></i>Data da Última Atualização:</strong><br>
+                            <span class="text-muted">{{ precatorio.data_ultima_atualizacao|date:"d/m/Y" }}</span>
+                        </div>
+                        
+                        <!-- Percentage Fields -->
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-percentage me-1"></i>Percentual Contratuais Assinado:</strong><br>
+                            <span class="text-info fs-5 fw-bold">{{ precatorio.percentual_contratuais_assinado|floatformat:2 }}%</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-percentage me-1"></i>Percentual Contratuais Apartado:</strong><br>
+                            <span class="text-warning fs-5 fw-bold">{{ precatorio.percentual_contratuais_apartado|floatformat:2 }}%</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-percentage me-1"></i>Percentual Sucumbenciais:</strong><br>
+                            <span class="text-danger fs-5 fw-bold">{{ precatorio.percentual_sucumbenciais|floatformat:2 }}%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Status Badges -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6><strong><i class="fas fa-tags me-1"></i>Status:</strong></h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% if precatorio.quitado %}
+                                    <span class="badge bg-success fs-6">
+                                        <i class="fas fa-check-circle me-1"></i>Quitado
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark fs-6">
+                                        <i class="fas fa-clock me-1"></i>Pendente
+                                    </span>
+                                {% endif %}
+                                
+                                {% if precatorio.prioridade_deferida %}
+                                    <span class="badge bg-info fs-6">
+                                        <i class="fas fa-star me-1"></i>Prioridade Deferida
+                                    </span>
+                                {% endif %}
+                                
+                                {% if precatorio.acordo_deferido %}
+                                    <span class="badge bg-primary fs-6">
+                                        <i class="fas fa-handshake me-1"></i>Acordo Deferido
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Card (View Mode Only) -->
+{% if not is_editing and not request.GET.edit %}
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
+                <h5 class="text-success">R$ {{ precatorio.valor_de_face|floatformat:2 }}</h5>
+                <small class="text-muted">Valor de Face</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+                <h5 class="text-info">R$ {{ precatorio.ultima_atualizacao|floatformat:2 }}</h5>
+                <small class="text-muted">Valor Atualizado</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Second Row for Percentages -->
+<div class="row mt-3">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-percentage fa-2x text-primary mb-2"></i>
+                <h5 class="text-primary">{{ precatorio.percentual_contratuais_assinado|floatformat:2 }}%</h5>
+                <small class="text-muted">% Contratuais Assinado</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-percentage fa-2x text-warning mb-2"></i>
+                <h5 class="text-warning">{{ precatorio.percentual_contratuais_apartado|floatformat:2 }}%</h5>
+                <small class="text-muted">% Contratuais Apartado</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-percentage fa-2x text-danger mb-2"></i>
+                <h5 class="text-danger">{{ precatorio.percentual_sucumbenciais|floatformat:2 }}%</h5>
+                <small class="text-muted">% Sucumbenciais</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Clients Section -->
+{% if not is_editing and not request.GET.edit %}
+
+
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        Clientes Associados
+                        <span class="badge bg-light text-dark ms-2">{{ associated_clientes.count }}</span>
+                    </h5>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="collapse" data-bs-target="#novoClienteForm">
+                            <i class="fas fa-user-plus me-1"></i>Novo Cliente
+                        </button>
+                        <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="collapse" data-bs-target="#linkClienteForm">
+                            <i class="fas fa-link me-1"></i>Vincular Existente
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- New Cliente Form (Collapsible) -->
+                <div class="collapse mb-4" id="novoClienteForm">
+                    <div class="card bg-light">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-user-plus me-2"></i>
+                                Criar Novo Cliente
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ cliente_form.cpf.label_tag }}
+                                            {{ cliente_form.cpf }}
+                                            {% if cliente_form.cpf.help_text %}
+                                                <small class="form-text text-muted">{{ cliente_form.cpf.help_text }}</small>
+                                            {% endif %}
+                                            {% if cliente_form.cpf.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in cliente_form.cpf.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ cliente_form.nome.label_tag }}
+                                            {{ cliente_form.nome }}
+                                            {% if cliente_form.nome.help_text %}
+                                                <small class="form-text text-muted">{{ cliente_form.nome.help_text }}</small>
+                                            {% endif %}
+                                            {% if cliente_form.nome.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in cliente_form.nome.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ cliente_form.nascimento.label_tag }}
+                                            {{ cliente_form.nascimento }}
+                                            {% if cliente_form.nascimento.help_text %}
+                                                <small class="form-text text-muted">{{ cliente_form.nascimento.help_text }}</small>
+                                            {% endif %}
+                                            {% if cliente_form.nascimento.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in cliente_form.nascimento.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ cliente_form.prioridade }}
+                                                {{ cliente_form.prioridade.label_tag }}
+                                                {% if cliente_form.prioridade.help_text %}
+                                                    <small class="form-text text-muted d-block">{{ cliente_form.prioridade.help_text }}</small>
+                                                {% endif %}
+                                                {% if cliente_form.prioridade.errors %}
+                                                    <div class="text-danger small">
+                                                        {% for error in cliente_form.prioridade.errors %}{{ error }}{% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button type="button" class="btn btn-secondary me-2" data-bs-toggle="collapse" data-bs-target="#novoClienteForm">
+                                        <i class="fas fa-times me-1"></i>Cancelar
+                                    </button>
+                                    <button type="submit" name="create_cliente" class="btn btn-success">
+                                        <i class="fas fa-save me-1"></i>Criar Cliente
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Link Existing Cliente Form (Collapsible) -->
+                <div class="collapse mb-4" id="linkClienteForm">
+                    <div class="card bg-light">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-link me-2"></i>
+                                Vincular Cliente Existente
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="mb-3">
+                                            {{ client_search_form.cpf.label_tag }}
+                                            {{ client_search_form.cpf }}
+                                            {% if client_search_form.cpf.help_text %}
+                                                <small class="form-text text-muted">{{ client_search_form.cpf.help_text }}</small>
+                                            {% endif %}
+                                            {% if client_search_form.cpf.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in client_search_form.cpf.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 d-flex align-items-end">
+                                        <div class="d-flex gap-2 w-100">
+                                            <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#linkClienteForm">
+                                                <i class="fas fa-times me-1"></i>Cancelar
+                                            </button>
+                                            <button type="submit" name="link_cliente" class="btn btn-primary">
+                                                <i class="fas fa-link me-1"></i>Vincular
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clients List -->
+                {% if associated_clientes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><i class="fas fa-user me-1"></i>Nome</th>
+                                    <th><i class="fas fa-id-card me-1"></i>CPF</th>
+                                    <th><i class="fas fa-calendar me-1"></i>Nascimento</th>
+                                    <th><i class="fas fa-star me-1"></i>Prioridade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cliente in associated_clientes %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                                <i class="fas fa-user text-white"></i>
+                                            </div>
+                                            <div>
+                                                <a href="{% url 'cliente_detail' cliente.cpf %}" class="text-decoration-none">
+                                                    <strong class="text-primary">{{ cliente.nome }}</strong>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ cliente.cpf }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ cliente.nascimento|date:"d/m/Y" }}</span>
+                                    </td>
+                                    <td>
+                                        {% if cliente.prioridade %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-star me-1"></i>Prioridade
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">Normal</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">Nenhum cliente associado</h6>
+                        <p class="text-muted">Clique em "Novo Cliente" para criar e vincular um cliente ou "Vincular Existente" para vincular um cliente já cadastrado.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Alvaras Section -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-contract me-2"></i>
+                        Alvarás Emitidos
+                        <span class="badge bg-light text-dark ms-2">{{ alvaras.count }}</span>
+                    </h5>
+                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="collapse" data-bs-target="#novoAlvaraForm">
+                        <i class="fas fa-plus me-1"></i>Novo Alvará
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- New Alvara Form (Collapsible) -->
+                <div class="collapse mb-4" id="novoAlvaraForm">
+                    <div class="card bg-light">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-file-contract me-2"></i>
+                                Criar Novo Alvará
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ alvara_form.cliente_cpf.label_tag }}
+                                            {{ alvara_form.cliente_cpf }}
+                                            {% if alvara_form.cliente_cpf.help_text %}
+                                                <small class="form-text text-muted">{{ alvara_form.cliente_cpf.help_text }}</small>
+                                            {% endif %}
+                                            {% if alvara_form.cliente_cpf.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in alvara_form.cliente_cpf.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ alvara_form.tipo.label_tag }}
+                                            {{ alvara_form.tipo }}
+                                            {% if alvara_form.tipo.help_text %}
+                                                <small class="form-text text-muted">{{ alvara_form.tipo.help_text }}</small>
+                                            {% endif %}
+                                            {% if alvara_form.tipo.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in alvara_form.tipo.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ alvara_form.fase.label_tag }}
+                                            {{ alvara_form.fase }}
+                                            {% if alvara_form.fase.help_text %}
+                                                <small class="form-text text-muted">{{ alvara_form.fase.help_text }}</small>
+                                            {% endif %}
+                                            {% if alvara_form.fase.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in alvara_form.fase.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ alvara_form.valor_principal.label_tag }}
+                                            {{ alvara_form.valor_principal }}
+                                            {% if alvara_form.valor_principal.help_text %}
+                                                <small class="form-text text-muted">{{ alvara_form.valor_principal.help_text }}</small>
+                                            {% endif %}
+                                            {% if alvara_form.valor_principal.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in alvara_form.valor_principal.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ alvara_form.honorarios_contratuais.label_tag }}
+                                            {{ alvara_form.honorarios_contratuais }}
+                                            {% if alvara_form.honorarios_contratuais.help_text %}
+                                                <small class="form-text text-muted">{{ alvara_form.honorarios_contratuais.help_text }}</small>
+                                            {% endif %}
+                                            {% if alvara_form.honorarios_contratuais.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in alvara_form.honorarios_contratuais.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ alvara_form.honorarios_sucumbenciais.label_tag }}
+                                            {{ alvara_form.honorarios_sucumbenciais }}
+                                            {% if alvara_form.honorarios_sucumbenciais.help_text %}
+                                                <small class="form-text text-muted">{{ alvara_form.honorarios_sucumbenciais.help_text }}</small>
+                                            {% endif %}
+                                            {% if alvara_form.honorarios_sucumbenciais.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in alvara_form.honorarios_sucumbenciais.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button type="button" class="btn btn-secondary me-2" data-bs-toggle="collapse" data-bs-target="#novoAlvaraForm">
+                                        <i class="fas fa-times me-1"></i>Cancelar
+                                    </button>
+                                    <button type="submit" name="create_alvara" class="btn btn-success">
+                                        <i class="fas fa-save me-1"></i>Criar Alvará
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% if alvaras %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><i class="fas fa-user me-1"></i>Cliente</th>
+                                    <th><i class="fas fa-money-bill me-1"></i>Valor Principal</th>
+                                    <th><i class="fas fa-handshake me-1"></i>Hon. Contratuais</th>
+                                    <th><i class="fas fa-gavel me-1"></i>Hon. Sucumbenciais</th>
+                                    <th><i class="fas fa-tags me-1"></i>Tipo</th>
+                                    <th><i class="fas fa-layer-group me-1"></i>Fase</th>
+                                    <th><i class="fas fa-cog me-1"></i>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for alvara in alvaras %}
+                                <tr>
+                                    <td>
+                                        {% if alvara.cliente.cpf %}
+                                            <a href="{% url 'cliente_detail' alvara.cliente.cpf %}" class="text-decoration-none">
+                                                <strong class="text-primary">{{ alvara.cliente.nome }}</strong>
+                                            </a>
+                                        {% else %}
+                                            <strong class="text-primary">{{ alvara.cliente.nome }}</strong>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-bold">R$ {{ alvara.valor_principal|floatformat:2 }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-info">R$ {{ alvara.honorarios_contratuais|floatformat:2 }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-warning">R$ {{ alvara.honorarios_sucumbenciais|floatformat:2 }}</span>
+                                    </td>
+                                    <td>
+                                        {% if alvara.tipo == 'aguardando depósito' %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-clock me-1"></i>Aguardando
+                                            </span>
+                                        {% elif alvara.tipo == 'depósito judicial' %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-university me-1"></i>Depósito
+                                            </span>
+                                        {% elif alvara.tipo == 'recebido pelo cliente' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>Recebido
+                                            </span>
+                                        {% elif alvara.tipo == 'honorários recebidos' %}
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-coins me-1"></i>Honorários
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ alvara.tipo }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ alvara.fase|truncatechars:20 }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-outline-primary" 
+                                                    data-bs-toggle="collapse" 
+                                                    data-bs-target="#editAlvaraForm-{{ alvara.id }}" 
+                                                    aria-expanded="false" 
+                                                    title="Editar alvará">
+                                                <i class="fas fa-edit me-1"></i>Editar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Dropdown Edit Form for this Alvará -->
+                                <tr>
+                                    <td colspan="7" class="p-0">
+                                        <div class="collapse" id="editAlvaraForm-{{ alvara.id }}">
+                                            <div class="card card-body m-2 bg-light">
+                                                <form method="post" action="{% url 'precatorio_detalhe' precatorio.cnj %}">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="alvara_id" value="{{ alvara.id }}">
+                                                    
+                                                    <div class="row mb-3">
+                                                        <div class="col-12">
+                                                            <h6 class="text-primary mb-3">
+                                                                <i class="fas fa-edit me-2"></i>Editar Alvará - {{ alvara.cliente.nome }}
+                                                            </h6>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="row g-3">
+                                                        <div class="col-md-4">
+                                                            <label for="valor_principal_{{ alvara.id }}" class="form-label">Valor Principal</label>
+                                                            <div class="input-group input-group-sm">
+                                                                <span class="input-group-text">R$</span>
+                                                                <input type="number" step="0.01" class="form-control" 
+                                                                       id="valor_principal_{{ alvara.id }}" 
+                                                                       name="valor_principal" 
+                                                                       value="{{ alvara.valor_principal }}" required>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="col-md-4">
+                                                            <label for="honorarios_contratuais_{{ alvara.id }}" class="form-label">Hon. Contratuais</label>
+                                                            <div class="input-group input-group-sm">
+                                                                <span class="input-group-text">R$</span>
+                                                                <input type="number" step="0.01" class="form-control" 
+                                                                       id="honorarios_contratuais_{{ alvara.id }}" 
+                                                                       name="honorarios_contratuais" 
+                                                                       value="{{ alvara.honorarios_contratuais }}">
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="col-md-4">
+                                                            <label for="honorarios_sucumbenciais_{{ alvara.id }}" class="form-label">Hon. Sucumbenciais</label>
+                                                            <div class="input-group input-group-sm">
+                                                                <span class="input-group-text">R$</span>
+                                                                <input type="number" step="0.01" class="form-control" 
+                                                                       id="honorarios_sucumbenciais_{{ alvara.id }}" 
+                                                                       name="honorarios_sucumbenciais" 
+                                                                       value="{{ alvara.honorarios_sucumbenciais }}">
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="col-md-6">
+                                                            <label for="tipo_{{ alvara.id }}" class="form-label">Tipo</label>
+                                                            <select class="form-select form-select-sm" id="tipo_{{ alvara.id }}" name="tipo">
+                                                                <option value="">Selecione o tipo</option>
+                                                                <option value="ordem cronológica" {% if alvara.tipo == 'ordem cronológica' %}selected{% endif %}>Ordem cronológica</option>
+                                                                <option value="prioridade" {% if alvara.tipo == 'prioridade' %}selected{% endif %}>Prioridade</option>
+                                                                <option value="acordo" {% if alvara.tipo == 'acordo' %}selected{% endif %}>Acordo</option>
+                                                            </select>
+                                                        </div>
+                                                        
+                                                        <div class="col-md-6">
+                                                            <label for="fase_{{ alvara.id }}" class="form-label">Fase</label>
+                                                            <select class="form-select form-select-sm" id="fase_{{ alvara.id }}" name="fase">
+                                                                <option value="">Selecione a fase</option>
+                                                                <option value="aguardando depósito" {% if alvara.fase == 'aguardando depósito' %}selected{% endif %}>Aguardando depósito</option>
+                                                                <option value="depósito judicial" {% if alvara.fase == 'depósito judicial' %}selected{% endif %}>Depósito judicial</option>
+                                                                <option value="recebido pelo cliente" {% if alvara.fase == 'recebido pelo cliente' %}selected{% endif %}>Recebido pelo cliente</option>
+                                                                <option value="honorários recebidos" {% if alvara.fase == 'honorários recebidos' %}selected{% endif %}>Honorários recebidos</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="row mt-3">
+                                                        <div class="col-12">
+                                                            <div class="d-flex justify-content-between">
+                                                                <div class="btn-group">
+                                                                    <button type="button" class="btn btn-secondary btn-sm" 
+                                                                            data-bs-toggle="collapse" 
+                                                                            data-bs-target="#editAlvaraForm-{{ alvara.id }}">
+                                                                        <i class="fas fa-times me-1"></i>Cancelar
+                                                                    </button>
+                                                                    <button type="submit" name="update_alvara" class="btn btn-success btn-sm">
+                                                                        <i class="fas fa-save me-1"></i>Salvar Alterações
+                                                                    </button>
+                                                                </div>
+                                                                
+                                                                <button type="button" class="btn btn-danger btn-sm" 
+                                                                        data-bs-toggle="modal" 
+                                                                        data-bs-target="#deleteAlvaraModal-{{ alvara.id }}">
+                                                                    <i class="fas fa-trash me-1"></i>Excluir Alvará
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Delete Confirmation Modal -->
+                                <div class="modal fade" id="deleteAlvaraModal-{{ alvara.id }}" tabindex="-1" aria-labelledby="deleteAlvaraModalLabel-{{ alvara.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title" id="deleteAlvaraModalLabel-{{ alvara.id }}">
+                                                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                                                </h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="text-center">
+                                                    <i class="fas fa-trash-alt fa-3x text-danger mb-3"></i>
+                                                    <h6>Tem certeza que deseja excluir este alvará?</h6>
+                                                    <p class="text-muted mb-0">
+                                                        <strong>Cliente:</strong> {{ alvara.cliente.nome }}<br>
+                                                        <strong>Valor:</strong> R$ {{ alvara.valor_principal|floatformat:2 }}
+                                                    </p>
+                                                    <div class="alert alert-warning mt-3">
+                                                        <small><i class="fas fa-warning me-1"></i>Esta ação não pode ser desfeita!</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                    <i class="fas fa-times me-1"></i>Cancelar
+                                                </button>
+                                                <form method="post" action="{% url 'precatorio_detalhe' precatorio.cnj %}" style="display: inline;">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="alvara_id" value="{{ alvara.id }}">
+                                                    <button type="submit" name="delete_alvara" class="btn btn-danger">
+                                                        <i class="fas fa-trash me-1"></i>Excluir Definitivamente
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Alvará Summary -->
+                    <div class="row mt-3">
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <i class="fas fa-file-contract fa-2x text-success mb-2"></i>
+                                <h6 class="mb-0">Total de Alvarás</h6>
+                                <span class="text-muted">{{ alvaras.count }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
+                                <h6 class="mb-0">Valor Principal Total</h6>
+                                <span class="text-success fw-bold">
+                                    R$ {% for alvara in alvaras %}{{ alvara.valor_principal|add:0 }}{% if not forloop.last %}+{% endif %}{% empty %}0.00{% endfor %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <i class="fas fa-handshake fa-2x text-info mb-2"></i>
+                                <h6 class="mb-0">Hon. Contratuais Total</h6>
+                                <span class="text-info fw-bold">
+                                    R$ {% for alvara in alvaras %}{{ alvara.honorarios_contratuais|add:0 }}{% if not forloop.last %}+{% endif %}{% empty %}0.00{% endfor %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <i class="fas fa-gavel fa-2x text-warning mb-2"></i>
+                                <h6 class="mb-0">Hon. Sucumbenciais Total</h6>
+                                <span class="text-warning fw-bold">
+                                    R$ {% for alvara in alvaras %}{{ alvara.honorarios_sucumbenciais|add:0 }}{% if not forloop.last %}+{% endif %}{% empty %}0.00{% endfor %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-file-contract fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Nenhum alvará emitido</h5>
+                        <p class="text-muted">Este precatório ainda não possui alvarás associados.</p>
+                        <button type="button" class="btn btn-success" data-bs-toggle="collapse" data-bs-target="#novoAlvaraForm">
+                            <i class="fas fa-plus me-1"></i>Emitir Primeiro Alvará
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Requerimentos Section -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-signature me-2"></i>
+                        Requerimentos
+                        <span class="badge bg-light text-dark ms-2">{{ requerimentos.count }}</span>
+                    </h5>
+                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="collapse" data-bs-target="#novoRequerimentoForm">
+                        <i class="fas fa-plus me-1"></i>Novo Requerimento
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- New Requerimento Form (Collapsible) -->
+                <div class="collapse mb-4" id="novoRequerimentoForm">
+                    <div class="card bg-light">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-plus-circle me-2"></i>
+                                Adicionar Novo Requerimento
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ requerimento_form.cliente_cpf.label_tag }}
+                                            {{ requerimento_form.cliente_cpf }}
+                                            {% if requerimento_form.cliente_cpf.help_text %}
+                                                <small class="form-text text-muted">{{ requerimento_form.cliente_cpf.help_text }}</small>
+                                            {% endif %}
+                                            {% if requerimento_form.cliente_cpf.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in requerimento_form.cliente_cpf.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ requerimento_form.pedido.label_tag }}
+                                            {{ requerimento_form.pedido }}
+                                            {% if requerimento_form.pedido.help_text %}
+                                                <small class="form-text text-muted">{{ requerimento_form.pedido.help_text }}</small>
+                                            {% endif %}
+                                            {% if requerimento_form.pedido.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in requerimento_form.pedido.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            {{ requerimento_form.valor.label_tag }}
+                                            {{ requerimento_form.valor }}
+                                            {% if requerimento_form.valor.help_text %}
+                                                <small class="form-text text-muted">{{ requerimento_form.valor.help_text }}</small>
+                                            {% endif %}
+                                            {% if requerimento_form.valor.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in requerimento_form.valor.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            {{ requerimento_form.desagio.label_tag }}
+                                            {{ requerimento_form.desagio }}
+                                            {% if requerimento_form.desagio.help_text %}
+                                                <small class="form-text text-muted">{{ requerimento_form.desagio.help_text }}</small>
+                                            {% endif %}
+                                            {% if requerimento_form.desagio.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in requerimento_form.desagio.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            {{ requerimento_form.fase.label_tag }}
+                                            {{ requerimento_form.fase }}
+                                            {% if requerimento_form.fase.help_text %}
+                                                <small class="form-text text-muted">{{ requerimento_form.fase.help_text }}</small>
+                                            {% endif %}
+                                            {% if requerimento_form.fase.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in requerimento_form.fase.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button type="button" class="btn btn-secondary me-2" data-bs-toggle="collapse" data-bs-target="#novoRequerimentoForm">
+                                        <i class="fas fa-times me-1"></i>Cancelar
+                                    </button>
+                                    <button type="submit" name="create_requerimento" class="btn btn-success">
+                                        <i class="fas fa-save me-1"></i>Salvar Requerimento
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Requerimentos List -->
+                {% if requerimentos %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Tipo de Pedido</th>
+                                    <th>Valor</th>
+                                    <th>Deságio</th>
+                                    <th>Fase</th>
+                                    <th><i class="fas fa-cog me-1"></i>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for requerimento in requerimentos %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-user-circle text-secondary me-2"></i>
+                                            <div>
+                                                <strong>{{ requerimento.cliente.nome }}</strong>
+                                                <br>
+                                                <small class="text-muted">CPF: {{ requerimento.cliente.cpf }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ requerimento.get_pedido_display }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-bold">R$ {{ requerimento.valor|floatformat:2 }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-warning">{{ requerimento.desagio|floatformat:2 }}%</span>
+                                    </td>
+                                    <td>
+                                        {% if requerimento.fase == 'deferido' %}
+                                            <span class="badge bg-success">{{ requerimento.fase|capfirst }}</span>
+                                        {% elif requerimento.fase == 'indeferido' %}
+                                            <span class="badge bg-danger">{{ requerimento.fase|capfirst }}</span>
+                                        {% elif requerimento.fase == 'em andamento' %}
+                                            <span class="badge bg-warning text-dark">{{ requerimento.fase|capfirst }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ requerimento.fase|capfirst }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-outline-primary" 
+                                                    data-bs-toggle="collapse" 
+                                                    data-bs-target="#editRequerimentoForm-{{ requerimento.id }}" 
+                                                    aria-expanded="false" 
+                                                    title="Editar requerimento">
+                                                <i class="fas fa-edit me-1"></i>Editar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Dropdown Edit Form for this Requerimento -->
+                                <tr>
+                                    <td colspan="6" class="p-0">
+                                        <div class="collapse" id="editRequerimentoForm-{{ requerimento.id }}">
+                                            <div class="card card-body m-2 bg-light">
+                                                <form method="post" action="{% url 'precatorio_detalhe' precatorio.cnj %}">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="requerimento_id" value="{{ requerimento.id }}">
+                                                    
+                                                    <div class="row mb-3">
+                                                        <div class="col-12">
+                                                            <h6 class="text-primary mb-3">
+                                                                <i class="fas fa-edit me-2"></i>Editar Requerimento - {{ requerimento.cliente.nome }}
+                                                            </h6>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="row g-3">
+                                                        <div class="col-md-6">
+                                                            <label for="pedido_{{ requerimento.id }}" class="form-label">Tipo de Pedido</label>
+                                                            <select class="form-select form-select-sm" id="pedido_{{ requerimento.id }}" name="pedido">
+                                                                <option value="">Selecione o tipo de pedido</option>
+                                                                <option value="prioridade doença" {% if requerimento.pedido == 'prioridade doença' %}selected{% endif %}>Prioridade por doença</option>
+                                                                <option value="prioridade idade" {% if requerimento.pedido == 'prioridade idade' %}selected{% endif %}>Prioridade por idade</option>
+                                                                <option value="acordo principal" {% if requerimento.pedido == 'acordo principal' %}selected{% endif %}>Acordo sobre o valor Principal</option>
+                                                                <option value="acordo honorários contratuais" {% if requerimento.pedido == 'acordo honorários contratuais' %}selected{% endif %}>Acordo sobre os Honorários Contratuais</option>
+                                                                <option value="acordo honorários sucumbenciais" {% if requerimento.pedido == 'acordo honorários sucumbenciais' %}selected{% endif %}>Acordo sobre os Honorários Sucumbenciais</option>
+                                                            </select>
+                                                        </div>
+                                                        
+                                                        <div class="col-md-6">
+                                                            <label for="fase_{{ requerimento.id }}" class="form-label">Fase</label>
+                                                            <select class="form-select form-select-sm" id="fase_{{ requerimento.id }}" name="fase">
+                                                                <option value="">Selecione a fase</option>
+                                                                <option value="protocolado" {% if requerimento.fase == 'protocolado' %}selected{% endif %}>Protocolado</option>
+                                                                <option value="em andamento" {% if requerimento.fase == 'em andamento' %}selected{% endif %}>Em andamento</option>
+                                                                <option value="deferido" {% if requerimento.fase == 'deferido' %}selected{% endif %}>Deferido</option>
+                                                                <option value="indeferido" {% if requerimento.fase == 'indeferido' %}selected{% endif %}>Indeferido</option>
+                                                            </select>
+                                                        </div>
+                                                        
+                                                        <div class="col-md-6">
+                                                            <label for="valor_{{ requerimento.id }}" class="form-label">Valor</label>
+                                                            <div class="input-group input-group-sm">
+                                                                <span class="input-group-text">R$</span>
+                                                                <input type="number" step="0.01" class="form-control" 
+                                                                       id="valor_{{ requerimento.id }}" 
+                                                                       name="valor" 
+                                                                       value="{{ requerimento.valor }}" required>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="col-md-6">
+                                                            <label for="desagio_{{ requerimento.id }}" class="form-label">Deságio (%)</label>
+                                                            <div class="input-group input-group-sm">
+                                                                <input type="number" step="0.01" class="form-control" 
+                                                                       id="desagio_{{ requerimento.id }}" 
+                                                                       name="desagio" 
+                                                                       value="{{ requerimento.desagio }}" 
+                                                                       min="0" max="100">
+                                                                <span class="input-group-text">%</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="row mt-3">
+                                                        <div class="col-12">
+                                                            <div class="d-flex justify-content-between">
+                                                                <div class="btn-group">
+                                                                    <button type="button" class="btn btn-secondary btn-sm" 
+                                                                            data-bs-toggle="collapse" 
+                                                                            data-bs-target="#editRequerimentoForm-{{ requerimento.id }}">
+                                                                        <i class="fas fa-times me-1"></i>Cancelar
+                                                                    </button>
+                                                                    <button type="submit" name="update_requerimento" class="btn btn-success btn-sm">
+                                                                        <i class="fas fa-save me-1"></i>Salvar Alterações
+                                                                    </button>
+                                                                </div>
+                                                                
+                                                                <button type="button" class="btn btn-danger btn-sm" 
+                                                                        data-bs-toggle="modal" 
+                                                                        data-bs-target="#deleteRequerimentoModal-{{ requerimento.id }}">
+                                                                    <i class="fas fa-trash me-1"></i>Excluir Requerimento
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Delete Confirmation Modal -->
+                                <div class="modal fade" id="deleteRequerimentoModal-{{ requerimento.id }}" tabindex="-1" aria-labelledby="deleteRequerimentoModalLabel-{{ requerimento.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title" id="deleteRequerimentoModalLabel-{{ requerimento.id }}">
+                                                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                                                </h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="text-center">
+                                                    <i class="fas fa-file-signature fa-3x text-danger mb-3"></i>
+                                                    <h6>Tem certeza que deseja excluir este requerimento?</h6>
+                                                    <p class="text-muted mb-0">
+                                                        <strong>Cliente:</strong> {{ requerimento.cliente.nome }}<br>
+                                                        <strong>Tipo:</strong> {{ requerimento.get_pedido_display }}<br>
+                                                        <strong>Valor:</strong> R$ {{ requerimento.valor|floatformat:2 }}
+                                                    </p>
+                                                    <div class="alert alert-warning mt-3">
+                                                        <small><i class="fas fa-warning me-1"></i>Esta ação não pode ser desfeita!</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                    <i class="fas fa-times me-1"></i>Cancelar
+                                                </button>
+                                                <form method="post" action="{% url 'precatorio_detalhe' precatorio.cnj %}" style="display: inline;">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="requerimento_id" value="{{ requerimento.id }}">
+                                                    <button type="submit" name="delete_requerimento" class="btn btn-danger">
+                                                        <i class="fas fa-trash me-1"></i>Excluir Definitivamente
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-file-signature fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">Nenhum requerimento encontrado</h6>
+                        <p class="text-muted">Clique em "Novo Requerimento" para adicionar o primeiro requerimento a este precatório.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .badge {
+        font-size: 0.8em;
+    }
+    
+    .form-check-input {
+        margin-top: 0.3em;
+    }
+    
+    .fs-5 {
+        font-size: 1.25rem;
+    }
+    
+    .fs-6 {
+        font-size: 0.875rem;
+    }
+    
+    .fw-bold {
+        font-weight: bold;
+    }
+</style>
+{% endblock %}

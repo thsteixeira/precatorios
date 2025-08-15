@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+{% block title %}Consultar Precatórios - Controle de Precatórios{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-search text-primary me-2"></i>
+                Consultar Precatórios
+            </h2>
+            <a href="{% url 'novo_precatorio' %}" class="btn btn-success">
+                <i class="fas fa-plus me-1"></i>Novo Precatório
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>Filtros de Pesquisa
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="cnj" class="form-label">CNJ</label>
+                        <input type="text" class="form-control" id="cnj" name="cnj" placeholder="Digite o CNJ">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="origem" class="form-label">Origem</label>
+                        <input type="text" class="form-control" id="origem" name="origem" placeholder="Digite a origem">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="quitado" class="form-label">Status</label>
+                        <select class="form-control" id="quitado" name="quitado">
+                            <option value="">Todos</option>
+                            <option value="true">Quitado</option>
+                            <option value="false">Não Quitado</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-search me-1"></i>Buscar
+                        </button>
+                        <a href="{% url 'precatorios' %}" class="btn btn-secondary">
+                            <i class="fas fa-undo me-1"></i>Limpar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Section -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Precatórios Encontrados
+                    {% if precatorios %}
+                        <span class="badge bg-light text-dark ms-2">{{ precatorios|length }}</span>
+                    {% endif %}
+                </h5>
+                {% if precatorios %}
+                    <small>Total: {{ precatorios|length }} registro{{ precatorios|length|pluralize }}</small>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if precatorios %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">CNJ</th>
+                                    <th scope="col">Data Ofício</th>
+                                    <th scope="col">Origem</th>
+                                    <th scope="col">Valor</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Prioridade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for precatorio in precatorios %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'precatorio_detalhe' precatorio.cnj %}" 
+                                               class="text-decoration-none fw-bold text-primary" 
+                                               title="Clique para ver detalhes">
+                                                {{ precatorio.cnj|truncatechars:20 }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <i class="fas fa-calendar text-muted me-1"></i>
+                                            {{ precatorio.data_oficio|date:"d/m/Y" }}
+                                        </td>
+                                        <td>{{ precatorio.origem|truncatechars:25 }}</td>
+                                        <td>
+                                            <span class="text-success fw-bold">
+                                                R$ {{ precatorio.valor_de_face|floatformat:2 }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if precatorio.quitado %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i>Quitado
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fas fa-clock me-1"></i>Pendente
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if precatorio.prioridade_deferida %}
+                                                <span class="badge bg-info">
+                                                    <i class="fas fa-star me-1"></i>Prioritário
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">
+                                                    <i class="fas fa-minus me-1"></i>Normal
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Nenhum precatório encontrado</h5>
+                        <p class="text-muted">Não há precatórios cadastrados no sistema ou nenhum resultado corresponde aos filtros aplicados.</p>
+                        <a href="{% url 'novo_precatorio' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Cadastrar Primeiro Precatório
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+{% if precatorios %}
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="text-primary">{{ total_precatorios }}</h5>
+                <small class="text-muted">Total de Precatórios</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="text-success">{{ quitados }}</h5>
+                <small class="text-muted">Quitados</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="text-warning">{{ pendentes }}</h5>
+                <small class="text-muted">Pendentes</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="text-info">{{ prioritarios }}</h5>
+                <small class="text-muted">Prioritários</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table th {
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    .btn-group .btn {
+        margin-right: 0;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .badge {
+        font-size: 0.75em;
+    }
+    
+    .fa-3x {
+        font-size: 2.5em;
+    }
+</style>
+{% endblock %}

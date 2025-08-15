@@ -1,0 +1,529 @@
+{% extends 'base.html' %}
+
+{% block title %}Alvará - {{ alvara.cliente.nome }}{% endblock %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2>
+                    <i class="fas fa-file-contract text-success me-2"></i>
+                    Alvará - {{ alvara.cliente.nome }}
+                </h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'home' %}"><i class="fas fa-home"></i> Início</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'alvaras' %}"><i class="fas fa-file-contract"></i> Alvarás</a>
+                        </li>
+                        <li class="breadcrumb-item active">Alvará #{{ alvara.id }}</li>
+                    </ol>
+                </nav>
+            </div>
+            <div class="btn-group" role="group">
+                {% if not is_editing %}
+                    <a href="?edit=true" class="btn btn-primary">
+                        <i class="fas fa-edit me-1"></i>Editar Alvará
+                    </a>
+                {% endif %}
+                <a href="{% url 'alvaras' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Voltar à Lista
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Messages -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {% if message.tags == 'success' %}
+                <i class="fas fa-check-circle me-2"></i>
+            {% elif message.tags == 'error' %}
+                <i class="fas fa-exclamation-triangle me-2"></i>
+            {% elif message.tags == 'warning' %}
+                <i class="fas fa-exclamation-circle me-2"></i>
+            {% else %}
+                <i class="fas fa-info-circle me-2"></i>
+            {% endif %}
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        {% if is_editing %}
+            <!-- Edit Form -->
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Editando Alvará
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        <div class="row">
+                            <!-- Cliente and Precatório Selection -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-user me-1"></i>Cliente
+                                </label>
+                                {{ form.cliente }}
+                                {% if form.cliente.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.cliente.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-gavel me-1"></i>Precatório
+                                </label>
+                                {{ form.precatorio }}
+                                {% if form.precatorio.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.precatorio.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <!-- Type and Phase -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-tag me-1"></i>{{ form.tipo.label }}
+                                </label>
+                                {{ form.tipo }}
+                                {% if form.tipo.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.tipo.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-tasks me-1"></i>{{ form.fase.label }}
+                                </label>
+                                {{ form.fase }}
+                                {% if form.fase.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.fase.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Financial Values -->
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <h6 class="text-muted border-bottom pb-2">
+                                    <i class="fas fa-calculator me-1"></i>Valores Financeiros
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-dollar-sign me-1"></i>{{ form.valor_principal.label }}
+                                </label>
+                                {{ form.valor_principal }}
+                                {% if form.valor_principal.help_text %}
+                                    <small class="form-text text-muted">{{ form.valor_principal.help_text }}</small>
+                                {% endif %}
+                                {% if form.valor_principal.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.valor_principal.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-handshake me-1"></i>{{ form.honorarios_contratuais.label }}
+                                </label>
+                                {{ form.honorarios_contratuais }}
+                                {% if form.honorarios_contratuais.help_text %}
+                                    <small class="form-text text-muted">{{ form.honorarios_contratuais.help_text }}</small>
+                                {% endif %}
+                                {% if form.honorarios_contratuais.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.honorarios_contratuais.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-gavel me-1"></i>{{ form.honorarios_sucumbenciais.label }}
+                                </label>
+                                {{ form.honorarios_sucumbenciais }}
+                                {% if form.honorarios_sucumbenciais.help_text %}
+                                    <small class="form-text text-muted">{{ form.honorarios_sucumbenciais.help_text }}</small>
+                                {% endif %}
+                                {% if form.honorarios_sucumbenciais.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.honorarios_sucumbenciais.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <button type="submit" class="btn btn-success me-2">
+                                    <i class="fas fa-save me-1"></i>Salvar Alterações
+                                </button>
+                                <a href="{% url 'alvara_detail' alvara.id %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i>Cancelar
+                                </a>
+                            </div>
+                            <div>
+                                <a href="{% url 'alvaras' %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-list me-1"></i>Ver Todos os Alvarás
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <!-- View Mode -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-contract me-2"></i>Detalhes do Alvará
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Basic Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6 class="text-muted border-bottom pb-2">
+                                <i class="fas fa-info-circle me-1"></i>Informações Básicas
+                            </h6>
+                            <dl class="row">
+                                <dt class="col-sm-4">ID do Alvará:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-primary">#{{ alvara.id }}</span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Tipo:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-info">{{ alvara.tipo|capfirst }}</span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Fase:</dt>
+                                <dd class="col-sm-8">
+                                    {% if alvara.fase == 'recebido pelo cliente' %}
+                                        <span class="badge bg-success">{{ alvara.fase|capfirst }}</span>
+                                    {% elif alvara.fase == 'honorários recebidos' %}
+                                        <span class="badge bg-success">{{ alvara.fase|capfirst }}</span>
+                                    {% elif alvara.fase == 'depósito judicial' %}
+                                        <span class="badge bg-warning">{{ alvara.fase|capfirst }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ alvara.fase|capfirst }}</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="text-muted border-bottom pb-2">
+                                <i class="fas fa-link me-1"></i>Relacionamentos
+                            </h6>
+                            <dl class="row">
+                                <dt class="col-sm-4">Cliente:</dt>
+                                <dd class="col-sm-8">
+                                    {% if alvara.cliente.cpf %}
+                                        <a href="{% url 'cliente_detail' alvara.cliente.cpf %}" class="text-decoration-none">
+                                            <i class="fas fa-user me-1"></i>{{ alvara.cliente.nome }}
+                                        </a>
+                                    {% else %}
+                                        <i class="fas fa-user me-1"></i>{{ alvara.cliente.nome }}
+                                    {% endif %}
+                                </dd>
+                                
+                                <dt class="col-sm-4">Precatório:</dt>
+                                <dd class="col-sm-8">
+                                    <a href="{% url 'precatorio_detalhe' alvara.precatorio.cnj %}" class="text-decoration-none">
+                                        <i class="fas fa-gavel me-1"></i>{{ alvara.precatorio.cnj|default:"N/A" }}
+                                    </a>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                    
+                    <!-- Financial Information -->
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <h6 class="text-muted border-bottom pb-2">
+                                <i class="fas fa-calculator me-1"></i>Informações Financeiras
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="text-primary">
+                                        <i class="fas fa-dollar-sign"></i>
+                                        R$ {{ alvara.valor_principal|floatformat:2 }}
+                                    </h5>
+                                    <p class="text-muted mb-0">Valor Principal</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="text-info">
+                                        <i class="fas fa-handshake"></i>
+                                        R$ {{ alvara.honorarios_contratuais|floatformat:2 }}
+                                    </h5>
+                                    <p class="text-muted mb-0">Hon. Contratuais</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="text-warning">
+                                        <i class="fas fa-gavel"></i>
+                                        R$ {{ alvara.honorarios_sucumbenciais|floatformat:2 }}
+                                    </h5>
+                                    <p class="text-muted mb-0">Hon. Sucumbenciais</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="card border-success">
+                                <div class="card-body text-center">
+                                    <h4 class="text-success mb-0">
+                                        <i class="fas fa-calculator me-2"></i>
+                                        Total: R$ {{ alvara.valor_principal|add:alvara.honorarios_contratuais|add:alvara.honorarios_sucumbenciais|floatformat:2 }}
+                                    </h4>
+                                    <p class="text-muted mb-0">Valor Total do Alvará</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <a href="?edit=true" class="btn btn-primary">
+                                <i class="fas fa-edit me-1"></i>Editar Alvará
+                            </a>
+                        </div>
+                        <div>
+                            <a href="{% url 'alvaras' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-list me-1"></i>Ver Todos os Alvarás
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card mb-3">
+            <div class="card-header bg-secondary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-bolt me-1"></i>Ações Rápidas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if not is_editing %}
+                        <a href="?edit=true" class="btn btn-primary btn-sm">
+                            <i class="fas fa-edit me-1"></i>Editar Este Alvará
+                        </a>
+                    {% endif %}
+                    {% if alvara.cliente.cpf %}
+                        <a href="{% url 'cliente_detail' alvara.cliente.cpf %}" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-user me-1"></i>Ver Cliente
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'precatorio_detalhe' alvara.precatorio.cnj %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-gavel me-1"></i>Ver Precatório
+                    </a>
+                    <a href="{% url 'alvaras' %}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-list me-1"></i>Lista de Alvarás
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status Information -->
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-1"></i>Status do Alvará
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Situação Atual:</strong><br>
+                    {% if alvara.fase == 'recebido pelo cliente' %}
+                        <span class="badge bg-success fs-6">
+                            <i class="fas fa-check-circle me-1"></i>Finalizado
+                        </span>
+                    {% elif alvara.fase == 'honorários recebidos' %}
+                        <span class="badge bg-success fs-6">
+                            <i class="fas fa-check-circle me-1"></i>Completo
+                        </span>
+                    {% elif alvara.fase == 'depósito judicial' %}
+                        <span class="badge bg-warning fs-6">
+                            <i class="fas fa-clock me-1"></i>Em Andamento
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary fs-6">
+                            <i class="fas fa-hourglass-half me-1"></i>Aguardando
+                        </span>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <strong>Categoria:</strong><br>
+                    {% if alvara.tipo == 'acordo' %}
+                        <span class="badge bg-primary">
+                            <i class="fas fa-handshake me-1"></i>{{ alvara.tipo|capfirst }}
+                        </span>
+                    {% elif alvara.tipo == 'prioridade' %}
+                        <span class="badge bg-danger">
+                            <i class="fas fa-exclamation me-1"></i>{{ alvara.tipo|capfirst }}
+                        </span>
+                    {% else %}
+                        <span class="badge bg-info">
+                            <i class="fas fa-sort-numeric-down me-1"></i>{{ alvara.tipo|capfirst }}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Related Information -->
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-link me-1"></i>Informações Relacionadas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-muted">Cliente:</h6>
+                    <p class="mb-0">
+                        <strong>{{ alvara.cliente.nome }}</strong><br>
+                        <small class="text-muted">{{ alvara.cliente.cpf }}</small>
+                    </p>
+                </div>
+                
+                <div>
+                    <h6 class="text-muted">Precatório:</h6>
+                    <p class="mb-0">
+                        <strong>CNJ:</strong> {{ alvara.precatorio.cnj|default:"N/A" }}<br>
+                        <small class="text-muted">Origem: {{ alvara.precatorio.origem|default:"N/A" }}</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        transition: box-shadow 0.2s;
+    }
+    
+    .card:hover {
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .badge {
+        font-size: 0.8em;
+    }
+    
+    .bg-light .card-body {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .btn-group .btn {
+        border-radius: 0;
+    }
+    
+    .btn-group .btn:first-child {
+        border-top-left-radius: 0.375rem;
+        border-bottom-left-radius: 0.375rem;
+    }
+    
+    .btn-group .btn:last-child {
+        border-top-right-radius: 0.375rem;
+        border-bottom-right-radius: 0.375rem;
+    }
+    
+    .form-control:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+    
+    dl.row dt {
+        font-weight: 600;
+        color: #6c757d;
+    }
+    
+    .breadcrumb-item + .breadcrumb-item::before {
+        content: ">";
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-dismiss alerts after 5 seconds
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            var alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    });
+    
+    // Format currency inputs
+    document.addEventListener('DOMContentLoaded', function() {
+        const currencyInputs = document.querySelectorAll('input[step="0.01"]');
+        currencyInputs.forEach(function(input) {
+            input.addEventListener('blur', function() {
+                if (this.value) {
+                    const value = parseFloat(this.value);
+                    if (!isNaN(value)) {
+                        this.value = value.toFixed(2);
+                    }
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

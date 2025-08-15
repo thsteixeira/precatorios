@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block title %}Lista de Alvarás{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-file-contract"></i> Lista de Alvarás</h1>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ total_alvaras }}</h4>
+                    <small>Total de Alvarás</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ aguardando_deposito }}</h4>
+                    <small>Aguardando</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ deposito_judicial }}</h4>
+                    <small>Depósito Judicial</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ recebido_cliente }}</h4>
+                    <small>Recebidos</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-secondary text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ honorarios_recebidos }}</h4>
+                    <small>Honorários</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-dark text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">R$ {{ total_valor_principal|floatformat:0 }}k</h4>
+                    <small>Valor Total</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alvarás Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0"><i class="fas fa-list"></i> Alvarás Cadastrados</h5>
+        </div>
+        <div class="card-body">
+            {% if alvaras %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Precatório (CNJ)</th>
+                                <th>Valor Principal</th>
+                                <th>Hon. Contratuais</th>
+                                <th>Hon. Sucumbenciais</th>
+                                <th>Tipo</th>
+                                <th>Fase</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alvara in alvaras %}
+                            <tr>
+                                <td>
+                                    {% if alvara.cliente.cpf %}
+                                        <a href="{% url 'cliente_detail' alvara.cliente.cpf %}" class="text-decoration-none">
+                                            <strong class="text-primary">{{ alvara.cliente.nome }}</strong>
+                                        </a>
+                                    {% else %}
+                                        <strong class="text-primary">{{ alvara.cliente.nome }}</strong>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'precatorio_detalhe' alvara.precatorio.cnj %}" class="text-decoration-none">
+                                        <span class="text-info">{{ alvara.precatorio.cnj }}</span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="text-success fw-bold">R$ {{ alvara.valor_principal|floatformat:2 }}</span>
+                                </td>
+                                <td>
+                                    <span class="text-info">R$ {{ alvara.honorarios_contratuais|floatformat:2 }}</span>
+                                </td>
+                                <td>
+                                    <span class="text-warning">R$ {{ alvara.honorarios_sucumbenciais|floatformat:2 }}</span>
+                                </td>
+                                <td>
+                                    {% if alvara.tipo == 'aguardando depósito' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-clock me-1"></i>Aguardando
+                                        </span>
+                                    {% elif alvara.tipo == 'depósito judicial' %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-university me-1"></i>Depósito
+                                        </span>
+                                    {% elif alvara.tipo == 'recebido pelo cliente' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Recebido
+                                        </span>
+                                    {% elif alvara.tipo == 'honorários recebidos' %}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-coins me-1"></i>Honorários
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ alvara.tipo }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="text-muted">{{ alvara.fase|truncatechars:15 }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-file-contract fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">Nenhum alvará cadastrado</h4>
+                    <p class="text-muted">Os alvarás devem ser criados a partir dos detalhes de cada precatório.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Financial Summary -->
+    {% if alvaras %}
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
+                    <h5 class="text-success">R$ {{ total_valor_principal|floatformat:2 }}</h5>
+                    <small class="text-muted">Total Valor Principal</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center border-info">
+                <div class="card-body">
+                    <i class="fas fa-handshake fa-2x text-info mb-2"></i>
+                    <h5 class="text-info">R$ {{ total_honorarios_contratuais|floatformat:2 }}</h5>
+                    <small class="text-muted">Total Honorários Contratuais</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <i class="fas fa-gavel fa-2x text-warning mb-2"></i>
+                    <h5 class="text-warning">R$ {{ total_honorarios_sucumbenciais|floatformat:2 }}</h5>
+                    <small class="text-muted">Total Honorários Sucumbenciais</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,458 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhes do Cliente - {{ cliente.nome }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-user text-primary me-2"></i>
+                Detalhes do Cliente
+            </h2>
+            <div class="btn-group" role="group">
+                <a href="{% url 'clientes' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Voltar à Lista
+                </a>
+                {% if not is_editing %}
+                    <a href="?edit=true" class="btn btn-warning">
+                        <i class="fas fa-edit me-1"></i>Editar
+                    </a>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteClienteModal">
+                        <i class="fas fa-trash me-1"></i>Excluir
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Client Information Card -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Informações do Cliente
+                    {% if cliente.prioridade %}
+                        <span class="badge bg-warning text-dark ms-2">
+                            <i class="fas fa-star me-1"></i>Prioritário
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary ms-2">
+                            <i class="fas fa-user me-1"></i>Normal
+                        </span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if is_editing or request.GET.edit %}
+                    <!-- Edit Mode -->
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="edit_client" value="1">
+                        
+                        <!-- Personal Information Section -->
+                        <h5 class="mb-3 text-primary">
+                            <i class="fas fa-user"></i> Informações Pessoais
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="{{ client_form.nome.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-user me-1"></i>{{ client_form.nome.label }}</strong>
+                                </label>
+                                {{ client_form.nome }}
+                                {% if client_form.nome.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ client_form.nome.errors|first }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ client_form.cpf.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-id-card me-1"></i>{{ client_form.cpf.label }}</strong>
+                                </label>
+                                {{ client_form.cpf }}
+                                {% if client_form.cpf.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ client_form.cpf.errors|first }}
+                                    </div>
+                                {% endif %}
+                                {% if client_form.cpf.help_text %}
+                                    <div class="form-text">{{ client_form.cpf.help_text }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ client_form.nascimento.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-calendar me-1"></i>{{ client_form.nascimento.label }}</strong>
+                                </label>
+                                {{ client_form.nascimento }}
+                                {% if client_form.nascimento.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ client_form.nascimento.errors|first }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Configuration Section -->
+                        <h5 class="mb-3 text-primary mt-4">
+                            <i class="fas fa-cog"></i> Configurações
+                        </h5>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check mt-4">
+                                    {{ client_form.prioridade }}
+                                    <label class="form-check-label" for="{{ client_form.prioridade.id_for_label }}">
+                                        <strong><i class="fas fa-star text-warning me-1"></i>{{ client_form.prioridade.label }}</strong>
+                                    </label>
+                                    {% if client_form.prioridade.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ client_form.prioridade.errors|first }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-text">Marque se o cliente possui prioridade legal</div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a href="{% url 'cliente_detail' cliente.cpf %}" class="btn btn-secondary btn-lg me-md-2">
+                                        <i class="fas fa-times"></i> Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="fas fa-save"></i> Salvar Alterações
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                {% else %}
+                    <!-- View Mode -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-user me-1"></i>Nome Completo:</strong><br>
+                            <span class="text-primary fs-5">{{ cliente.nome }}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-id-card me-1"></i>CPF:</strong><br>
+                            {% if cliente.cpf %}
+                                <span class="text-muted fs-6">{{ cliente.cpf }}</span>
+                            {% else %}
+                                <span class="text-muted fst-italic">Não informado</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-calendar me-1"></i>Data de Nascimento:</strong><br>
+                            {% if cliente.nascimento %}
+                                <span class="text-muted">{{ cliente.nascimento|date:"d/m/Y" }}</span>
+                            {% else %}
+                                <span class="text-muted fst-italic">Não informado</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-star me-1"></i>Status de Prioridade:</strong><br>
+                            {% if cliente.prioridade %}
+                                <span class="badge bg-warning text-dark fs-6">
+                                    <i class="fas fa-star me-1"></i>Cliente Prioritário
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary fs-6">
+                                    <i class="fas fa-user me-1"></i>Cliente Normal
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Associated Precatorios Card -->
+{% if not is_editing and not request.GET.edit %}
+
+<!-- Precatorio Search and Link Section -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-link me-2"></i>
+                    Vincular Precatório ao Cliente
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="mb-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="link_precatorio" value="1">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <label for="{{ search_form.cnj.id_for_label }}" class="form-label">
+                                <strong><i class="fas fa-search me-1"></i>{{ search_form.cnj.label }}</strong>
+                            </label>
+                            {{ search_form.cnj }}
+                            {% if search_form.cnj.help_text %}
+                                <div class="form-text">{{ search_form.cnj.help_text }}</div>
+                            {% endif %}
+                            {% if search_form.cnj.errors %}
+                                <div class="text-danger mt-1">{{ search_form.cnj.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="fas fa-link me-1"></i>Vincular Precatório
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Como usar:</strong> Digite o CNJ do precatório que deseja vincular a este cliente e clique em "Vincular Precatório".
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-gavel me-2"></i>
+                    Precatórios Associados
+                    <span class="badge bg-light text-dark ms-2">{{ associated_precatorios.count }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for precatorio in associated_precatorios %}
+                    <div class="card mb-3 border-primary">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h6><strong><i class="fas fa-hashtag me-1"></i>CNJ:</strong></h6>
+                                    <p class="text-primary fs-5 mb-2">{{ precatorio.cnj }}</p>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6><strong><i class="fas fa-calendar me-1"></i>Data do Ofício:</strong></h6>
+                                            <p class="text-muted mb-2">{{ precatorio.data_oficio|date:"d/m/Y" }}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6><strong><i class="fas fa-building me-1"></i>Origem:</strong></h6>
+                                            <p class="text-muted mb-2">{{ precatorio.origem|truncatechars:30 }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <h6><strong><i class="fas fa-money-bill-wave me-1"></i>Valor Atualizado:</strong></h6>
+                                        <p class="text-success fs-4 fw-bold mb-3">R$ {{ precatorio.ultima_atualizacao|floatformat:2 }}</p>
+                                        
+                                        <div class="d-grid gap-2">
+                                            <a href="{% url 'precatorio_detalhe' precatorio.cnj %}" class="btn btn-primary">
+                                                <i class="fas fa-eye me-1"></i>Ver Detalhes
+                                            </a>
+                                            
+                                            <form method="post" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="unlink_precatorio" value="1">
+                                                <input type="hidden" name="precatorio_cnj" value="{{ precatorio.cnj }}">
+                                                <button type="submit" class="btn btn-outline-danger w-100" 
+                                                        onclick="return confirm('Tem certeza que deseja desvincular este precatório do cliente {{ cliente.nome }}?')">
+                                                    <i class="fas fa-unlink me-1"></i>Desvincular
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Status Badges -->
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <h6><strong><i class="fas fa-tags me-1"></i>Status:</strong></h6>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% if precatorio.quitado %}
+                                            <span class="badge bg-success fs-6">
+                                                <i class="fas fa-check-circle me-1"></i>Quitado
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark fs-6">
+                                                <i class="fas fa-clock me-1"></i>Pendente
+                                            </span>
+                                        {% endif %}
+                                        
+                                        {% if precatorio.prioridade_deferida %}
+                                            <span class="badge bg-info fs-6">
+                                                <i class="fas fa-star me-1"></i>Prioridade Deferida
+                                            </span>
+                                        {% endif %}
+                                        
+                                        {% if precatorio.acordo_deferido %}
+                                            <span class="badge bg-primary fs-6">
+                                                <i class="fas fa-handshake me-1"></i>Acordo Deferido
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-gavel fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Nenhum precatório associado</h5>
+                        <p class="text-muted">Este cliente ainda não foi associado a um precatório.</p>
+                        <p class="text-muted">Use o formulário acima para buscar e vincular um precatório pelo CNJ.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Client Summary Card -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-user-circle fa-2x text-primary mb-2"></i>
+                <h5 class="text-primary">{{ cliente.nome|truncatechars:25 }}</h5>
+                <small class="text-muted">Nome do Cliente</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                {% if cliente.prioridade %}
+                    <i class="fas fa-star fa-2x text-warning mb-2"></i>
+                    <h5 class="text-warning">Prioritário</h5>
+                    <small class="text-muted">Status Legal</small>
+                {% else %}
+                    <i class="fas fa-user fa-2x text-secondary mb-2"></i>
+                    <h5 class="text-secondary">Normal</h5>
+                    <small class="text-muted">Status Legal</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete Cliente Modal -->
+<div class="modal fade" id="deleteClienteModal" tabindex="-1" aria-labelledby="deleteClienteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteClienteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-user-times fa-3x text-danger mb-3"></i>
+                    <h5>Tem certeza que deseja excluir este cliente?</h5>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <strong><i class="fas fa-info-circle me-2"></i>Cliente:</strong> {{ cliente.nome }}<br>
+                    <strong><i class="fas fa-id-card me-2"></i>CPF:</strong> {{ cliente.cpf|default:"Não informado" }}
+                </div>
+                
+                <div class="alert alert-danger">
+                    <strong><i class="fas fa-exclamation-triangle me-2"></i>Atenção:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Esta ação não pode ser desfeita</li>
+                        <li>O cliente só pode ser excluído se não estiver associado a precatórios, alvarás ou requerimentos</li>
+                        <li>Todos os dados do cliente serão permanentemente removidos</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <form method="post" action="{% url 'delete_cliente' cliente.cpf %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Excluir Definitivamente
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .badge {
+        font-size: 0.8em;
+    }
+    
+    .form-check-input {
+        margin-top: 0.3em;
+    }
+    
+    .fs-4 {
+        font-size: 1.5rem;
+    }
+    
+    .fs-5 {
+        font-size: 1.25rem;
+    }
+    
+    .fs-6 {
+        font-size: 0.875rem;
+    }
+    
+    .fw-bold {
+        font-weight: bold;
+    }
+    
+    .fst-italic {
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+<script>
+// Add form control classes to Django form fields
+document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap classes to form fields
+    const formFields = document.querySelectorAll('input, select, textarea');
+    formFields.forEach(field => {
+        field.classList.add('form-control');
+    });
+    
+    // Handle checkbox specifically
+    const checkbox = document.querySelector('input[type="checkbox"]');
+    if (checkbox) {
+        checkbox.classList.remove('form-control');
+        checkbox.classList.add('form-check-input');
+    }
+});
+</script>

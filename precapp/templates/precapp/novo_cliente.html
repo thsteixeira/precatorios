@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+
+{% block title %}Novo Cliente{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>
+                        <i class="fas fa-user-plus text-success me-2"></i>
+                        Novo Cliente
+                    </h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'home' %}"><i class="fas fa-home"></i> Início</a>
+                            </li>
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'clientes' %}"><i class="fas fa-users"></i> Clientes</a>
+                            </li>
+                            <li class="breadcrumb-item active">Novo Cliente</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'clientes' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Voltar à Lista
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {% if message.tags == 'success' %}
+                    <i class="fas fa-check-circle me-2"></i>
+                {% elif message.tags == 'error' %}
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                {% elif message.tags == 'warning' %}
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                {% else %}
+                    <i class="fas fa-info-circle me-2"></i>
+                {% endif %}
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Form Section -->
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-plus me-2"></i>
+                        Informações do Cliente
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Personal Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-muted border-bottom pb-2 mb-3">
+                                    <i class="fas fa-user me-1"></i>Informações Pessoais
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-12 mb-3">
+                                <label for="{{ form.nome.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-user me-1"></i>{{ form.nome.label }}</strong>
+                                </label>
+                                {{ form.nome }}
+                                {% if form.nome.help_text %}
+                                    <div class="form-text">{{ form.nome.help_text }}</div>
+                                {% endif %}
+                                {% if form.nome.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.nome.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.cpf.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-id-card me-1"></i>{{ form.cpf.label }}</strong>
+                                </label>
+                                {{ form.cpf }}
+                                {% if form.cpf.help_text %}
+                                    <div class="form-text">{{ form.cpf.help_text }}</div>
+                                {% endif %}
+                                {% if form.cpf.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.cpf.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.nascimento.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-calendar me-1"></i>{{ form.nascimento.label }}</strong>
+                                </label>
+                                {{ form.nascimento }}
+                                {% if form.nascimento.help_text %}
+                                    <div class="form-text">{{ form.nascimento.help_text }}</div>
+                                {% endif %}
+                                {% if form.nascimento.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.nascimento.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Configuration Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-muted border-bottom pb-2 mb-3">
+                                    <i class="fas fa-cog me-1"></i>Configurações
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.prioridade }}
+                                    <label class="form-check-label" for="{{ form.prioridade.id_for_label }}">
+                                        <strong><i class="fas fa-star text-warning me-1"></i>{{ form.prioridade.label }}</strong>
+                                    </label>
+                                </div>
+                                <div class="form-text">Marque se o cliente possui prioridade legal</div>
+                                {% if form.prioridade.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.prioridade.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Precatorio Association Section -->
+                        {% if form.precatorio_cnj %}
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-muted border-bottom pb-2 mb-3">
+                                    <i class="fas fa-gavel me-1"></i>Associação com Precatório
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-12 mb-3">
+                                <label for="{{ form.precatorio_cnj.id_for_label }}" class="form-label">
+                                    <strong><i class="fas fa-search me-1"></i>{{ form.precatorio_cnj.label }}</strong>
+                                </label>
+                                {{ form.precatorio_cnj }}
+                                {% if form.precatorio_cnj.help_text %}
+                                    <div class="form-text">{{ form.precatorio_cnj.help_text }}</div>
+                                {% endif %}
+                                {% if form.precatorio_cnj.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.precatorio_cnj.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Submit Buttons -->
+                        <div class="row">
+                            <div class="col-12">
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <button type="submit" class="btn btn-success btn-lg me-2">
+                                            <i class="fas fa-save me-1"></i>Criar Cliente
+                                        </button>
+                                        <a href="{% url 'clientes' %}" class="btn btn-outline-secondary btn-lg">
+                                            <i class="fas fa-times me-1"></i>Cancelar
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Após criar, você poderá vincular o cliente a precatórios.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .form-control:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+    
+    .form-check-input:checked {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+    
+    .form-check-input:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+    
+    .breadcrumb-item + .breadcrumb-item::before {
+        content: ">";
+    }
+    
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1.1rem;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-dismiss alerts after 5 seconds
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            var alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    });
+    
+    // Add Bootstrap classes to form fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const formFields = document.querySelectorAll('input[type="text"], input[type="email"], input[type="date"], select, textarea');
+        formFields.forEach(field => {
+            field.classList.add('form-control');
+        });
+        
+        // Handle checkbox specifically
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.classList.remove('form-control');
+            checkbox.classList.add('form-check-input');
+        });
+    });
+</script>
+{% endblock %}
