@@ -844,7 +844,7 @@
                                                             <select class="form-select form-select-sm" id="fase_{{ alvara.id }}" name="fase">
                                                                 <option value="">Selecione a fase</option>
                                                                 {% for fase in alvara_fases %}
-                                                                    <option value="{{ fase.id }}" {% if alvara.fase_id == fase.id %}selected{% endif %}>
+                                                                    <option value="{{ fase.id }}" {% if alvara.fase and alvara.fase.id == fase.id %}selected{% endif %}>
                                                                         {{ fase.nome }}
                                                                     </option>
                                                                 {% endfor %}
@@ -1187,7 +1187,7 @@
                                                             <select class="form-select form-select-sm" id="fase_{{ requerimento.id }}" name="fase">
                                                                 <option value="">Selecione a fase</option>
                                                                 {% for fase in requerimento_fases %}
-                                                                    <option value="{{ fase.id }}" {% if requerimento.fase_id == fase.id %}selected{% endif %}>
+                                                                    <option value="{{ fase.id }}" {% if requerimento.fase and requerimento.fase.id == fase.id %}selected{% endif %}>
                                                                         {{ fase.nome }}
                                                                     </option>
                                                                 {% endfor %}

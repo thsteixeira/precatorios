@@ -281,18 +281,32 @@ def precatorio_detalhe_view(request, precatorio_cnj):
             try:
                 alvara = get_object_or_404(Alvara, id=alvara_id, precatorio=precatorio)
                 # Update the alvara fields
-                alvara.valor_principal = request.POST.get('valor_principal', alvara.valor_principal)
-                alvara.honorarios_contratuais = request.POST.get('honorarios_contratuais', alvara.honorarios_contratuais)
-                alvara.honorarios_sucumbenciais = request.POST.get('honorarios_sucumbenciais', alvara.honorarios_sucumbenciais)
+                alvara.valor_principal = float(request.POST.get('valor_principal', alvara.valor_principal))
+                alvara.honorarios_contratuais = float(request.POST.get('honorarios_contratuais', alvara.honorarios_contratuais))
+                alvara.honorarios_sucumbenciais = float(request.POST.get('honorarios_sucumbenciais', alvara.honorarios_sucumbenciais))
                 alvara.tipo = request.POST.get('tipo', alvara.tipo)
-                alvara.fase = request.POST.get('fase', alvara.fase)
+                
+                # Handle fase field properly (ForeignKey)
+                fase_id = request.POST.get('fase')
+                if fase_id:
+                    try:
+                        fase = Fase.objects.get(id=fase_id)
+                        alvara.fase = fase
+                    except Fase.DoesNotExist:
+                        messages.error(request, 'Fase selecionada não existe.')
+                        return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
+                else:
+                    alvara.fase = None
+                
                 alvara.save()
                 messages.success(request, f'Alvará do cliente {alvara.cliente.nome} atualizado com sucesso!')
                 return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
             except Alvara.DoesNotExist:
                 messages.error(request, 'Alvará não encontrado.')
-            except ValueError as e:
+            except (ValueError, TypeError) as e:
                 messages.error(request, f'Erro nos dados fornecidos: {str(e)}')
+            except Exception as e:
+                messages.error(request, f'Erro inesperado: {str(e)}')
         
         elif 'delete_alvara' in request.POST:
             # Handle alvara deletion
@@ -312,17 +326,31 @@ def precatorio_detalhe_view(request, precatorio_cnj):
             try:
                 requerimento = get_object_or_404(Requerimento, id=requerimento_id, precatorio=precatorio)
                 # Update the requerimento fields
-                requerimento.valor = request.POST.get('valor', requerimento.valor)
-                requerimento.desagio = request.POST.get('desagio', requerimento.desagio)
+                requerimento.valor = float(request.POST.get('valor', requerimento.valor))
+                requerimento.desagio = float(request.POST.get('desagio', requerimento.desagio))
                 requerimento.pedido = request.POST.get('pedido', requerimento.pedido)
-                requerimento.fase = request.POST.get('fase', requerimento.fase)
+                
+                # Handle fase field properly (ForeignKey)
+                fase_id = request.POST.get('fase')
+                if fase_id:
+                    try:
+                        fase = Fase.objects.get(id=fase_id)
+                        requerimento.fase = fase
+                    except Fase.DoesNotExist:
+                        messages.error(request, 'Fase selecionada não existe.')
+                        return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
+                else:
+                    requerimento.fase = None
+                
                 requerimento.save()
                 messages.success(request, f'Requerimento do cliente {requerimento.cliente.nome} atualizado com sucesso!')
                 return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
             except Requerimento.DoesNotExist:
                 messages.error(request, 'Requerimento não encontrado.')
-            except ValueError as e:
+            except (ValueError, TypeError) as e:
                 messages.error(request, f'Erro nos dados fornecidos: {str(e)}')
+            except Exception as e:
+                messages.error(request, f'Erro inesperado: {str(e)}')
         
         elif 'delete_requerimento' in request.POST:
             # Handle requerimento deletion
