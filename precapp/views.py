@@ -285,6 +285,8 @@ def precatorio_detalhe_view(request, precatorio_cnj):
         'associated_clientes': associated_clientes,
         'alvaras': alvaras,
         'requerimentos': requerimentos,
+        'alvara_fases': Fase.get_fases_for_alvara(),
+        'requerimento_fases': Fase.get_fases_for_requerimento(),
     }
     
     return render(request, 'precapp/precatorio_detail.html', context)

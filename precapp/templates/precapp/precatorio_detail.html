@@ -756,7 +756,14 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <span class="text-muted">{{ alvara.fase|truncatechars:20 }}</span>
+                                        {% if alvara.fase %}
+                                            <div class="d-flex align-items-center">
+                                                <div class="fase-color-dot me-2" style="background-color: {{ alvara.fase.cor }};"></div>
+                                                <span class="text-muted">{{ alvara.fase.nome }}</span>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">Fase não definida</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">
@@ -836,10 +843,11 @@
                                                             <label for="fase_{{ alvara.id }}" class="form-label">Fase</label>
                                                             <select class="form-select form-select-sm" id="fase_{{ alvara.id }}" name="fase">
                                                                 <option value="">Selecione a fase</option>
-                                                                <option value="aguardando depósito" {% if alvara.fase == 'aguardando depósito' %}selected{% endif %}>Aguardando depósito</option>
-                                                                <option value="depósito judicial" {% if alvara.fase == 'depósito judicial' %}selected{% endif %}>Depósito judicial</option>
-                                                                <option value="recebido pelo cliente" {% if alvara.fase == 'recebido pelo cliente' %}selected{% endif %}>Recebido pelo cliente</option>
-                                                                <option value="honorários recebidos" {% if alvara.fase == 'honorários recebidos' %}selected{% endif %}>Honorários recebidos</option>
+                                                                {% for fase in alvara_fases %}
+                                                                    <option value="{{ fase.id }}" {% if alvara.fase_id == fase.id %}selected{% endif %}>
+                                                                        {{ fase.nome }}
+                                                                    </option>
+                                                                {% endfor %}
                                                             </select>
                                                         </div>
                                                     </div>
@@ -1120,14 +1128,15 @@
                                         <span class="text-warning">{{ requerimento.desagio|floatformat:2 }}%</span>
                                     </td>
                                     <td>
-                                        {% if requerimento.fase == 'deferido' %}
-                                            <span class="badge bg-success">{{ requerimento.fase|capfirst }}</span>
-                                        {% elif requerimento.fase == 'indeferido' %}
-                                            <span class="badge bg-danger">{{ requerimento.fase|capfirst }}</span>
-                                        {% elif requerimento.fase == 'em andamento' %}
-                                            <span class="badge bg-warning text-dark">{{ requerimento.fase|capfirst }}</span>
+                                        {% if requerimento.fase %}
+                                            <div class="d-flex align-items-center">
+                                                <div class="fase-color-dot me-2" style="background-color: {{ requerimento.fase.cor }};"></div>
+                                                <span class="badge" style="background-color: {{ requerimento.fase.cor }}; color: white;">
+                                                    {{ requerimento.fase.nome }}
+                                                </span>
+                                            </div>
                                         {% else %}
-                                            <span class="badge bg-secondary">{{ requerimento.fase|capfirst }}</span>
+                                            <span class="badge bg-secondary">Fase não definida</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -1177,10 +1186,11 @@
                                                             <label for="fase_{{ requerimento.id }}" class="form-label">Fase</label>
                                                             <select class="form-select form-select-sm" id="fase_{{ requerimento.id }}" name="fase">
                                                                 <option value="">Selecione a fase</option>
-                                                                <option value="protocolado" {% if requerimento.fase == 'protocolado' %}selected{% endif %}>Protocolado</option>
-                                                                <option value="em andamento" {% if requerimento.fase == 'em andamento' %}selected{% endif %}>Em andamento</option>
-                                                                <option value="deferido" {% if requerimento.fase == 'deferido' %}selected{% endif %}>Deferido</option>
-                                                                <option value="indeferido" {% if requerimento.fase == 'indeferido' %}selected{% endif %}>Indeferido</option>
+                                                                {% for fase in requerimento_fases %}
+                                                                    <option value="{{ fase.id }}" {% if requerimento.fase_id == fase.id %}selected{% endif %}>
+                                                                        {{ fase.nome }}
+                                                                    </option>
+                                                                {% endfor %}
                                                             </select>
                                                         </div>
                                                         
@@ -1368,6 +1378,14 @@
     
     .fw-bold {
         font-weight: bold;
+    }
+    
+    .fase-color-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        border: 1px solid #dee2e6;
     }
 </style>
 {% endblock %}
