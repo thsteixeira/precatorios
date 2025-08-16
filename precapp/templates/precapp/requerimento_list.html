@@ -13,10 +13,10 @@
                         <i class="fas fa-filter me-1"></i>Filtros
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="?fase=protocolado">Protocolados</a></li>
-                        <li><a class="dropdown-item" href="?fase=em_andamento">Em Andamento</a></li>
-                        <li><a class="dropdown-item" href="?fase=deferido">Deferidos</a></li>
-                        <li><a class="dropdown-item" href="?fase=indeferido">Indeferidos</a></li>
+                        <li><a class="dropdown-item" href="?fase=Protocolado">Protocolados</a></li>
+                        <li><a class="dropdown-item" href="?fase=Em Andamento">Em Andamento</a></li>
+                        <li><a class="dropdown-item" href="?fase=Deferido">Deferidos</a></li>
+                        <li><a class="dropdown-item" href="?fase=Indeferido">Indeferidos</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="?">Todos</a></li>
                     </ul>
@@ -151,11 +151,11 @@
                                             </span>
                                         </td>
                                         <td class="text-center">
-                                            {% if requerimento.fase == 'deferido' %}
+                                            {% if requerimento.fase.nome == 'Deferido' %}
                                                 <span class="badge bg-success">
                                                     <i class="fas fa-check me-1"></i>{{ requerimento.fase|capfirst }}
                                                 </span>
-                                            {% elif requerimento.fase == 'indeferido' %}
+                                            {% elif requerimento.fase.nome == 'Indeferido' %}
                                                 <span class="badge bg-danger">
                                                     <i class="fas fa-times me-1"></i>{{ requerimento.fase|capfirst }}
                                                 </span>

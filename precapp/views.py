@@ -469,14 +469,14 @@ def delete_alvara_view(request, alvara_id):
 @login_required
 def requerimento_list_view(request):
     """View to list all requerimentos with statistics"""
-    requerimentos = Requerimento.objects.all().select_related('cliente', 'precatorio').order_by('-id')
+    requerimentos = Requerimento.objects.all().select_related('cliente', 'precatorio', 'fase').order_by('-id')
     
     # Calculate statistics
     total_requerimentos = requerimentos.count()
-    protocolados_count = requerimentos.filter(fase='protocolado').count()
-    em_andamento_count = requerimentos.filter(fase='em andamento').count()
-    deferidos_count = requerimentos.filter(fase='deferido').count()
-    indeferidos_count = requerimentos.filter(fase='indeferido').count()
+    protocolados_count = requerimentos.filter(fase__nome='Protocolado').count()
+    em_andamento_count = requerimentos.filter(fase__nome='Em Andamento').count()
+    deferidos_count = requerimentos.filter(fase__nome='Deferido').count()
+    indeferidos_count = requerimentos.filter(fase__nome='Indeferido').count()
     
     # Calculate financial statistics
     valor_total = sum(r.valor for r in requerimentos if r.valor)
@@ -485,10 +485,7 @@ def requerimento_list_view(request):
     # Handle filtering by fase
     fase_filter = request.GET.get('fase')
     if fase_filter:
-        if fase_filter == 'em_andamento':
-            requerimentos = requerimentos.filter(fase='em andamento')
-        else:
-            requerimentos = requerimentos.filter(fase=fase_filter)
+        requerimentos = requerimentos.filter(fase__nome=fase_filter)
     
     # Handle requerimento deletion
     if request.method == 'POST' and 'delete_requerimento' in request.POST:
