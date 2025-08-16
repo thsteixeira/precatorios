@@ -19,6 +19,9 @@
                         <a href="?edit=true" class="btn btn-warning">
                             <i class="fas fa-edit me-1"></i>Editar
                         </a>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deletePrecatorioModal">
+                            <i class="fas fa-trash me-1"></i>Excluir
+                        </button>
                     {% endif %}
                 </div>
             </div>
@@ -1283,6 +1286,53 @@
                         <p class="text-muted">Clique em "Novo Requerimento" para adicionar o primeiro requerimento a este precatório.</p>
                     </div>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Precatorio Modal -->
+<div class="modal fade" id="deletePrecatorioModal" tabindex="-1" aria-labelledby="deletePrecatorioModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deletePrecatorioModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-file-times fa-3x text-danger mb-3"></i>
+                    <h5>Tem certeza que deseja excluir este precatório?</h5>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <strong><i class="fas fa-gavel me-2"></i>Precatório:</strong> {{ precatorio.cnj }}<br>
+                    <strong><i class="fas fa-building me-2"></i>Origem:</strong> {{ precatorio.origem|default:"Não informado" }}<br>
+                    <strong><i class="fas fa-money-bill-wave me-2"></i>Valor de Face:</strong> R$ {{ precatorio.valor_de_face|floatformat:2 }}
+                </div>
+                
+                <div class="alert alert-danger">
+                    <strong><i class="fas fa-exclamation-triangle me-2"></i>Atenção:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Esta ação não pode ser desfeita</li>
+                        <li>O precatório só pode ser excluído se não estiver associado a clientes, alvarás ou requerimentos</li>
+                        <li>Todos os dados do precatório serão permanentemente removidos</li>
+                        <li>Histórico e relacionamentos serão perdidos</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <form method="post" action="{% url 'delete_precatorio' precatorio.cnj %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Excluir Definitivamente
+                    </button>
+                </form>
             </div>
         </div>
     </div>

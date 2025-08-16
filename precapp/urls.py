@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .views import (
-    novoPrec_view, home_view, precatorio_view, precatorio_detalhe_view, 
+    novoPrec_view, home_view, precatorio_view, precatorio_detalhe_view, delete_precatorio_view,
     clientes_view, cliente_detail_view, novo_cliente_view, delete_cliente_view,
     alvaras_view, alvara_detail_view, delete_alvara_view,
     requerimento_list_view, login_view, logout_view
@@ -17,6 +17,7 @@ urlpatterns = [
     path('precatorios/novo/', novoPrec_view, name='novo_precatorio'),
     path('precatorios/', precatorio_view, name='precatorios'),
     path('precatorios/<str:precatorio_cnj>/', precatorio_detalhe_view, name='precatorio_detalhe'),
+    path('precatorios/<str:precatorio_cnj>/delete/', delete_precatorio_view, name='delete_precatorio'),
     path('clientes/', clientes_view, name='clientes'),
     path('clientes/novo/', novo_cliente_view, name='novo_cliente'),
     path('clientes/<str:cpf>/', cliente_detail_view, name='cliente_detail'),

@@ -557,3 +557,34 @@ def delete_cliente_view(request, cpf):
     # If not POST, redirect to client detail
     return redirect('cliente_detail', cpf=cpf)
 
+
+@login_required
+def delete_precatorio_view(request, precatorio_cnj):
+    """View to delete a precatório"""
+    precatorio = get_object_or_404(Precatorio, cnj=precatorio_cnj)
+    
+    if request.method == 'POST':
+        precatorio_cnj_display = precatorio.cnj
+        
+        # Check if precatorio has associated clientes
+        if precatorio.clientes.exists():
+            messages.error(request, f'Não é possível excluir o precatório {precatorio_cnj_display} pois ele possui clientes associados. Remova as associações primeiro.')
+            return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
+        
+        # Check if precatorio has associated alvaras
+        if hasattr(precatorio, 'alvara_set') and precatorio.alvara_set.exists():
+            messages.error(request, f'Não é possível excluir o precatório {precatorio_cnj_display} pois ele possui alvarás associados. Remova os alvarás primeiro.')
+            return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
+        
+        # Check if precatorio has associated requerimentos
+        if hasattr(precatorio, 'requerimento_set') and precatorio.requerimento_set.exists():
+            messages.error(request, f'Não é possível excluir o precatório {precatorio_cnj_display} pois ele possui requerimentos associados. Remova os requerimentos primeiro.')
+            return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
+        
+        precatorio.delete()
+        messages.success(request, f'Precatório {precatorio_cnj_display} foi excluído com sucesso!')
+        return redirect('precatorios')
+    
+    # If not POST, redirect to precatorio detail
+    return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
+
