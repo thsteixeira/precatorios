@@ -195,7 +195,6 @@ class PrecatorioForm(forms.ModelForm):
         model = Precatorio
         fields = [
             "cnj",
-            "data_oficio",
             "orcamento",
             "origem",
             "quitado",
@@ -210,7 +209,6 @@ class PrecatorioForm(forms.ModelForm):
         ]
         
         widgets = {
-            'data_oficio': BrazilianDateInput(attrs={'required': False}),
             'orcamento': forms.NumberInput(attrs={
                 'type': 'number', 
                 'class': 'form-control',
@@ -226,7 +224,6 @@ class PrecatorioForm(forms.ModelForm):
         }
         
         labels = {
-            'data_oficio': 'Data do Ofício (Opcional)',
             'orcamento': 'Ano do Orçamento',
             'quitado': 'Quitado',
             'data_ultima_atualizacao': 'Data da Última Atualização (Opcional)',

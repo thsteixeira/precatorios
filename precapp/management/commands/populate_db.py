@@ -112,7 +112,6 @@ class Command(BaseCommand):
         precatorios_data = [
             {
                 'cnj': '1234567-89.2023.8.26.0100',
-                'data_oficio': date(2023, 3, 15),
                 'orcamento': 2023,
                 'origem': '5432109-87.2022.8.26.0001',
                 'quitado': False,
@@ -127,7 +126,6 @@ class Command(BaseCommand):
             },
             {
                 'cnj': '2345678-90.2023.8.26.0200',
-                'data_oficio': date(2023, 5, 22),
                 'orcamento': 2023,
                 'origem': '6543210-98.2022.8.26.0002',
                 'quitado': True,
@@ -142,7 +140,6 @@ class Command(BaseCommand):
             },
             {
                 'cnj': '3456789-01.2024.8.26.0300',
-                'data_oficio': date(2024, 1, 10),
                 'orcamento': 2024,
                 'origem': '7654321-09.2023.8.26.0003',
                 'quitado': False,
@@ -157,7 +154,6 @@ class Command(BaseCommand):
             },
             {
                 'cnj': '4567890-12.2024.8.26.0400',
-                'data_oficio': date(2024, 6, 5),
                 'orcamento': 2024,
                 'origem': '8765432-10.2023.8.26.0004',
                 'quitado': False,
@@ -172,7 +168,6 @@ class Command(BaseCommand):
             },
             {
                 'cnj': '5678901-23.2024.8.26.0500',
-                'data_oficio': date(2024, 9, 12),
                 'orcamento': 2024,
                 'origem': '9876543-21.2023.8.26.0005',
                 'quitado': False,

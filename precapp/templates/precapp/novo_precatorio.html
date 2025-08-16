@@ -91,16 +91,6 @@
                         </div>
                         
                         <div class="col-md-6 mb-3">
-                            <label for="{{ form.data_oficio.id_for_label }}" class="form-label">
-                                <strong><i class="fas fa-calendar me-1"></i>{{ form.data_oficio.label }}</strong>
-                            </label>
-                            {{ form.data_oficio }}
-                            {% if form.data_oficio.errors %}
-                                <div class="text-danger mt-1">{{ form.data_oficio.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
                             <label for="{{ form.orcamento.id_for_label }}" class="form-label">
                                 <strong><i class="fas fa-calendar-alt me-1"></i>{{ form.orcamento.label }}</strong>
                             </label>

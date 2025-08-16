@@ -91,7 +91,6 @@
                             <thead class="table-light">
                                 <tr>
                                     <th scope="col">CNJ</th>
-                                    <th scope="col">Data Ofício</th>
                                     <th scope="col">Origem</th>
                                     <th scope="col">Valor</th>
                                     <th scope="col">Status</th>
@@ -107,10 +106,6 @@
                                                title="Clique para ver detalhes">
                                                 {{ precatorio.cnj|truncatechars:20 }}
                                             </a>
-                                        </td>
-                                        <td>
-                                            <i class="fas fa-calendar text-muted me-1"></i>
-                                            {{ precatorio.data_oficio|date:"d/m/Y" }}
                                         </td>
                                         <td>{{ precatorio.origem|truncatechars:25 }}</td>
                                         <td>

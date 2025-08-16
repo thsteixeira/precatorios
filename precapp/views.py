@@ -74,7 +74,7 @@ def home_view(request):
     total_valor_requerimentos = Requerimento.objects.aggregate(total=Sum('valor'))['total'] or 0
     
     # Get recent activity
-    recent_precatorios = Precatorio.objects.prefetch_related('clientes').order_by('-data_oficio')[:5]
+    recent_precatorios = Precatorio.objects.prefetch_related('clientes').order_by('cnj')[:5]
     recent_alvaras = Alvara.objects.select_related('cliente', 'precatorio').order_by('-id')[:5]
     recent_requerimentos = Requerimento.objects.select_related('cliente', 'precatorio').order_by('-id')[:5]
     
@@ -437,7 +437,7 @@ def cliente_detail_view(request, cpf):
     cliente = get_object_or_404(Cliente, cpf=cpf)
     
     # Get all precatorios associated with this client
-    associated_precatorios = cliente.precatorios.all().order_by('-data_oficio')
+    associated_precatorios = cliente.precatorios.all().order_by('cnj')
     
     # Initialize forms
     client_form = None

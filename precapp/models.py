@@ -58,7 +58,6 @@ class Fase(models.Model):
         ]
 class Precatorio(models.Model):
     cnj = models.CharField(max_length=200, primary_key=True)
-    data_oficio = models.DateField(null=True, blank=True)
     orcamento = models.IntegerField(
         validators=[
             MinValueValidator(1988),
@@ -84,7 +83,7 @@ class Precatorio(models.Model):
     class Meta:
         verbose_name = "Precatório"
         verbose_name_plural = "Precatórios"
-        ordering = ['-data_oficio']  # Django handles null values in ordering automatically
+        ordering = ['cnj']  # Changed from data_oficio to cnj
 
 
 class Cliente(models.Model):

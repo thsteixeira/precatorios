@@ -138,7 +138,6 @@ class PrecatorioModelTest(TestCase):
         """Set up test data"""
         self.precatorio_data = {
             'cnj': '1234567-89.2023.8.26.0100',
-            'data_oficio': date(2023, 1, 1),
             'orcamento': 2023,
             'origem': '1234567-89.2022.8.26.0001',
             'valor_de_face': Decimal('100000.00'),
@@ -218,7 +217,6 @@ class AlvaraModelTest(TestCase):
         """Set up test data"""
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
-            data_oficio=date(2023, 1, 1),
             orcamento=2023,
             origem='1234567-89.2022.8.26.0001',
             valor_de_face=100000.00,
@@ -284,7 +282,6 @@ class RequerimentoModelTest(TestCase):
         """Set up test data"""
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
-            data_oficio=date(2023, 1, 1),
             orcamento=2023,
             origem='1234567-89.2022.8.26.0001',
             valor_de_face=100000.00,
@@ -388,7 +385,6 @@ class AlvaraFormTest(TestCase):
         """Set up test data"""
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
-            data_oficio=date(2023, 1, 1),
             orcamento=2023,
             origem='1234567-89.2022.8.26.0001',
             valor_de_face=100000.00,
@@ -457,7 +453,6 @@ class RequerimentoFormTest(TestCase):
         """Set up test data"""
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
-            data_oficio=date(2023, 1, 1),
             orcamento=2023,
             origem='1234567-89.2022.8.26.0001',
             valor_de_face=100000.00,
@@ -528,7 +523,6 @@ class PrecatorioFormTest(TestCase):
         """Set up test form data"""
         self.valid_form_data = {
             'cnj': '1234567-89.2023.8.26.0100',
-            'data_oficio': '2023-01-01',
             'orcamento': '2023',
             'origem': '1234567-89.2022.8.26.0001',
             'valor_de_face': '100000.00',
@@ -562,7 +556,6 @@ class ClienteFormTest(TestCase):
         """Set up test data"""
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
-            data_oficio=date(2023, 1, 1),
             orcamento=2023,
             origem='1234567-89.2022.8.26.0001',
             valor_de_face=100000.00,
@@ -660,7 +653,6 @@ class IntegrationTest(TestCase):
         # Create precatorio
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
-            data_oficio=date(2023, 1, 1),
             orcamento=2023,
             origem='1234567-89.2022.8.26.0001',
             valor_de_face=100000.00,
@@ -755,7 +747,6 @@ class ViewTest(TestCase):
         
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
-            data_oficio=date(2023, 1, 1),
             orcamento=2023,
             origem='1234567-89.2022.8.26.0001',
             valor_de_face=100000.00,
@@ -808,7 +799,6 @@ class ManyToManyRelationshipTest(TestCase):
         """Set up test data"""
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
-            data_oficio=date(2023, 1, 1),
             orcamento=2023,
             origem='1234567-89.2022.8.26.0001',
             valor_de_face=100000.00,
@@ -824,7 +814,6 @@ class ManyToManyRelationshipTest(TestCase):
         
         self.precatorio2 = Precatorio.objects.create(
             cnj='7654321-12.2023.8.26.0200',
-            data_oficio=date(2023, 2, 1),
             orcamento=2023,
             origem='1234567-98.2022.8.26.0002',
             valor_de_face=75000.00,
@@ -905,7 +894,6 @@ class PrecatorioViewFilterTest(TestCase):
         # Create test precatorios with different attributes
         self.precatorio1 = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
-            data_oficio=date(2023, 1, 15),
             orcamento=2023,
             origem='Tribunal de São Paulo',
             quitado=False,
@@ -921,7 +909,6 @@ class PrecatorioViewFilterTest(TestCase):
         
         self.precatorio2 = Precatorio.objects.create(
             cnj='2345678-90.2023.8.26.0200',
-            data_oficio=date(2023, 2, 20),
             orcamento=2023,
             origem='Tribunal de Campinas',
             quitado=True,
@@ -937,7 +924,6 @@ class PrecatorioViewFilterTest(TestCase):
         
         self.precatorio3 = Precatorio.objects.create(
             cnj='3456789-01.2023.8.26.0300',
-            data_oficio=date(2023, 3, 25),
             orcamento=2023,
             origem='Tribunal de Santos',
             quitado=False,
@@ -1059,7 +1045,6 @@ class ClienteViewFilterTest(TestCase):
         # Create test precatorios
         self.precatorio1 = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
-            data_oficio=date(2023, 1, 15),
             orcamento=2023,
             origem='Tribunal de São Paulo',
             quitado=False,
@@ -1075,7 +1060,6 @@ class ClienteViewFilterTest(TestCase):
         
         self.precatorio2 = Precatorio.objects.create(
             cnj='2345678-90.2023.8.26.0200',
-            data_oficio=date(2023, 2, 20),
             orcamento=2023,
             origem='Tribunal de Campinas',
             quitado=True,
@@ -1238,7 +1222,6 @@ class AlvaraViewFilterTest(TestCase):
         # Create test precatorios
         self.precatorio1 = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
-            data_oficio=date(2023, 1, 15),
             orcamento=2023,
             origem='Tribunal de São Paulo',
             quitado=False,
@@ -1254,7 +1237,6 @@ class AlvaraViewFilterTest(TestCase):
         
         self.precatorio2 = Precatorio.objects.create(
             cnj='2345678-90.2023.8.26.0200',
-            data_oficio=date(2023, 2, 20),
             orcamento=2023,
             origem='Tribunal de Campinas',
             quitado=True,
