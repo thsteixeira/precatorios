@@ -13,13 +13,63 @@
                         <i class="fas fa-gavel text-primary me-3"></i>
                         Sistema de Controle de Precatórios
                     </h1>
-                    <p class="lead">Gerencie precatórios, clientes e alvarás de forma eficiente, organizada e segura.</p>
+                    <p class="lead">Gerencie precatórios, clientes, alvarás e requerimentos com sistema completo de fases e filtros avançados.</p>
                     <hr class="my-4">
-                    <p>Controle completo do processo judicial desde o precatório até a emissão de alvarás.</p>
+                    <p>Controle completo do processo judicial desde o precatório até a emissão de alvarás, incluindo gestão de requerimentos e fases personalizadas.</p>
                 </div>
                 <div class="col-md-4 text-center">
                     <i class="fas fa-balance-scale fa-5x text-primary opacity-75"></i>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Dashboard -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="mb-4"><i class="fas fa-chart-bar text-primary me-2"></i>Visão Geral do Sistema</h3>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-primary">
+            <div class="card-body">
+                <i class="fas fa-gavel fa-3x text-primary mb-3"></i>
+                <h2 class="text-primary">{{ total_precatorios }}</h2>
+                <p class="card-text">Precatórios</p>
+                <small class="text-muted">R$ {{ total_valor_precatorios|floatformat:2 }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <i class="fas fa-users fa-3x text-info mb-3"></i>
+                <h2 class="text-info">{{ total_clientes }}</h2>
+                <p class="card-text">Clientes</p>
+                <small class="text-muted">Cadastrados no sistema</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <i class="fas fa-file-contract fa-3x text-success mb-3"></i>
+                <h2 class="text-success">{{ total_alvaras }}</h2>
+                <p class="card-text">Alvarás</p>
+                <small class="text-muted">R$ {{ valor_alvaras|floatformat:2 }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <i class="fas fa-file-signature fa-3x text-warning mb-3"></i>
+                <h2 class="text-warning">{{ total_requerimentos }}</h2>
+                <p class="card-text">Requerimentos</p>
+                <small class="text-muted">R$ {{ total_valor_requerimentos|floatformat:2 }}</small>
             </div>
         </div>
     </div>
@@ -42,15 +92,15 @@
                 </h5>
             </div>
             <div class="card-body">
-                <p class="card-text">Controle completo dos precatórios com validação CNJ e acompanhamento de valores.</p>
+                <p class="card-text">Controle completo dos precatórios com validação CNJ, filtros avançados e acompanhamento de valores.</p>
                 <div class="row">
                     <div class="col-6">
-                        <a href="{% url 'novo_precatorio' %}" class="btn btn-success btn-block mb-2 w-100">
+                        <a href="{% url 'novo_precatorio' %}" class="btn btn-primary btn-block mb-2 w-100">
                             <i class="fas fa-plus me-1"></i>Novo Precatório
                         </a>
                     </div>
                     <div class="col-6">
-                        <a href="{% url 'precatorios' %}" class="btn btn-primary btn-block mb-2 w-100">
+                        <a href="{% url 'precatorios' %}" class="btn btn-outline-primary btn-block mb-2 w-100">
                             <i class="fas fa-list me-1"></i>Ver Todos
                         </a>
                     </div>
@@ -59,9 +109,9 @@
                     <h6 class="text-muted">Recursos:</h6>
                     <ul class="list-unstyled small">
                         <li><i class="fas fa-check text-success me-1"></i>Validação de números CNJ</li>
+                        <li><i class="fas fa-check text-success me-1"></i>Filtros por CNJ, origem, status e prioridade</li>
                         <li><i class="fas fa-check text-success me-1"></i>Controle de valores e datas</li>
-                        <li><i class="fas fa-check text-success me-1"></i>Status de quitação</li>
-                        <li><i class="fas fa-check text-success me-1"></i>Prioridades e acordos</li>
+                        <li><i class="fas fa-check text-success me-1"></i>Sistema de prioridades e acordos</li>
                     </ul>
                 </div>
             </div>
@@ -76,7 +126,7 @@
                 </h5>
             </div>
             <div class="card-body">
-                <p class="card-text">Visualização e controle de clientes beneficiários dos precatórios. Clientes são criados diretamente nos precatórios.</p>
+                <p class="card-text">Visualização e controle de clientes beneficiários com sistema de filtros avançados.</p>
                 <div class="row">
                     <div class="col-12">
                         <a href="{% url 'clientes' %}" class="btn btn-info btn-block mb-2 w-100">
@@ -87,9 +137,9 @@
                 <div class="mt-3">
                     <h6 class="text-muted">Recursos:</h6>
                     <ul class="list-unstyled small">
-                        <li><i class="fas fa-check text-success me-1"></i>Dados pessoais completos</li>
+                        <li><i class="fas fa-check text-success me-1"></i>Filtros por nome, CPF, prioridade</li>
+                        <li><i class="fas fa-check text-success me-1"></i>Busca por precatório associado</li>
                         <li><i class="fas fa-check text-success me-1"></i>Controle de prioridade legal</li>
-                        <li><i class="fas fa-check text-success me-1"></i>Vinculação a precatórios</li>
                         <li><i class="fas fa-check text-success me-1"></i>Histórico de relacionamentos</li>
                     </ul>
                 </div>
@@ -98,7 +148,7 @@
     </div>
 </div>
 
-<!-- Alvarás and Analytics Section -->
+<!-- Alvarás and Requerimentos Section -->
 <div class="row mb-4">
     <div class="col-md-6">
         <div class="card h-100 border-success">
@@ -108,10 +158,10 @@
                 </h5>
             </div>
             <div class="card-body">
-                <p class="card-text">Emissão e controle de alvarás com valores financeiros detalhados.</p>
+                <p class="card-text">Emissão e controle de alvarás com sistema de fases personalizadas e filtros detalhados.</p>
                 <div class="row">
                     <div class="col-12">
-                        <a href="{% url 'alvaras' %}" class="btn btn-outline-success btn-block mb-2 w-100">
+                        <a href="{% url 'alvaras' %}" class="btn btn-success btn-block mb-2 w-100">
                             <i class="fas fa-list me-1"></i>Ver Todos os Alvarás
                         </a>
                     </div>
@@ -119,10 +169,10 @@
                 <div class="mt-3">
                     <h6 class="text-muted">Recursos:</h6>
                     <ul class="list-unstyled small">
-                        <li><i class="fas fa-check text-success me-1"></i>Valores principais e honorários</li>
-                        <li><i class="fas fa-check text-success me-1"></i>Controle de tipos e fases</li>
-                        <li><i class="fas fa-check text-success me-1"></i>Status de pagamento</li>
-                        <li><i class="fas fa-check text-success me-1"></i>Relatórios financeiros</li>
+                        <li><i class="fas fa-check text-success me-1"></i>Sistema de fases personalizadas</li>
+                        <li><i class="fas fa-check text-success me-1"></i>Filtros por nome, precatório, tipo e fase</li>
+                        <li><i class="fas fa-check text-success me-1"></i>Controle de valores e honorários</li>
+                        <li><i class="fas fa-check text-success me-1"></i>Relatórios financeiros detalhados</li>
                     </ul>
                 </div>
             </div>
@@ -133,26 +183,79 @@
         <div class="card h-100 border-warning">
             <div class="card-header bg-warning text-dark">
                 <h5 class="mb-0">
-                    <i class="fas fa-chart-bar me-2"></i>Relatórios e Estatísticas
+                    <i class="fas fa-file-signature me-2"></i>Gestão de Requerimentos
                 </h5>
             </div>
             <div class="card-body">
-                <p class="card-text">Acompanhe estatísticas e gere relatórios detalhados do sistema.</p>
+                <p class="card-text">Controle completo de requerimentos com tipos de pedido específicos e fases personalizadas.</p>
                 <div class="row">
-                    <div class="col-12 mb-2">
-                        <button class="btn btn-outline-warning btn-block w-100 disabled">
+                    <div class="col-12">
+                        <a href="{% url 'requerimentos' %}" class="btn btn-warning btn-block mb-2 w-100">
+                            <i class="fas fa-list me-1"></i>Ver Todos os Requerimentos
+                        </a>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <h6 class="text-muted">Recursos:</h6>
+                    <ul class="list-unstyled small">
+                        <li><i class="fas fa-check text-success me-1"></i>Tipos: prioridade por doença/idade</li>
+                        <li><i class="fas fa-check text-success me-1"></i>Acordos sobre valores e honorários</li>
+                        <li><i class="fas fa-check text-success me-1"></i>Sistema de fases específicas</li>
+                        <li><i class="fas fa-check text-success me-1"></i>Filtros avançados por tipo e fase</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Phase Management Section -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-secondary">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>Sistema de Fases Personalizadas
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Crie e gerencie fases customizadas para alvarás e requerimentos com cores e descrições personalizadas.</p>
+                <div class="row">
+                    <div class="col-md-4">
+                        <a href="{% url 'fases' %}" class="btn btn-secondary btn-block mb-2 w-100">
+                            <i class="fas fa-list me-1"></i>Ver Fases
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'nova_fase' %}" class="btn btn-outline-secondary btn-block mb-2 w-100">
+                            <i class="fas fa-plus me-1"></i>Nova Fase
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-outline-secondary btn-block w-100 disabled">
                             <i class="fas fa-chart-line me-1"></i>Relatórios (Em breve)
                         </button>
                     </div>
                 </div>
                 <div class="mt-3">
-                    <h6 class="text-muted">Funcionalidades futuras:</h6>
-                    <ul class="list-unstyled small">
-                        <li><i class="fas fa-clock text-warning me-1"></i>Dashboard com gráficos</li>
-                        <li><i class="fas fa-clock text-warning me-1"></i>Relatórios em PDF</li>
-                        <li><i class="fas fa-clock text-warning me-1"></i>Exportação de dados</li>
-                        <li><i class="fas fa-clock text-warning me-1"></i>Análises financeiras</li>
-                    </ul>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Fases para Alvarás:</h6>
+                            <ul class="list-unstyled small">
+                                <li><i class="fas fa-circle text-primary me-1"></i>Separadas por tipo de documento</li>
+                                <li><i class="fas fa-circle text-primary me-1"></i>Cores personalizáveis</li>
+                                <li><i class="fas fa-circle text-primary me-1"></i>Descrições detalhadas</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Fases para Requerimentos:</h6>
+                            <ul class="list-unstyled small">
+                                <li><i class="fas fa-circle text-warning me-1"></i>Sistema independente de alvarás</li>
+                                <li><i class="fas fa-circle text-warning me-1"></i>Controle de workflow específico</li>
+                                <li><i class="fas fa-circle text-warning me-1"></i>Acompanhamento de status</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -170,7 +273,7 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-3 mb-3">
+                    <div class="col-md-2 mb-3">
                         <div class="d-grid">
                             <a href="{% url 'novo_precatorio' %}" class="btn btn-outline-primary btn-lg">
                                 <i class="fas fa-plus-circle fa-2x mb-2 d-block"></i>
@@ -178,7 +281,7 @@
                             </a>
                         </div>
                     </div>
-                    <div class="col-md-3 mb-3">
+                    <div class="col-md-2 mb-3">
                         <div class="d-grid">
                             <a href="{% url 'alvaras' %}" class="btn btn-outline-success btn-lg">
                                 <i class="fas fa-file-contract fa-2x mb-2 d-block"></i>
@@ -186,9 +289,33 @@
                             </a>
                         </div>
                     </div>
-                    <div class="col-md-3 mb-3">
+                    <div class="col-md-2 mb-3">
                         <div class="d-grid">
-                            <a href="{% url 'precatorios' %}" class="btn btn-outline-secondary btn-lg">
+                            <a href="{% url 'requerimentos' %}" class="btn btn-outline-warning btn-lg">
+                                <i class="fas fa-file-signature fa-2x mb-2 d-block"></i>
+                                <small>Ver Requerimentos</small>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="d-grid">
+                            <a href="{% url 'clientes' %}" class="btn btn-outline-info btn-lg">
+                                <i class="fas fa-users fa-2x mb-2 d-block"></i>
+                                <small>Ver Clientes</small>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="d-grid">
+                            <a href="{% url 'fases' %}" class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-cogs fa-2x mb-2 d-block"></i>
+                                <small>Gerenciar Fases</small>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="d-grid">
+                            <a href="{% url 'precatorios' %}" class="btn btn-outline-dark btn-lg">
                                 <i class="fas fa-search fa-2x mb-2 d-block"></i>
                                 <small>Consultar Sistema</small>
                             </a>
@@ -199,6 +326,92 @@
         </div>
     </div>
 </div>
+
+<!-- Recent Activity -->
+{% if recent_precatorios or recent_alvaras or recent_requerimentos %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="mb-4"><i class="fas fa-clock text-info me-2"></i>Atividade Recente</h3>
+    </div>
+</div>
+
+<div class="row mb-4">
+    {% if recent_precatorios %}
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="fas fa-gavel me-2"></i>Últimos Precatórios</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for precatorio in recent_precatorios %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">{{ precatorio.cnj }}</div>
+                                <small class="text-muted">{{ precatorio.origem|truncatechars:30 }}</small>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">R$ {{ precatorio.valor_de_face|floatformat:0 }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if recent_alvaras %}
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0"><i class="fas fa-file-contract me-2"></i>Últimos Alvarás</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for alvara in recent_alvaras %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">{{ alvara.cliente.nome }}</div>
+                                <small class="text-muted">{{ alvara.precatorio.cnj }}</small>
+                            </div>
+                            <span class="badge bg-success rounded-pill">{{ alvara.tipo }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if recent_requerimentos %}
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0"><i class="fas fa-file-signature me-2"></i>Últimos Requerimentos</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for requerimento in recent_requerimentos %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">{{ requerimento.cliente.nome }}</div>
+                                <small class="text-muted">{{ requerimento.get_pedido_display }}</small>
+                            </div>
+                            <span class="badge bg-warning text-dark rounded-pill">R$ {{ requerimento.valor|floatformat:0 }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 
 <!-- System Information -->
 <div class="row">
@@ -211,11 +424,12 @@
             </div>
             <div class="card-body">
                 <ul class="list-unstyled">
-                    <li class="mb-2"><i class="fas fa-chevron-right text-primary me-2"></i>Gestão completa de precatórios</li>
-                    <li class="mb-2"><i class="fas fa-chevron-right text-info me-2"></i>Controle de clientes beneficiários</li>
-                    <li class="mb-2"><i class="fas fa-chevron-right text-success me-2"></i>Emissão e controle de alvarás</li>
-                    <li class="mb-2"><i class="fas fa-chevron-right text-warning me-2"></i>Validação de números CNJ</li>
-                    <li class="mb-2"><i class="fas fa-chevron-right text-danger me-2"></i>Sistema de mensagens e notificações</li>
+                    <li class="mb-2"><i class="fas fa-chevron-right text-primary me-2"></i>Gestão completa de precatórios com filtros avançados</li>
+                    <li class="mb-2"><i class="fas fa-chevron-right text-info me-2"></i>Controle de clientes com busca por múltiplos critérios</li>
+                    <li class="mb-2"><i class="fas fa-chevron-right text-success me-2"></i>Sistema de alvarás com fases personalizadas</li>
+                    <li class="mb-2"><i class="fas fa-chevron-right text-warning me-2"></i>Gestão de requerimentos com tipos específicos</li>
+                    <li class="mb-2"><i class="fas fa-chevron-right text-secondary me-2"></i>Sistema de fases customizáveis para documentos</li>
+                    <li class="mb-2"><i class="fas fa-chevron-right text-danger me-2"></i>Filtros avançados em todas as listagens</li>
                     <li><i class="fas fa-chevron-right text-dark me-2"></i>Interface responsiva e moderna</li>
                 </ul>
             </div>
@@ -236,6 +450,7 @@
                     <li class="mb-2"><i class="fas fa-calendar-check text-success me-2"></i>Gestão de datas e prazos</li>
                     <li class="mb-2"><i class="fas fa-user-shield text-warning me-2"></i>Controle de prioridades legais</li>
                     <li class="mb-2"><i class="fas fa-link text-danger me-2"></i>Relacionamentos entre entidades</li>
+                    <li class="mb-2"><i class="fas fa-palette text-secondary me-2"></i>Fases com cores personalizáveis</li>
                     <li><i class="fas fa-database text-dark me-2"></i>Armazenamento seguro de dados</li>
                 </ul>
             </div>
@@ -264,6 +479,10 @@
         font-size: 4rem;
     }
     
+    .fa-3x {
+        font-size: 2.5rem;
+    }
+    
     .btn-block {
         display: block;
         width: 100%;
@@ -275,6 +494,27 @@
     
     .list-unstyled li {
         padding: 2px 0;
+    }
+    
+    .statistics-card {
+        transition: all 0.3s ease;
+    }
+    
+    .statistics-card:hover {
+        transform: scale(1.05);
+    }
+    
+    .list-group-item {
+        border-left: none;
+        border-right: none;
+    }
+    
+    .list-group-item:first-child {
+        border-top: none;
+    }
+    
+    .list-group-item:last-child {
+        border-bottom: none;
     }
 </style>
 {% endblock %}

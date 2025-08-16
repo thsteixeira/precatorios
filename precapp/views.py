@@ -48,8 +48,50 @@ def logout_view(request):
 
 @login_required
 def home_view(request):
-    """Simple home view"""
-    return render(request, 'precapp/home.html')
+    """Home view with dashboard statistics"""
+    from django.db.models import Sum, Count
+    
+    # Get counts for dashboard
+    total_precatorios = Precatorio.objects.count()
+    total_clientes = Cliente.objects.count()
+    total_alvaras = Alvara.objects.count()
+    total_requerimentos = Requerimento.objects.count()
+    
+    # Get financial statistics - using correct field names
+    total_valor_precatorios = Precatorio.objects.aggregate(total=Sum('valor_de_face'))['total'] or 0
+    total_valor_alvaras = Alvara.objects.aggregate(
+        principal=Sum('valor_principal'),
+        contratuais=Sum('honorarios_contratuais'),
+        sucumbenciais=Sum('honorarios_sucumbenciais')
+    )
+    
+    valor_alvaras = (
+        (total_valor_alvaras['principal'] or 0) + 
+        (total_valor_alvaras['contratuais'] or 0) + 
+        (total_valor_alvaras['sucumbenciais'] or 0)
+    )
+    
+    total_valor_requerimentos = Requerimento.objects.aggregate(total=Sum('valor'))['total'] or 0
+    
+    # Get recent activity
+    recent_precatorios = Precatorio.objects.prefetch_related('clientes').order_by('-data_oficio')[:5]
+    recent_alvaras = Alvara.objects.select_related('cliente', 'precatorio').order_by('-id')[:5]
+    recent_requerimentos = Requerimento.objects.select_related('cliente', 'precatorio').order_by('-id')[:5]
+    
+    context = {
+        'total_precatorios': total_precatorios,
+        'total_clientes': total_clientes,
+        'total_alvaras': total_alvaras,
+        'total_requerimentos': total_requerimentos,
+        'total_valor_precatorios': total_valor_precatorios,
+        'valor_alvaras': valor_alvaras,
+        'total_valor_requerimentos': total_valor_requerimentos,
+        'recent_precatorios': recent_precatorios,
+        'recent_alvaras': recent_alvaras,
+        'recent_requerimentos': recent_requerimentos,
+    }
+    
+    return render(request, 'precapp/home.html', context)
 
 @login_required
 def novoPrec_view(request):
