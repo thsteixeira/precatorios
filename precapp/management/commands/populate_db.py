@@ -24,60 +24,86 @@ class Command(BaseCommand):
             Fase.objects.all().delete()
             self.stdout.write(self.style.SUCCESS('Existing data cleared.'))
 
-        # Sample Fases data
+        # Sample Fases data with tipos
         fases_data = [
+            # Alvará phases
             {
                 'nome': 'Aguardando Depósito',
                 'descricao': 'Alvará emitido, aguardando depósito judicial',
                 'cor': '#ffc107',
+                'tipo': 'alvara',
                 'ativa': True,
             },
             {
                 'nome': 'Depósito Judicial',
                 'descricao': 'Valor depositado judicialmente',
                 'cor': '#17a2b8',
+                'tipo': 'alvara',
                 'ativa': True,
             },
             {
                 'nome': 'Recebido pelo Cliente',
                 'descricao': 'Valor já recebido pelo cliente',
                 'cor': '#28a745',
+                'tipo': 'alvara',
                 'ativa': True,
             },
             {
                 'nome': 'Honorários Recebidos',
                 'descricao': 'Honorários já recebidos pelo escritório',
                 'cor': '#6f42c1',
+                'tipo': 'alvara',
+                'ativa': True,
+            },
+            # Requerimento phases
+            {
+                'nome': 'Protocolado',
+                'descricao': 'Requerimento protocolado',
+                'cor': '#6c757d',
+                'tipo': 'requerimento',
                 'ativa': True,
             },
             {
                 'nome': 'Análise Inicial',
                 'descricao': 'Requerimento em análise inicial',
                 'cor': '#fd7e14',
+                'tipo': 'requerimento',
                 'ativa': True,
             },
             {
                 'nome': 'Em Andamento',
                 'descricao': 'Requerimento em andamento',
                 'cor': '#007bff',
+                'tipo': 'requerimento',
                 'ativa': True,
             },
             {
                 'nome': 'Deferido',
                 'descricao': 'Requerimento deferido',
                 'cor': '#28a745',
+                'tipo': 'requerimento',
                 'ativa': True,
             },
             {
                 'nome': 'Indeferido',
                 'descricao': 'Requerimento indeferido',
                 'cor': '#dc3545',
+                'tipo': 'requerimento',
+                'ativa': True,
+            },
+            # Shared phases (both)
+            {
+                'nome': 'Cancelado',
+                'descricao': 'Processo cancelado',
+                'cor': '#dc3545',
+                'tipo': 'ambos',
                 'ativa': True,
             },
             {
-                'nome': 'Protocolado',
-                'descricao': 'Requerimento protocolado',
-                'cor': '#6c757d',
+                'nome': 'Aguardando Documentação',
+                'descricao': 'Aguardando documentação complementar',
+                'cor': '#ffc107',
+                'tipo': 'ambos',
                 'ativa': True,
             },
         ]
@@ -293,13 +319,14 @@ class Command(BaseCommand):
                 for data in fases_data:
                     fase, created = Fase.objects.get_or_create(
                         nome=data['nome'],
+                        tipo=data['tipo'],
                         defaults=data
                     )
                     fases_created[data['nome']] = fase
                     if created:
-                        self.stdout.write(f'  ✓ Created fase: {fase.nome}')
+                        self.stdout.write(f'  ✓ Created fase: {fase.nome} ({fase.get_tipo_display()})')
                     else:
-                        self.stdout.write(f'  ⚠ Fase already exists: {fase.nome}')
+                        self.stdout.write(f'  ⚠ Fase already exists: {fase.nome} ({fase.get_tipo_display()})')
 
                 self.stdout.write('Creating precatórios...')
                 precatorios_created = []

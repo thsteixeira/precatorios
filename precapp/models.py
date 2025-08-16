@@ -7,24 +7,55 @@ from datetime import datetime
 
 class Fase(models.Model):
     """Model for custom phases that can be used in Alvarás and Requerimentos"""
-    nome = models.CharField(max_length=100, unique=True, help_text="Nome da fase")
+    
+    TIPO_CHOICES = [
+        ('alvara', 'Alvará'),
+        ('requerimento', 'Requerimento'),
+        ('ambos', 'Ambos (Alvará e Requerimento)'),
+    ]
+    
+    nome = models.CharField(max_length=100, help_text="Nome da fase")
     descricao = models.TextField(blank=True, help_text="Descrição opcional da fase")
     cor = models.CharField(
         max_length=7, 
         default='#6c757d', 
         help_text="Cor da fase em hexadecimal (ex: #007bff)"
     )
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_CHOICES,
+        default='ambos',
+        help_text="Define se a fase é específica para Alvarás, Requerimentos ou ambos"
+    )
     ativa = models.BooleanField(default=True, help_text="Se esta fase está ativa para uso")
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return self.nome
+        tipo_display = dict(self.TIPO_CHOICES).get(self.tipo, self.tipo)
+        return f"{self.nome} ({tipo_display})"
+    
+    @classmethod
+    def get_fases_for_alvara(cls):
+        """Get active phases that can be used for Alvarás"""
+        return cls.objects.filter(ativa=True, tipo__in=['alvara', 'ambos'])
+    
+    @classmethod
+    def get_fases_for_requerimento(cls):
+        """Get active phases that can be used for Requerimentos"""
+        return cls.objects.filter(ativa=True, tipo__in=['requerimento', 'ambos'])
     
     class Meta:
         verbose_name = "Fase"
         verbose_name_plural = "Fases"
-        ordering = ['nome']
+        ordering = ['tipo', 'nome']
+        # Remove unique constraint on nome to allow same names for different types
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nome', 'tipo'],
+                name='unique_fase_nome_tipo'
+            )
+        ]
 class Precatorio(models.Model):
     cnj = models.CharField(max_length=200, primary_key=True)
     data_oficio = models.DateField()

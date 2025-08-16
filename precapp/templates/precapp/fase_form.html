@@ -81,6 +81,25 @@
                             {% endif %}
                         </div>
 
+                        <!-- Tipo Field -->
+                        <div class="mb-3">
+                            <label for="{{ form.tipo.id_for_label }}" class="form-label">
+                                {{ form.tipo.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.tipo }}
+                            {% if form.tipo.help_text %}
+                                <div class="form-text">{{ form.tipo.help_text }}</div>
+                            {% endif %}
+                            {% if form.tipo.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.tipo.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
                         <!-- Cor Field -->
                         <div class="mb-3">
                             <label for="{{ form.cor.id_for_label }}" class="form-label">

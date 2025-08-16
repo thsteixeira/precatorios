@@ -432,7 +432,7 @@ class AlvaraForm(forms.ModelForm):
     )
     
     fase = forms.ModelChoiceField(
-        queryset=Fase.objects.filter(ativa=True),
+        queryset=None,  # Will be set in __init__
         empty_label='Selecione a fase',
         label='Fase',
         required=False,
@@ -513,6 +513,12 @@ class AlvaraForm(forms.ModelForm):
             except Cliente.DoesNotExist:
                 raise forms.ValidationError(f'Não foi encontrado um cliente com o CPF "{cpf}". Verifique se o número está correto ou cadastre o cliente primeiro.')
         return cpf
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set queryset to only show phases for Alvará
+        from .models import Fase
+        self.fields['fase'].queryset = Fase.get_fases_for_alvara()
 
     class Meta:
         model = Alvara
@@ -619,7 +625,7 @@ class RequerimentoForm(forms.ModelForm):
     )
     
     fase = forms.ModelChoiceField(
-        queryset=Fase.objects.filter(ativa=True),
+        queryset=None,  # Will be set in __init__
         empty_label='Selecione a fase',
         label='Fase',
         required=False,
@@ -643,6 +649,12 @@ class RequerimentoForm(forms.ModelForm):
             except Cliente.DoesNotExist:
                 raise forms.ValidationError(f'Não foi encontrado um cliente com o CPF "{cpf}". Verifique se o número está correto ou cadastre o cliente primeiro.')
         return cpf
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set queryset to only show phases for Requerimento
+        from .models import Fase
+        self.fields['fase'].queryset = Fase.get_fases_for_requerimento()
 
     class Meta:
         model = Requerimento
@@ -691,7 +703,7 @@ class AlvaraSimpleForm(forms.ModelForm):
     )
     
     fase = forms.ModelChoiceField(
-        queryset=Fase.objects.filter(ativa=True),
+        queryset=None,  # Will be set in __init__
         empty_label='Selecione a fase',
         label='Fase',
         required=False,
@@ -761,6 +773,12 @@ class AlvaraSimpleForm(forms.ModelForm):
                 raise forms.ValidationError(f'Não foi encontrado um cliente com o CPF "{cpf}". Verifique se o número está correto ou cadastre o cliente primeiro.')
         return cpf
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set queryset to only show phases for Alvará
+        from .models import Fase
+        self.fields['fase'].queryset = Fase.get_fases_for_alvara()
+
     class Meta:
         model = Alvara
         fields = ["tipo", "fase", "valor_principal", "honorarios_contratuais", "honorarios_sucumbenciais"]
@@ -798,6 +816,20 @@ class FaseForm(forms.ModelForm):
         })
     )
     
+    tipo = forms.ChoiceField(
+        choices=[
+            ('alvara', 'Alvará'),
+            ('requerimento', 'Requerimento'),
+            ('ambos', 'Ambos (Alvará e Requerimento)'),
+        ],
+        initial='ambos',
+        label='Tipo de Fase',
+        help_text='Define onde esta fase pode ser usada',
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        })
+    )
+    
     cor = forms.CharField(
         max_length=7,
         label='Cor',
@@ -821,17 +853,18 @@ class FaseForm(forms.ModelForm):
     )
     
     def clean_nome(self):
-        """Validate nome field to ensure uniqueness"""
+        """Validate nome field to ensure uniqueness within the same tipo"""
         nome = self.cleaned_data.get('nome')
-        if nome:
+        tipo = self.cleaned_data.get('tipo')
+        if nome and tipo:
             nome = nome.strip()
-            # Check if another fase with the same name exists (excluding current instance if editing)
-            existing_fase = Fase.objects.filter(nome__iexact=nome)
+            # Check if another fase with the same name and tipo exists (excluding current instance if editing)
+            existing_fase = Fase.objects.filter(nome__iexact=nome, tipo=tipo)
             if self.instance.pk:
                 existing_fase = existing_fase.exclude(pk=self.instance.pk)
             
             if existing_fase.exists():
-                raise forms.ValidationError('Já existe uma fase com este nome.')
+                raise forms.ValidationError(f'Já existe uma fase com o nome "{nome}" para o tipo "{dict(Fase.TIPO_CHOICES).get(tipo, tipo)}".')
         return nome
     
     def clean_cor(self):
@@ -845,6 +878,6 @@ class FaseForm(forms.ModelForm):
 
     class Meta:
         model = Fase
-        fields = ['nome', 'descricao', 'cor', 'ativa']
+        fields = ['nome', 'descricao', 'tipo', 'cor', 'ativa']
 
         

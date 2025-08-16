@@ -1,19 +1,20 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Fases - Precatórios{% endblock %}
+{% block title %}Fases - Sistema de Precatórios{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid">
     <!-- Header -->
     <div class="row mb-4">
-        <div class="col">
+        <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h1 class="h2 mb-0">
-                        <i class="fas fa-list-task me-2 text-primary"></i>
-                        Fases Personalizadas
-                    </h1>
-                    <p class="text-muted mb-0">Configure as fases utilizadas em Alvarás e Requerimentos</p>
+                    <h2 class="h3 mb-0">
+                        <i class="fas fa-list-ul me-2 text-primary"></i>
+                        Gerenciamento de Fases
+                    </h2>
+                    <p class="text-muted mb-0">Configure e gerencie as fases dos Alvarás e Requerimentos</p>
                 </div>
                 <div>
                     <a href="{% url 'nova_fase' %}" class="btn btn-primary">
@@ -26,7 +27,7 @@
 
     <!-- Statistics Cards -->
     <div class="row mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card bg-light">
                 <div class="card-body text-center">
                     <h3 class="text-primary mb-0">{{ total_fases }}</h3>
@@ -34,7 +35,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card bg-light">
                 <div class="card-body text-center">
                     <h3 class="text-success mb-0">{{ fases_ativas }}</h3>
@@ -42,7 +43,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card bg-light">
                 <div class="card-body text-center">
                     <h3 class="text-warning mb-0">{{ fases_inativas }}</h3>
@@ -50,18 +51,32 @@
                 </div>
             </div>
         </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h3 class="text-info mb-0">
+                        {% for fase in fases %}{% if fase.tipo == 'ambos' %}{{ forloop.counter0|add:1 }}{% endif %}{% endfor %}
+                    </h3>
+                    <small class="text-muted">Fases Compartilhadas</small>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Fases Table -->
-    <div class="card shadow-sm">
-        <div class="card-header">
+    {% if fases %}
+    
+    <!-- Alvará Phases -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
             <h6 class="card-title mb-0">
-                <i class="bi bi-list me-1"></i>
-                Todas as Fases
+                <i class="fas fa-file-alt me-2"></i>
+                Fases de Alvará
+                <span class="badge bg-light text-primary ms-2">
+                    {% for fase in fases %}{% if fase.tipo == 'alvara' %}{{ forloop.counter0|add:1 }}{% endif %}{% endfor %}
+                </span>
             </h6>
         </div>
         <div class="card-body p-0">
-            {% if fases %}
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
@@ -76,6 +91,7 @@
                     </thead>
                     <tbody>
                         {% for fase in fases %}
+                        {% if fase.tipo == 'alvara' %}
                         <tr>
                             <td class="align-middle">
                                 <div class="d-flex align-items-center">
@@ -98,23 +114,17 @@
                             </td>
                             <td class="align-middle">
                                 {% if fase.ativa %}
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-check-circle me-1"></i>Ativa
-                                    </span>
+                                    <span class="badge bg-success">Ativa</span>
                                 {% else %}
-                                    <span class="badge bg-warning text-dark">
-                                        <i class="fas fa-pause-circle me-1"></i>Inativa
-                                    </span>
+                                    <span class="badge bg-secondary">Inativa</span>
                                 {% endif %}
                             </td>
                             <td class="align-middle">
-                                <small class="text-muted">
-                                    {{ fase.criado_em|date:"d/m/Y H:i" }}
-                                </small>
+                                <small class="text-muted">{{ fase.criado_em|date:"d/m/Y H:i" }}</small>
                             </td>
                             <td class="align-middle text-center">
                                 <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-outline-primary" 
+                                    <button type="button" class="btn btn-outline-primary btn-sm" 
                                             data-bs-toggle="collapse" 
                                             data-bs-target="#editFaseForm-{{ fase.id }}" 
                                             aria-expanded="false" 
@@ -129,126 +139,200 @@
                         <tr>
                             <td colspan="6" class="p-0">
                                 <div class="collapse" id="editFaseForm-{{ fase.id }}">
-                                    <div class="card card-body m-2 bg-light">
-                                        <form method="post" action="{% url 'editar_fase' fase.id %}">
-                                            {% csrf_token %}
-                                            
-                                            <div class="row mb-3">
-                                                <div class="col-12">
-                                                    <h6 class="text-primary mb-3">
-                                                        <i class="fas fa-edit me-2"></i>Editar Fase: {{ fase.nome }}
-                                                    </h6>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="row">
-                                                <!-- Nome Field -->
-                                                <div class="col-md-4 mb-3">
-                                                    <label class="form-label">Nome da Fase <span class="text-danger">*</span></label>
-                                                    <input type="text" class="form-control" name="nome" value="{{ fase.nome }}" required>
-                                                </div>
-                                                
-                                                <!-- Cor Field -->
-                                                <div class="col-md-2 mb-3">
-                                                    <label class="form-label">Cor</label>
-                                                    <input type="color" class="form-control form-control-color" name="cor" value="{{ fase.cor }}">
-                                                </div>
-                                                
-                                                <!-- Ativa Field -->
-                                                <div class="col-md-2 mb-3">
-                                                    <label class="form-label d-block">Status</label>
-                                                    <div class="form-check">
-                                                        <input type="checkbox" class="form-check-input" name="ativa" id="ativa-{{ fase.id }}" {% if fase.ativa %}checked{% endif %}>
-                                                        <label class="form-check-label" for="ativa-{{ fase.id }}">Fase Ativa</label>
-                                                    </div>
-                                                </div>
-                                                
-                                                <!-- Actions -->
-                                                <div class="col-md-4 mb-3 d-flex align-items-end">
-                                                    <div class="btn-group w-100" role="group">
-                                                        <button type="submit" name="update_fase" class="btn btn-success btn-sm">
-                                                            <i class="fas fa-save me-1"></i>Salvar
-                                                        </button>
-                                                        <button type="button" class="btn btn-warning btn-sm" 
-                                                                onclick="toggleFaseStatus({{ fase.id }}, {{ fase.ativa|yesno:'false,true' }})">
-                                                            <i class="fas fa-{% if fase.ativa %}pause{% else %}play{% endif %} me-1"></i>
-                                                            {% if fase.ativa %}Desativar{% else %}Ativar{% endif %}
-                                                        </button>
-                                                        <button type="button" class="btn btn-danger btn-sm" 
-                                                                data-bs-toggle="modal" 
-                                                                data-bs-target="#deleteModal{{ fase.id }}">
-                                                            <i class="fas fa-trash me-1"></i>Excluir
-                                                        </button>
-                                                        <button type="button" 
-                                                                class="btn btn-secondary btn-sm" 
-                                                                data-bs-toggle="collapse" 
-                                                                data-bs-target="#editFaseForm-{{ fase.id }}">
-                                                            <i class="fas fa-times me-1"></i>Cancelar
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Descrição Field (full width) -->
-                                            <div class="row">
-                                                <div class="col-12 mb-3">
-                                                    <label class="form-label">Descrição</label>
-                                                    <textarea class="form-control" name="descricao" rows="2" placeholder="Descrição opcional da fase">{{ fase.descricao }}</textarea>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    </div>
+                                    {% include 'precapp/fase_edit_form.html' with fase=fase %}
                                 </div>
                             </td>
                         </tr>
-
-                        <!-- Delete Confirmation Modal -->
-                        <div class="modal fade" id="deleteModal{{ fase.id }}" tabindex="-1">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Confirmar Exclusão</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <p>Tem certeza que deseja excluir a fase <strong>"{{ fase.nome }}"</strong>?</p>
-                                        <div class="alert alert-warning">
-                                            <i class="fas fa-exclamation-triangle me-1"></i>
-                                            <strong>Atenção:</strong> Esta ação não pode ser desfeita. 
-                                            Se existirem Alvarás ou Requerimentos usando esta fase, 
-                                            a exclusão será impedida.
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                            Cancelar
-                                        </button>
-                                        <form method="post" action="{% url 'deletar_fase' fase.id %}" class="d-inline">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-danger">
-                                                <i class="fas fa-trash me-1"></i>Excluir
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-            {% else %}
-            <div class="text-center py-5">
-                <i class="fas fa-list-task display-1 text-muted"></i>
-                <h5 class="text-muted mt-3">Nenhuma fase cadastrada</h5>
-                <p class="text-muted">Comece criando sua primeira fase personalizada.</p>
-                <a href="{% url 'nova_fase' %}" class="btn btn-primary">
-                    <i class="fas fa-plus me-1"></i>Criar Primeira Fase
-                </a>
-            </div>
-            {% endif %}
         </div>
     </div>
+
+    <!-- Requerimento Phases -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white">
+            <h6 class="card-title mb-0">
+                <i class="fas fa-file-contract me-2"></i>
+                Fases de Requerimento
+                <span class="badge bg-light text-info ms-2">
+                    {% for fase in fases %}{% if fase.tipo == 'requerimento' %}{{ forloop.counter0|add:1 }}{% endif %}{% endfor %}
+                </span>
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Cor</th>
+                            <th>Nome</th>
+                            <th>Descrição</th>
+                            <th>Status</th>
+                            <th>Criada em</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fase in fases %}
+                        {% if fase.tipo == 'requerimento' %}
+                        <tr>
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle me-2" 
+                                         style="width: 20px; height: 20px; background-color: {{ fase.cor }};"
+                                         title="Cor: {{ fase.cor }}">
+                                    </div>
+                                    <code class="small text-muted">{{ fase.cor }}</code>
+                                </div>
+                            </td>
+                            <td class="align-middle">
+                                <strong>{{ fase.nome }}</strong>
+                            </td>
+                            <td class="align-middle">
+                                {% if fase.descricao %}
+                                    <span class="text-muted">{{ fase.descricao|truncatechars:60 }}</span>
+                                {% else %}
+                                    <span class="text-muted fst-italic">Sem descrição</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                {% if fase.ativa %}
+                                    <span class="badge bg-success">Ativa</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inativa</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                <small class="text-muted">{{ fase.criado_em|date:"d/m/Y H:i" }}</small>
+                            </td>
+                            <td class="align-middle text-center">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-info btn-sm" 
+                                            data-bs-toggle="collapse" 
+                                            data-bs-target="#editFaseForm-{{ fase.id }}" 
+                                            aria-expanded="false" 
+                                            title="Editar fase">
+                                        <i class="fas fa-edit me-1"></i>Editar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Dropdown Edit Form for this Fase -->
+                        <tr>
+                            <td colspan="6" class="p-0">
+                                <div class="collapse" id="editFaseForm-{{ fase.id }}">
+                                    {% include 'precapp/fase_edit_form.html' with fase=fase %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shared Phases (Ambos) -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h6 class="card-title mb-0">
+                <i class="fas fa-share-alt me-2"></i>
+                Fases Compartilhadas (Ambos)
+                <span class="badge bg-light text-secondary ms-2">
+                    {% for fase in fases %}{% if fase.tipo == 'ambos' %}{{ forloop.counter0|add:1 }}{% endif %}{% endfor %}
+                </span>
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Cor</th>
+                            <th>Nome</th>
+                            <th>Descrição</th>
+                            <th>Status</th>
+                            <th>Criada em</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fase in fases %}
+                        {% if fase.tipo == 'ambos' %}
+                        <tr>
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle me-2" 
+                                         style="width: 20px; height: 20px; background-color: {{ fase.cor }};"
+                                         title="Cor: {{ fase.cor }}">
+                                    </div>
+                                    <code class="small text-muted">{{ fase.cor }}</code>
+                                </div>
+                            </td>
+                            <td class="align-middle">
+                                <strong>{{ fase.nome }}</strong>
+                            </td>
+                            <td class="align-middle">
+                                {% if fase.descricao %}
+                                    <span class="text-muted">{{ fase.descricao|truncatechars:60 }}</span>
+                                {% else %}
+                                    <span class="text-muted fst-italic">Sem descrição</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                {% if fase.ativa %}
+                                    <span class="badge bg-success">Ativa</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inativa</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                <small class="text-muted">{{ fase.criado_em|date:"d/m/Y H:i" }}</small>
+                            </td>
+                            <td class="align-middle text-center">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" 
+                                            data-bs-toggle="collapse" 
+                                            data-bs-target="#editFaseForm-{{ fase.id }}" 
+                                            aria-expanded="false" 
+                                            title="Editar fase">
+                                        <i class="fas fa-edit me-1"></i>Editar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Dropdown Edit Form for this Fase -->
+                        <tr>
+                            <td colspan="6" class="p-0">
+                                <div class="collapse" id="editFaseForm-{{ fase.id }}">
+                                    {% include 'precapp/fase_edit_form.html' with fase=fase %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-list-task display-1 text-muted"></i>
+        <h5 class="text-muted mt-3">Nenhuma fase cadastrada</h5>
+        <p class="text-muted">Comece criando sua primeira fase personalizada.</p>
+        <a href="{% url 'nova_fase' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Criar Primeira Fase
+        </a>
+    </div>
+    {% endif %}
 </div>
 
 <script>
