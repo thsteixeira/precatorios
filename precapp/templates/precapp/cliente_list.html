@@ -17,50 +17,49 @@
         </div>
     </div>
 
-    <!-- Statistics Cards -->
+    <!-- Search and Filter Section -->
     <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div>
-                            <h4 class="mb-0">{{ total_clientes }}</h4>
-                            <small>Total de Clientes</small>
-                        </div>
-                        <div class="ms-auto">
-                            <i class="fas fa-users fa-2x opacity-75"></i>
-                        </div>
-                    </div>
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>Filtros de Pesquisa
+                    </h5>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-warning text-white">
                 <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div>
-                            <h4 class="mb-0">{{ clientes_com_prioridade }}</h4>
-                            <small>Com Prioridade</small>
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="nome" class="form-label">Nome</label>
+                            <input type="text" class="form-control" id="nome" name="nome" 
+                                   placeholder="Digite o nome" value="{{ current_nome }}">
                         </div>
-                        <div class="ms-auto">
-                            <i class="fas fa-star fa-2x opacity-75"></i>
+                        <div class="col-md-2">
+                            <label for="cpf" class="form-label">CPF</label>
+                            <input type="text" class="form-control" id="cpf" name="cpf" 
+                                   placeholder="Digite o CPF" value="{{ current_cpf }}">
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-secondary text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div>
-                            <h4 class="mb-0">{{ clientes_sem_prioridade }}</h4>
-                            <small>Sem Prioridade</small>
+                        <div class="col-md-2">
+                            <label for="prioridade" class="form-label">Prioridade</label>
+                            <select class="form-control" id="prioridade" name="prioridade">
+                                <option value="">Todas</option>
+                                <option value="true" {% if current_prioridade == 'true' %}selected{% endif %}>Prioritário</option>
+                                <option value="false" {% if current_prioridade == 'false' %}selected{% endif %}>Normal</option>
+                            </select>
                         </div>
-                        <div class="ms-auto">
-                            <i class="fas fa-user fa-2x opacity-75"></i>
+                        <div class="col-md-2">
+                            <label for="precatorio" class="form-label">Precatório (CNJ)</label>
+                            <input type="text" class="form-control" id="precatorio" name="precatorio" 
+                                   placeholder="Digite o CNJ" value="{{ current_precatorio }}">
                         </div>
-                    </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search me-1"></i>Buscar
+                            </button>
+                            <a href="{% url 'clientes' %}" class="btn btn-secondary">
+                                <i class="fas fa-undo me-1"></i>Limpar
+                            </a>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -68,8 +67,17 @@
 
     <!-- Clients Table -->
     <div class="card">
-        <div class="card-header">
-            <h5 class="card-title mb-0"><i class="fas fa-list"></i> Clientes Cadastrados</h5>
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list me-2"></i>
+                Clientes Encontrados
+                {% if clientes %}
+                    <span class="badge bg-light text-dark ms-2">{{ clientes|length }}</span>
+                {% endif %}
+            </h5>
+            {% if clientes %}
+                <small>Total: {{ clientes|length }} cliente{{ clientes|length|pluralize }}</small>
+            {% endif %}
         </div>
         <div class="card-body">
             {% if clientes %}
@@ -138,9 +146,12 @@
                 </div>
             {% else %}
                 <div class="text-center py-5">
-                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                    <h4 class="text-muted">Nenhum cliente cadastrado</h4>
-                    <p class="text-muted">Os clientes são criados dentro dos precatórios. Vá para a página de um precatório e clique em "Novo Cliente" para criar um cliente.</p>
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Nenhum cliente encontrado</h5>
+                    <p class="text-muted">Não há clientes cadastrados no sistema ou nenhum resultado corresponde aos filtros aplicados.</p>
+                    <a href="{% url 'novo_cliente' %}" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-1"></i>Cadastrar Novo Cliente
+                    </a>
                 </div>
             {% endif %}
         </div>

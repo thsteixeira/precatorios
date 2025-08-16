@@ -12,53 +12,54 @@
         </div>
     </div>
 
-    <!-- Statistics Cards -->
+    <!-- Search and Filter Section -->
     <div class="row mb-4">
-        <div class="col-md-2">
-            <div class="card bg-primary text-white">
-                <div class="card-body text-center">
-                    <h4 class="mb-0">{{ total_alvaras }}</h4>
-                    <small>Total de Alvarás</small>
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>Filtros de Pesquisa
+                    </h5>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-warning text-white">
-                <div class="card-body text-center">
-                    <h4 class="mb-0">{{ aguardando_deposito }}</h4>
-                    <small>Aguardando</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-info text-white">
-                <div class="card-body text-center">
-                    <h4 class="mb-0">{{ deposito_judicial }}</h4>
-                    <small>Depósito Judicial</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-success text-white">
-                <div class="card-body text-center">
-                    <h4 class="mb-0">{{ recebido_cliente }}</h4>
-                    <small>Recebidos</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-secondary text-white">
-                <div class="card-body text-center">
-                    <h4 class="mb-0">{{ honorarios_recebidos }}</h4>
-                    <small>Honorários</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-dark text-white">
-                <div class="card-body text-center">
-                    <h4 class="mb-0">R$ {{ total_valor_principal|floatformat:0 }}k</h4>
-                    <small>Valor Total</small>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="nome" class="form-label">Nome do Cliente</label>
+                            <input type="text" class="form-control" id="nome" name="nome" 
+                                   placeholder="Digite o nome do cliente" value="{{ current_nome }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="precatorio" class="form-label">Precatório (CNJ)</label>
+                            <input type="text" class="form-control" id="precatorio" name="precatorio" 
+                                   placeholder="Digite o CNJ" value="{{ current_precatorio }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="tipo" class="form-label">Tipo</label>
+                            <select class="form-control" id="tipo" name="tipo">
+                                <option value="">Todos</option>
+                                <option value="ordem cronológica" {% if current_tipo == 'ordem cronológica' %}selected{% endif %}>Ordem cronológica</option>
+                                <option value="prioridade" {% if current_tipo == 'prioridade' %}selected{% endif %}>Prioridade</option>
+                                <option value="acordo" {% if current_tipo == 'acordo' %}selected{% endif %}>Acordo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="fase" class="form-label">Fase</label>
+                            <select class="form-control" id="fase" name="fase">
+                                <option value="">Todas</option>
+                                {% for fase in available_fases %}
+                                    <option value="{{ fase.nome }}" {% if current_fase == fase.nome %}selected{% endif %}>{{ fase.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search me-1"></i>Buscar
+                            </button>
+                            <a href="{% url 'alvaras' %}" class="btn btn-secondary">
+                                <i class="fas fa-undo me-1"></i>Limpar
+                            </a>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -66,8 +67,17 @@
 
     <!-- Alvarás Table -->
     <div class="card">
-        <div class="card-header">
-            <h5 class="card-title mb-0"><i class="fas fa-list"></i> Alvarás Cadastrados</h5>
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list me-2"></i>
+                Alvarás Encontrados
+                {% if alvaras %}
+                    <span class="badge bg-light text-dark ms-2">{{ alvaras|length }}</span>
+                {% endif %}
+            </h5>
+            {% if alvaras %}
+                <small>Total: {{ alvaras|length }} alvará{{ alvaras|length|pluralize }}</small>
+            {% endif %}
         </div>
         <div class="card-body">
             {% if alvaras %}
@@ -132,7 +142,13 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <span class="text-muted">{{ alvara.fase|truncatechars:15 }}</span>
+                                    {% if alvara.fase %}
+                                        <span class="badge" style="background-color: {{ alvara.fase.cor }}; color: white;">
+                                            {{ alvara.fase.nome }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -141,8 +157,9 @@
                 </div>
             {% else %}
                 <div class="text-center py-5">
-                    <i class="fas fa-file-contract fa-3x text-muted mb-3"></i>
-                    <h4 class="text-muted">Nenhum alvará cadastrado</h4>
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Nenhum alvará encontrado</h5>
+                    <p class="text-muted">Não há alvarás cadastrados no sistema ou nenhum resultado corresponde aos filtros aplicados.</p>
                     <p class="text-muted">Os alvarás devem ser criados a partir dos detalhes de cada precatório.</p>
                 </div>
             {% endif %}

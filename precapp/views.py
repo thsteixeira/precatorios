@@ -70,8 +70,28 @@ def novoPrec_view(request):
 
 @login_required
 def precatorio_view(request):
-    """Simple view to display all precatorios"""
+    """View to display all precatorios with filtering support"""
     precatorios = Precatorio.objects.all()
+    
+    # Apply filters based on GET parameters
+    cnj_filter = request.GET.get('cnj', '').strip()
+    origem_filter = request.GET.get('origem', '').strip()
+    quitado_filter = request.GET.get('quitado', '')
+    prioridade_filter = request.GET.get('prioridade', '')
+    
+    if cnj_filter:
+        precatorios = precatorios.filter(cnj__icontains=cnj_filter)
+    
+    if origem_filter:
+        precatorios = precatorios.filter(origem__icontains=origem_filter)
+    
+    if quitado_filter in ['true', 'false']:
+        quitado_bool = quitado_filter == 'true'
+        precatorios = precatorios.filter(quitado=quitado_bool)
+    
+    if prioridade_filter in ['true', 'false']:
+        prioridade_bool = prioridade_filter == 'true'
+        precatorios = precatorios.filter(prioridade_deferida=prioridade_bool)
     
     # Calculate summary statistics
     total_precatorios = precatorios.count()
@@ -85,6 +105,11 @@ def precatorio_view(request):
         'quitados': quitados,
         'pendentes': pendentes,
         'prioritarios': prioritarios,
+        # Include current filter values to maintain state in form
+        'current_cnj': cnj_filter,
+        'current_origem': origem_filter,
+        'current_quitado': quitado_filter,
+        'current_prioridade': prioridade_filter,
     }
     
     return render(request, 'precapp/precatorio_list.html', context)
@@ -294,8 +319,27 @@ def precatorio_detalhe_view(request, precatorio_cnj):
 
 @login_required
 def clientes_view(request):
-    """View to display all clients"""
+    """View to display all clients with filtering support"""
     clientes = Cliente.objects.all().prefetch_related('precatorios')
+    
+    # Apply filters based on GET parameters
+    nome_filter = request.GET.get('nome', '').strip()
+    cpf_filter = request.GET.get('cpf', '').strip()
+    prioridade_filter = request.GET.get('prioridade', '')
+    precatorio_filter = request.GET.get('precatorio', '').strip()
+    
+    if nome_filter:
+        clientes = clientes.filter(nome__icontains=nome_filter)
+    
+    if cpf_filter:
+        clientes = clientes.filter(cpf__icontains=cpf_filter)
+    
+    if prioridade_filter in ['true', 'false']:
+        prioridade_bool = prioridade_filter == 'true'
+        clientes = clientes.filter(prioridade=prioridade_bool)
+    
+    if precatorio_filter:
+        clientes = clientes.filter(precatorios__cnj__icontains=precatorio_filter).distinct()
     
     # Calculate summary statistics
     total_clientes = clientes.count()
@@ -307,6 +351,11 @@ def clientes_view(request):
         'total_clientes': total_clientes,
         'clientes_com_prioridade': clientes_com_prioridade,
         'clientes_sem_prioridade': clientes_sem_prioridade,
+        # Include current filter values to maintain state in form
+        'current_nome': nome_filter,
+        'current_cpf': cpf_filter,
+        'current_prioridade': prioridade_filter,
+        'current_precatorio': precatorio_filter,
     }
     
     return render(request, 'precapp/cliente_list.html', context)
@@ -385,8 +434,29 @@ def cliente_detail_view(request, cpf):
 
 @login_required
 def alvaras_view(request):
-    """View to display all alvarás"""
-    alvaras = Alvara.objects.all().select_related('precatorio', 'cliente').order_by('-id')
+    """View to display all alvarás with filtering support"""
+    alvaras = Alvara.objects.all().select_related('precatorio', 'cliente', 'fase').order_by('-id')
+    
+    # Get available fases for alvara
+    available_fases = Fase.get_fases_for_alvara()
+    
+    # Apply filters based on GET parameters
+    nome_filter = request.GET.get('nome', '').strip()
+    precatorio_filter = request.GET.get('precatorio', '').strip()
+    tipo_filter = request.GET.get('tipo', '').strip()
+    fase_filter = request.GET.get('fase', '').strip()
+    
+    if nome_filter:
+        alvaras = alvaras.filter(cliente__nome__icontains=nome_filter)
+    
+    if precatorio_filter:
+        alvaras = alvaras.filter(precatorio__cnj__icontains=precatorio_filter)
+    
+    if tipo_filter:
+        alvaras = alvaras.filter(tipo=tipo_filter)  # Exact match for dropdown
+    
+    if fase_filter:
+        alvaras = alvaras.filter(fase__nome=fase_filter)  # Exact match for dropdown
     
     # Calculate summary statistics
     total_alvaras = alvaras.count()
@@ -410,6 +480,13 @@ def alvaras_view(request):
         'total_valor_principal': total_valor_principal,
         'total_honorarios_contratuais': total_honorarios_contratuais,
         'total_honorarios_sucumbenciais': total_honorarios_sucumbenciais,
+        # Include current filter values to maintain state in form
+        'current_nome': nome_filter,
+        'current_precatorio': precatorio_filter,
+        'current_tipo': tipo_filter,
+        'current_fase': fase_filter,
+        # Include available options for dropdowns
+        'available_fases': available_fases,
     }
     
     return render(request, 'precapp/alvara_list.html', context)
@@ -468,24 +545,35 @@ def delete_alvara_view(request, alvara_id):
 
 @login_required
 def requerimento_list_view(request):
-    """View to list all requerimentos with statistics"""
+    """View to list all requerimentos with filtering"""
     requerimentos = Requerimento.objects.all().select_related('cliente', 'precatorio', 'fase').order_by('-id')
     
-    # Calculate statistics
-    total_requerimentos = requerimentos.count()
-    protocolados_count = requerimentos.filter(fase__nome='Protocolado').count()
-    em_andamento_count = requerimentos.filter(fase__nome='Em Andamento').count()
-    deferidos_count = requerimentos.filter(fase__nome='Deferido').count()
-    indeferidos_count = requerimentos.filter(fase__nome='Indeferido').count()
+    # Get filter parameters
+    cliente_filter = request.GET.get('cliente', '').strip()
+    precatorio_filter = request.GET.get('precatorio', '').strip()
+    pedido_filter = request.GET.get('pedido', '').strip()
+    fase_filter = request.GET.get('fase', '').strip()
     
-    # Calculate financial statistics
-    valor_total = sum(r.valor for r in requerimentos if r.valor)
-    desagio_medio = sum(r.desagio for r in requerimentos if r.desagio) / total_requerimentos if total_requerimentos > 0 else 0
+    # Apply filters
+    if cliente_filter:
+        requerimentos = requerimentos.filter(cliente__nome__icontains=cliente_filter)
     
-    # Handle filtering by fase
-    fase_filter = request.GET.get('fase')
+    if precatorio_filter:
+        requerimentos = requerimentos.filter(precatorio__cnj__icontains=precatorio_filter)
+    
+    if pedido_filter:
+        requerimentos = requerimentos.filter(pedido=pedido_filter)
+    
     if fase_filter:
         requerimentos = requerimentos.filter(fase__nome=fase_filter)
+    
+    # Get available phases for requerimentos
+    from .models import Fase
+    available_fases = Fase.get_fases_for_requerimento()
+    
+    # Calculate financial statistics based on filtered results
+    valor_total = sum(r.valor for r in requerimentos if r.valor)
+    desagio_medio = sum(r.desagio for r in requerimentos if r.desagio) / requerimentos.count() if requerimentos.count() > 0 else 0
     
     # Handle requerimento deletion
     if request.method == 'POST' and 'delete_requerimento' in request.POST:
@@ -501,13 +589,14 @@ def requerimento_list_view(request):
     
     context = {
         'requerimentos': requerimentos,
-        'total_requerimentos': total_requerimentos,
-        'protocolados_count': protocolados_count,
-        'em_andamento_count': em_andamento_count,
-        'deferidos_count': deferidos_count,
-        'indeferidos_count': indeferidos_count,
+        'available_fases': available_fases,
         'valor_total': valor_total,
         'desagio_medio': desagio_medio,
+        # Current filter values for form persistence
+        'current_cliente': cliente_filter,
+        'current_precatorio': precatorio_filter,
+        'current_pedido': pedido_filter,
+        'current_fase': fase_filter,
     }
     return render(request, 'precapp/requerimento_list.html', context)
 

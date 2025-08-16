@@ -8,70 +8,60 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1><i class="fas fa-file-signature text-info"></i> Lista de Requerimentos</h1>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="fas fa-filter me-1"></i>Filtros
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="?fase=Protocolado">Protocolados</a></li>
-                        <li><a class="dropdown-item" href="?fase=Em Andamento">Em Andamento</a></li>
-                        <li><a class="dropdown-item" href="?fase=Deferido">Deferidos</a></li>
-                        <li><a class="dropdown-item" href="?fase=Indeferido">Indeferidos</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="?">Todos</a></li>
-                    </ul>
-                </div>
             </div>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
+    <!-- Search and Filter Section -->
     <div class="row mb-4">
-        <div class="col-md-2">
-            <div class="card bg-primary text-white">
-                <div class="card-body text-center">
-                    <h4 class="mb-0">{{ requerimentos.count }}</h4>
-                    <small>Total</small>
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>Filtros de Pesquisa
+                    </h5>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-secondary text-white">
-                <div class="card-body text-center">
-                    <h4 class="mb-0">{{ protocolados_count }}</h4>
-                    <small>Protocolados</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-warning text-dark">
-                <div class="card-body text-center">
-                    <h4 class="mb-0">{{ em_andamento_count }}</h4>
-                    <small>Em Andamento</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-success text-white">
-                <div class="card-body text-center">
-                    <h4 class="mb-0">{{ deferidos_count }}</h4>
-                    <small>Deferidos</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-danger text-white">
-                <div class="card-body text-center">
-                    <h4 class="mb-0">{{ indeferidos_count }}</h4>
-                    <small>Indeferidos</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-info text-white">
-                <div class="card-body text-center">
-                    <h4 class="mb-0">R$ {{ valor_total|floatformat:2 }}</h4>
-                    <small>Valor Total</small>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="cliente" class="form-label">Cliente</label>
+                            <input type="text" class="form-control" id="cliente" name="cliente" 
+                                   placeholder="Digite o nome do cliente" value="{{ current_cliente }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="precatorio" class="form-label">Precatório (CNJ)</label>
+                            <input type="text" class="form-control" id="precatorio" name="precatorio" 
+                                   placeholder="Digite o CNJ" value="{{ current_precatorio }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="pedido" class="form-label">Tipo de Pedido</label>
+                            <select class="form-control" id="pedido" name="pedido">
+                                <option value="">Todos</option>
+                                <option value="prioridade doença" {% if current_pedido == 'prioridade doença' %}selected{% endif %}>Prioridade por doença</option>
+                                <option value="prioridade idade" {% if current_pedido == 'prioridade idade' %}selected{% endif %}>Prioridade por idade</option>
+                                <option value="acordo principal" {% if current_pedido == 'acordo principal' %}selected{% endif %}>Acordo sobre o valor Principal</option>
+                                <option value="acordo honorários contratuais" {% if current_pedido == 'acordo honorários contratuais' %}selected{% endif %}>Acordo sobre os Honorários Contratuais</option>
+                                <option value="acordo honorários sucumbenciais" {% if current_pedido == 'acordo honorários sucumbenciais' %}selected{% endif %}>Acordo sobre os Honorários Sucumbenciais</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="fase" class="form-label">Fase</label>
+                            <select class="form-control" id="fase" name="fase">
+                                <option value="">Todas</option>
+                                {% for fase in available_fases %}
+                                    <option value="{{ fase.nome }}" {% if current_fase == fase.nome %}selected{% endif %}>{{ fase.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search me-1"></i>Buscar
+                            </button>
+                            <a href="{% url 'requerimentos' %}" class="btn btn-secondary">
+                                <i class="fas fa-undo me-1"></i>Limpar
+                            </a>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -81,12 +71,17 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
                         <i class="fas fa-list me-2"></i>
-                        Requerimentos Cadastrados
-                        <span class="badge bg-light text-dark ms-2">{{ requerimentos.count }}</span>
+                        Requerimentos Encontrados
+                        {% if requerimentos %}
+                            <span class="badge bg-light text-dark ms-2">{{ requerimentos|length }}</span>
+                        {% endif %}
                     </h5>
+                    {% if requerimentos %}
+                        <small>Total: {{ requerimentos|length }} requerimento{{ requerimentos|length|pluralize }}</small>
+                    {% endif %}
                 </div>
                 <div class="card-body p-0">
                     {% if requerimentos %}
@@ -193,33 +188,24 @@
         </div>
     </div>
 
-    <!-- Summary Cards -->
+    <!-- Financial Summary -->
     {% if requerimentos %}
     <div class="row mt-4">
-        <div class="col-md-4">
-            <div class="card bg-light">
-                <div class="card-body text-center">
-                    <i class="fas fa-file-signature fa-2x text-info mb-3"></i>
-                    <h5 class="card-title">Total de Requerimentos</h5>
-                    <h3 class="text-info">{{ requerimentos.count }}</h3>
+        <div class="col-md-6">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
+                    <h5 class="text-success">R$ {{ valor_total|floatformat:2 }}</h5>
+                    <small class="text-muted">Valor Total dos Requerimentos</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card bg-light">
-                <div class="card-body text-center">
-                    <i class="fas fa-money-bill-wave fa-2x text-success mb-3"></i>
-                    <h5 class="card-title">Valor Total</h5>
-                    <h3 class="text-success">R$ {{ valor_total|floatformat:2 }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-light">
-                <div class="card-body text-center">
-                    <i class="fas fa-percentage fa-2x text-warning mb-3"></i>
-                    <h5 class="card-title">Deságio Médio</h5>
-                    <h3 class="text-warning">{{ desagio_medio|floatformat:2 }}%</h3>
+        <div class="col-md-6">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <i class="fas fa-percentage fa-2x text-warning mb-2"></i>
+                    <h5 class="text-warning">{{ desagio_medio|floatformat:2 }}%</h5>
+                    <small class="text-muted">Deságio Médio</small>
                 </div>
             </div>
         </div>
