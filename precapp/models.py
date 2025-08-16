@@ -58,7 +58,7 @@ class Fase(models.Model):
         ]
 class Precatorio(models.Model):
     cnj = models.CharField(max_length=200, primary_key=True)
-    data_oficio = models.DateField()
+    data_oficio = models.DateField(null=True, blank=True)
     orcamento = models.IntegerField(
         validators=[
             MinValueValidator(1988),
@@ -69,11 +69,11 @@ class Precatorio(models.Model):
     origem = models.CharField(max_length=200)
     quitado = models.BooleanField()
     valor_de_face = models.FloatField()
-    ultima_atualizacao = models.FloatField()
-    data_ultima_atualizacao = models.DateField()
-    percentual_contratuais_assinado = models.FloatField()
-    percentual_contratuais_apartado = models.FloatField()
-    percentual_sucumbenciais = models.FloatField()
+    ultima_atualizacao = models.FloatField(null=True, blank=True)
+    data_ultima_atualizacao = models.DateField(null=True, blank=True)
+    percentual_contratuais_assinado = models.FloatField(null=True, blank=True)
+    percentual_contratuais_apartado = models.FloatField(null=True, blank=True)
+    percentual_sucumbenciais = models.FloatField(null=True, blank=True)
     prioridade_deferida = models.BooleanField()
     acordo_deferido = models.BooleanField()
     clientes = models.ManyToManyField('Cliente', related_name='precatorios')
@@ -84,7 +84,7 @@ class Precatorio(models.Model):
     class Meta:
         verbose_name = "Precatório"
         verbose_name_plural = "Precatórios"
-        ordering = ['-data_oficio']
+        ordering = ['-data_oficio']  # Django handles null values in ordering automatically
 
 
 class Cliente(models.Model):

@@ -130,8 +130,9 @@ class PrecatorioForm(forms.ModelForm):
     ultima_atualizacao = forms.DecimalField(
         max_digits=15,
         decimal_places=2,
+        required=False,  # Made optional
         label='Última Atualização Monetária',
-        help_text='Valor atualizado em reais (R$). Ex: 75000.00',
+        help_text='Valor atualizado em reais (R$). Ex: 75000.00 (Opcional)',
         validators=[validate_currency],
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
@@ -209,7 +210,7 @@ class PrecatorioForm(forms.ModelForm):
         ]
         
         widgets = {
-            'data_oficio': BrazilianDateInput(),
+            'data_oficio': BrazilianDateInput(attrs={'required': False}),
             'orcamento': forms.NumberInput(attrs={
                 'type': 'number', 
                 'class': 'form-control',
@@ -218,18 +219,17 @@ class PrecatorioForm(forms.ModelForm):
                 'placeholder': '2023',
                 'title': 'Digite apenas o ano (formato: YYYY)'
             }),
-            'ultima_atualizacao': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Digite as informações sobre a última atualização...'}),
-            'data_ultima_atualizacao': BrazilianDateInput(),
+            'data_ultima_atualizacao': BrazilianDateInput(attrs={'required': False}),
             'quitado': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'prioridade_deferida': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'acordo_deferido': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         
         labels = {
-            'data_oficio': 'Data do Ofício',
+            'data_oficio': 'Data do Ofício (Opcional)',
             'orcamento': 'Ano do Orçamento',
             'quitado': 'Quitado',
-            'data_ultima_atualizacao': 'Data da Última Atualização',
+            'data_ultima_atualizacao': 'Data da Última Atualização (Opcional)',
             'prioridade_deferida': 'Prioridade Deferida',
             'acordo_deferido': 'Acordo Deferido',
         }
