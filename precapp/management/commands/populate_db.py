@@ -1,11 +1,11 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from datetime import date, datetime
-from precapp.models import Precatorio, Cliente, Alvara
+from precapp.models import Precatorio, Cliente, Alvara, Requerimento
 
 
 class Command(BaseCommand):
-    help = 'Populate the database with sample data: 5 precatórios, 5 clientes, and 5 alvarás'
+    help = 'Populate the database with sample data: 5 precatórios, 5 clientes, 5 alvarás, and 5 requerimentos'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -17,6 +17,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if options['clear']:
             self.stdout.write('Clearing existing data...')
+            Requerimento.objects.all().delete()
             Alvara.objects.all().delete()
             Cliente.objects.all().delete()
             Precatorio.objects.all().delete()
@@ -182,6 +183,49 @@ class Command(BaseCommand):
             },
         ]
 
+        requerimentos_data = [
+            {
+                'precatorio_cnj': '1234567-89.2023.8.26.0100',
+                'cliente_cpf': '12345678901',
+                'valor': 15000.00,
+                'desagio': 5.00,
+                'pedido': 'prioridade idade',
+                'fase': 'análise inicial',
+            },
+            {
+                'precatorio_cnj': '2345678-90.2023.8.26.0200',
+                'cliente_cpf': '23456789012',
+                'valor': 8000.00,
+                'desagio': 12.50,
+                'pedido': 'acordo principal',
+                'fase': 'deferido',
+            },
+            {
+                'precatorio_cnj': '3456789-01.2024.8.26.0300',
+                'cliente_cpf': '34567890123',
+                'valor': 22000.00,
+                'desagio': 8.00,
+                'pedido': 'prioridade doença',
+                'fase': 'em andamento',
+            },
+            {
+                'precatorio_cnj': '4567890-12.2024.8.26.0400',
+                'cliente_cpf': '45678901234',
+                'valor': 6500.00,
+                'desagio': 15.00,
+                'pedido': 'acordo honorários contratuais',
+                'fase': 'análise inicial',
+            },
+            {
+                'precatorio_cnj': '5678901-23.2024.8.26.0500',
+                'cliente_cpf': '56789012345',
+                'valor': 35000.00,
+                'desagio': 10.00,
+                'pedido': 'acordo honorários sucumbenciais',
+                'fase': 'em andamento',
+            },
+        ]
+
         try:
             with transaction.atomic():
                 self.stdout.write('Creating precatórios...')
@@ -236,6 +280,32 @@ class Command(BaseCommand):
                     else:
                         self.stdout.write(f'  ⚠ Alvará already exists for {cliente.nome} and precatório {precatorio.cnj}')
 
+                self.stdout.write('Creating requerimentos...')
+                for i, data in enumerate(requerimentos_data):
+                    precatorio = Precatorio.objects.get(cnj=data['precatorio_cnj'])
+                    cliente = Cliente.objects.get(cpf=data['cliente_cpf'])
+                    
+                    requerimento_data = {
+                        'precatorio': precatorio,
+                        'cliente': cliente,
+                        'valor': data['valor'],
+                        'desagio': data['desagio'],
+                        'pedido': data['pedido'],
+                        'fase': data['fase'],
+                    }
+                    
+                    requerimento, created = Requerimento.objects.get_or_create(
+                        precatorio=precatorio,
+                        cliente=cliente,
+                        pedido=data['pedido'],
+                        defaults=requerimento_data
+                    )
+                    
+                    if created:
+                        self.stdout.write(f'  ✓ Created requerimento: {requerimento.pedido} for {cliente.nome}')
+                    else:
+                        self.stdout.write(f'  ⚠ Requerimento already exists: {requerimento.pedido} for {cliente.nome}')
+
                 # Link clientes to precatórios (many-to-many relationship)
                 self.stdout.write('Linking clientes to precatórios...')
                 for i in range(5):
@@ -255,6 +325,7 @@ class Command(BaseCommand):
         self.stdout.write(f'   • {Precatorio.objects.count()} Precatórios')
         self.stdout.write(f'   • {Cliente.objects.count()} Clientes')
         self.stdout.write(f'   • {Alvara.objects.count()} Alvarás')
+        self.stdout.write(f'   • {Requerimento.objects.count()} Requerimentos')
         
         # Show some quick stats
         total_valor = sum(p.valor_de_face for p in Precatorio.objects.all())
@@ -265,3 +336,10 @@ class Command(BaseCommand):
         
         prioridades = Cliente.objects.filter(prioridade=True).count()
         self.stdout.write(f'   • Clientes com Prioridade: {prioridades}')
+        
+        # Show requerimento stats
+        pedidos_prioridade = Requerimento.objects.filter(pedido__contains='prioridade').count()
+        self.stdout.write(f'   • Requerimentos de Prioridade: {pedidos_prioridade}')
+        
+        pedidos_acordo = Requerimento.objects.filter(pedido__contains='acordo').count()
+        self.stdout.write(f'   • Requerimentos de Acordo: {pedidos_acordo}')
