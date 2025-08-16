@@ -3,6 +3,31 @@ from django.core.exceptions import ValidationError
 import re
 from .models import Precatorio, Cliente, Alvara, Requerimento
 
+
+class BrazilianDateInput(forms.DateInput):
+    """
+    Custom DateInput widget for Brazilian date format (dd/mm/yyyy)
+    """
+    input_type = 'text'
+    
+    def __init__(self, attrs=None, format=None):
+        default_attrs = {
+            'class': 'form-control',
+            'placeholder': 'dd/mm/aaaa',
+            'pattern': r'\d{2}/\d{2}/\d{4}',
+            'title': 'Digite a data no formato dd/mm/aaaa (ex: 31/12/2023)',
+            'maxlength': '10',
+        }
+        if attrs:
+            default_attrs.update(attrs)
+        
+        # Use Brazilian date format
+        if format is None:
+            format = '%d/%m/%Y'
+            
+        super().__init__(attrs=default_attrs, format=format)
+
+
 def validate_cnj(value):
     """
     Validates CNJ number format: NNNNNNN-DD.AAAA.J.TR.OOOO
@@ -184,7 +209,7 @@ class PrecatorioForm(forms.ModelForm):
         ]
         
         widgets = {
-            'data_oficio': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'data_oficio': BrazilianDateInput(),
             'orcamento': forms.NumberInput(attrs={
                 'type': 'number', 
                 'class': 'form-control',
@@ -194,7 +219,7 @@ class PrecatorioForm(forms.ModelForm):
                 'title': 'Digite apenas o ano (formato: YYYY)'
             }),
             'ultima_atualizacao': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Digite as informações sobre a última atualização...'}),
-            'data_ultima_atualizacao': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'data_ultima_atualizacao': BrazilianDateInput(),
             'quitado': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'prioridade_deferida': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'acordo_deferido': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -298,10 +323,7 @@ class ClienteForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Digite o nome completo do cliente'
             }),
-            'nascimento': forms.DateInput(attrs={
-                'type': 'date', 
-                'class': 'form-control'
-            }),
+            'nascimento': BrazilianDateInput(),
             'prioridade': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
@@ -357,15 +379,12 @@ class ClienteSimpleForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Digite o nome completo do cliente'
             }),
-            'nascimento': forms.DateInput(attrs={
-                'type': 'date', 
-                'class': 'form-control'
-            }),
+            'nascimento': BrazilianDateInput(),
             'prioridade': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
         }
-        
+
         labels = {
             'nome': 'Nome Completo',
             'nascimento': 'Data de Nascimento',

@@ -33,6 +33,22 @@
         .alert {
             margin-top: 15px;
         }
+        /* Brazilian Date Input Styling */
+        input[placeholder="dd/mm/aaaa"] {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23dee2e6'%3e%3cpath d='M4.5 1a.5.5 0 00-1 0v1H2a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2h-1.5V1a.5.5 0 00-1 0v1H4.5V1zM2 4h12v10H2V4z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 16px;
+            padding-right: 35px;
+        }
+        input[placeholder="dd/mm/aaaa"]:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+        input[placeholder="dd/mm/aaaa"].is-invalid {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -185,6 +201,60 @@
                     bsAlert.close();
                 });
             }, 5000);
+        });
+
+        // Brazilian Date Input Formatting
+        document.addEventListener('DOMContentLoaded', function() {
+            // Find all date inputs with Brazilian format
+            const dateInputs = document.querySelectorAll('input[placeholder="dd/mm/aaaa"]');
+            
+            dateInputs.forEach(function(input) {
+                // Format input as user types
+                input.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                    
+                    if (value.length >= 2) {
+                        value = value.substring(0,2) + '/' + value.substring(2);
+                    }
+                    if (value.length >= 5) {
+                        value = value.substring(0,5) + '/' + value.substring(5,9);
+                    }
+                    
+                    e.target.value = value;
+                });
+                
+                // Validate on blur
+                input.addEventListener('blur', function(e) {
+                    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+                    const value = e.target.value;
+                    
+                    if (value && !dateRegex.test(value)) {
+                        e.target.setCustomValidity('Data deve estar no formato dd/mm/aaaa');
+                        e.target.classList.add('is-invalid');
+                    } else if (value && dateRegex.test(value)) {
+                        const [, day, month, year] = value.match(dateRegex);
+                        const date = new Date(year, month - 1, day);
+                        
+                        if (date.getFullYear() != year || 
+                            date.getMonth() != month - 1 || 
+                            date.getDate() != day) {
+                            e.target.setCustomValidity('Data inválida');
+                            e.target.classList.add('is-invalid');
+                        } else {
+                            e.target.setCustomValidity('');
+                            e.target.classList.remove('is-invalid');
+                        }
+                    } else {
+                        e.target.setCustomValidity('');
+                        e.target.classList.remove('is-invalid');
+                    }
+                });
+                
+                // Clear validation on focus
+                input.addEventListener('focus', function(e) {
+                    e.target.classList.remove('is-invalid');
+                });
+            });
         });
     </script>
     

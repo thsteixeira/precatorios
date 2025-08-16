@@ -104,15 +104,36 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/3.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'pt-br'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Sao_Paulo'
 
 USE_I18N = True
 
 USE_L10N = True
 
 USE_TZ = True
+
+# Date format settings for Brazilian localization
+DATE_FORMAT = 'd/m/Y'
+DATETIME_FORMAT = 'd/m/Y H:i'
+SHORT_DATE_FORMAT = 'd/m/Y'
+SHORT_DATETIME_FORMAT = 'd/m/Y H:i'
+
+DATE_INPUT_FORMATS = [
+    '%d/%m/%Y',     # Brazilian format: 31/12/2023
+    '%d-%m-%Y',     # Alternative: 31-12-2023
+    '%Y-%m-%d',     # ISO format: 2023-12-31 (fallback)
+]
+
+DATETIME_INPUT_FORMATS = [
+    '%d/%m/%Y %H:%M:%S',    # 31/12/2023 14:30:00
+    '%d/%m/%Y %H:%M',       # 31/12/2023 14:30
+    '%d-%m-%Y %H:%M:%S',    # 31-12-2023 14:30:00
+    '%d-%m-%Y %H:%M',       # 31-12-2023 14:30
+    '%Y-%m-%d %H:%M:%S',    # ISO fallback
+    '%Y-%m-%d %H:%M',       # ISO fallback
+]
 
 
 # Static files (CSS, JavaScript, Images)
