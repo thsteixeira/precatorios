@@ -1,11 +1,11 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from datetime import date, datetime
-from precapp.models import Precatorio, Cliente, Alvara, Requerimento
+from precapp.models import Precatorio, Cliente, Alvara, Requerimento, Fase
 
 
 class Command(BaseCommand):
-    help = 'Populate the database with sample data: 5 precatórios, 5 clientes, 5 alvarás, and 5 requerimentos'
+    help = 'Populate the database with sample data: fases, precatórios, clientes, alvarás, and requerimentos'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -21,7 +21,66 @@ class Command(BaseCommand):
             Alvara.objects.all().delete()
             Cliente.objects.all().delete()
             Precatorio.objects.all().delete()
+            Fase.objects.all().delete()
             self.stdout.write(self.style.SUCCESS('Existing data cleared.'))
+
+        # Sample Fases data
+        fases_data = [
+            {
+                'nome': 'Aguardando Depósito',
+                'descricao': 'Alvará emitido, aguardando depósito judicial',
+                'cor': '#ffc107',
+                'ativa': True,
+            },
+            {
+                'nome': 'Depósito Judicial',
+                'descricao': 'Valor depositado judicialmente',
+                'cor': '#17a2b8',
+                'ativa': True,
+            },
+            {
+                'nome': 'Recebido pelo Cliente',
+                'descricao': 'Valor já recebido pelo cliente',
+                'cor': '#28a745',
+                'ativa': True,
+            },
+            {
+                'nome': 'Honorários Recebidos',
+                'descricao': 'Honorários já recebidos pelo escritório',
+                'cor': '#6f42c1',
+                'ativa': True,
+            },
+            {
+                'nome': 'Análise Inicial',
+                'descricao': 'Requerimento em análise inicial',
+                'cor': '#fd7e14',
+                'ativa': True,
+            },
+            {
+                'nome': 'Em Andamento',
+                'descricao': 'Requerimento em andamento',
+                'cor': '#007bff',
+                'ativa': True,
+            },
+            {
+                'nome': 'Deferido',
+                'descricao': 'Requerimento deferido',
+                'cor': '#28a745',
+                'ativa': True,
+            },
+            {
+                'nome': 'Indeferido',
+                'descricao': 'Requerimento indeferido',
+                'cor': '#dc3545',
+                'ativa': True,
+            },
+            {
+                'nome': 'Protocolado',
+                'descricao': 'Requerimento protocolado',
+                'cor': '#6c757d',
+                'ativa': True,
+            },
+        ]
 
         # Sample data
         precatorios_data = [
@@ -143,7 +202,7 @@ class Command(BaseCommand):
                 'honorarios_contratuais': 24000.00,
                 'honorarios_sucumbenciais': 12000.00,
                 'tipo': 'prioridade',
-                'fase': 'depósito judicial',
+                'fase': 'Depósito Judicial',
             },
             {
                 'precatorio_cnj': '2345678-90.2023.8.26.0200',
@@ -152,7 +211,7 @@ class Command(BaseCommand):
                 'honorarios_contratuais': 10200.00,
                 'honorarios_sucumbenciais': 5440.00,
                 'tipo': 'acordo',
-                'fase': 'recebido pelo cliente',
+                'fase': 'Recebido pelo Cliente',
             },
             {
                 'precatorio_cnj': '3456789-01.2024.8.26.0300',
@@ -161,7 +220,7 @@ class Command(BaseCommand):
                 'honorarios_contratuais': 45000.00,
                 'honorarios_sucumbenciais': 21600.00,
                 'tipo': 'prioridade',
-                'fase': 'aguardando depósito',
+                'fase': 'Aguardando Depósito',
             },
             {
                 'precatorio_cnj': '4567890-12.2024.8.26.0400',
@@ -170,7 +229,7 @@ class Command(BaseCommand):
                 'honorarios_contratuais': 10800.00,
                 'honorarios_sucumbenciais': 5400.00,
                 'tipo': 'acordo',
-                'fase': 'depósito judicial',
+                'fase': 'Depósito Judicial',
             },
             {
                 'precatorio_cnj': '5678901-23.2024.8.26.0500',
@@ -179,7 +238,7 @@ class Command(BaseCommand):
                 'honorarios_contratuais': 75000.00,
                 'honorarios_sucumbenciais': 37500.00,
                 'tipo': 'ordem cronológica',
-                'fase': 'aguardando depósito',
+                'fase': 'Aguardando Depósito',
             },
         ]
 
@@ -190,7 +249,7 @@ class Command(BaseCommand):
                 'valor': 15000.00,
                 'desagio': 5.00,
                 'pedido': 'prioridade idade',
-                'fase': 'análise inicial',
+                'fase': 'Análise Inicial',
             },
             {
                 'precatorio_cnj': '2345678-90.2023.8.26.0200',
@@ -198,7 +257,7 @@ class Command(BaseCommand):
                 'valor': 8000.00,
                 'desagio': 12.50,
                 'pedido': 'acordo principal',
-                'fase': 'deferido',
+                'fase': 'Deferido',
             },
             {
                 'precatorio_cnj': '3456789-01.2024.8.26.0300',
@@ -206,7 +265,7 @@ class Command(BaseCommand):
                 'valor': 22000.00,
                 'desagio': 8.00,
                 'pedido': 'prioridade doença',
-                'fase': 'em andamento',
+                'fase': 'Em Andamento',
             },
             {
                 'precatorio_cnj': '4567890-12.2024.8.26.0400',
@@ -214,7 +273,7 @@ class Command(BaseCommand):
                 'valor': 6500.00,
                 'desagio': 15.00,
                 'pedido': 'acordo honorários contratuais',
-                'fase': 'análise inicial',
+                'fase': 'Análise Inicial',
             },
             {
                 'precatorio_cnj': '5678901-23.2024.8.26.0500',
@@ -222,12 +281,26 @@ class Command(BaseCommand):
                 'valor': 35000.00,
                 'desagio': 10.00,
                 'pedido': 'acordo honorários sucumbenciais',
-                'fase': 'em andamento',
+                'fase': 'Em Andamento',
             },
         ]
 
         try:
             with transaction.atomic():
+                # Create Fases first
+                self.stdout.write('Creating fases...')
+                fases_created = {}
+                for data in fases_data:
+                    fase, created = Fase.objects.get_or_create(
+                        nome=data['nome'],
+                        defaults=data
+                    )
+                    fases_created[data['nome']] = fase
+                    if created:
+                        self.stdout.write(f'  ✓ Created fase: {fase.nome}')
+                    else:
+                        self.stdout.write(f'  ⚠ Fase already exists: {fase.nome}')
+
                 self.stdout.write('Creating precatórios...')
                 precatorios_created = []
                 for data in precatorios_data:
@@ -258,6 +331,7 @@ class Command(BaseCommand):
                 for i, data in enumerate(alvaras_data):
                     precatorio = Precatorio.objects.get(cnj=data['precatorio_cnj'])
                     cliente = Cliente.objects.get(cpf=data['cliente_cpf'])
+                    fase = fases_created.get(data['fase'])
                     
                     alvara_data = {
                         'precatorio': precatorio,
@@ -266,7 +340,7 @@ class Command(BaseCommand):
                         'honorarios_contratuais': data['honorarios_contratuais'],
                         'honorarios_sucumbenciais': data['honorarios_sucumbenciais'],
                         'tipo': data['tipo'],
-                        'fase': data['fase'],
+                        'fase': fase,
                     }
                     
                     alvara, created = Alvara.objects.get_or_create(
@@ -284,6 +358,7 @@ class Command(BaseCommand):
                 for i, data in enumerate(requerimentos_data):
                     precatorio = Precatorio.objects.get(cnj=data['precatorio_cnj'])
                     cliente = Cliente.objects.get(cpf=data['cliente_cpf'])
+                    fase = fases_created.get(data['fase'])
                     
                     requerimento_data = {
                         'precatorio': precatorio,
@@ -291,7 +366,7 @@ class Command(BaseCommand):
                         'valor': data['valor'],
                         'desagio': data['desagio'],
                         'pedido': data['pedido'],
-                        'fase': data['fase'],
+                        'fase': fase,
                     }
                     
                     requerimento, created = Requerimento.objects.get_or_create(
@@ -322,6 +397,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS('\n🎉 Database populated successfully!'))
         self.stdout.write(self.style.SUCCESS('📊 Summary:'))
+        self.stdout.write(f'   • {Fase.objects.count()} Fases')
         self.stdout.write(f'   • {Precatorio.objects.count()} Precatórios')
         self.stdout.write(f'   • {Cliente.objects.count()} Clientes')
         self.stdout.write(f'   • {Alvara.objects.count()} Alvarás')

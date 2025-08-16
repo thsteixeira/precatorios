@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 import re
-from .models import Precatorio, Cliente, Alvara, Requerimento
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase
 
 
 class BrazilianDateInput(forms.DateInput):
@@ -431,15 +431,11 @@ class AlvaraForm(forms.ModelForm):
         })
     )
     
-    fase = forms.ChoiceField(
-        choices=[
-            ('', 'Selecione a fase'),
-            ('aguardando depósito', 'Aguardando depósito'),
-            ('depósito judicial', 'Depósito judicial'),
-            ('recebido pelo cliente', 'Recebido pelo cliente'),
-            ('honorários recebidos', 'Honorários recebidos'),
-        ],
+    fase = forms.ModelChoiceField(
+        queryset=Fase.objects.filter(ativa=True),
+        empty_label='Selecione a fase',
         label='Fase',
+        required=False,
         widget=forms.Select(attrs={
             'class': 'form-control'
         })
@@ -622,15 +618,11 @@ class RequerimentoForm(forms.ModelForm):
         })
     )
     
-    fase = forms.ChoiceField(
-        choices=[
-            ('', 'Selecione a fase'),
-            ('protocolado', 'Protocolado'),
-            ('em andamento', 'Em andamento'),
-            ('deferido', 'Deferido'),
-            ('indeferido', 'Indeferido'),
-        ],
+    fase = forms.ModelChoiceField(
+        queryset=Fase.objects.filter(ativa=True),
+        empty_label='Selecione a fase',
         label='Fase',
+        required=False,
         widget=forms.Select(attrs={
             'class': 'form-control'
         })
@@ -698,15 +690,11 @@ class AlvaraSimpleForm(forms.ModelForm):
         })
     )
     
-    fase = forms.ChoiceField(
-        choices=[
-            ('', 'Selecione a fase'),
-            ('aguardando depósito', 'Aguardando depósito'),
-            ('depósito judicial', 'Depósito judicial'),
-            ('recebido pelo cliente', 'Recebido pelo cliente'),
-            ('honorários recebidos', 'Honorários recebidos'),
-        ],
+    fase = forms.ModelChoiceField(
+        queryset=Fase.objects.filter(ativa=True),
+        empty_label='Selecione a fase',
         label='Fase',
+        required=False,
         widget=forms.Select(attrs={
             'class': 'form-control'
         })
@@ -783,5 +771,80 @@ class AlvaraSimpleForm(forms.ModelForm):
             'honorarios_contratuais': 'Honorários Contratuais',
             'honorarios_sucumbenciais': 'Honorários Sucumbenciais',
         }
+
+
+class FaseForm(forms.ModelForm):
+    """Form for creating and editing custom phases"""
+    
+    nome = forms.CharField(
+        max_length=100,
+        label='Nome da Fase',
+        help_text='Nome único para identificar a fase',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ex: Aguardando documentos',
+            'required': True
+        })
+    )
+    
+    descricao = forms.CharField(
+        required=False,
+        label='Descrição',
+        help_text='Descrição opcional da fase',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Descreva esta fase (opcional)...'
+        })
+    )
+    
+    cor = forms.CharField(
+        max_length=7,
+        label='Cor',
+        help_text='Cor para identificar visualmente a fase',
+        widget=forms.TextInput(attrs={
+            'type': 'color',
+            'class': 'form-control form-control-color',
+            'value': '#6c757d',
+            'title': 'Escolha uma cor para esta fase'
+        })
+    )
+    
+    ativa = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='Fase Ativa',
+        help_text='Marque para disponibilizar esta fase para uso',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
+    )
+    
+    def clean_nome(self):
+        """Validate nome field to ensure uniqueness"""
+        nome = self.cleaned_data.get('nome')
+        if nome:
+            nome = nome.strip()
+            # Check if another fase with the same name exists (excluding current instance if editing)
+            existing_fase = Fase.objects.filter(nome__iexact=nome)
+            if self.instance.pk:
+                existing_fase = existing_fase.exclude(pk=self.instance.pk)
+            
+            if existing_fase.exists():
+                raise forms.ValidationError('Já existe uma fase com este nome.')
+        return nome
+    
+    def clean_cor(self):
+        """Validate color field format"""
+        cor = self.cleaned_data.get('cor')
+        if cor:
+            # Ensure it's a valid hex color
+            if not re.match(r'^#[0-9a-fA-F]{6}$', cor):
+                raise forms.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
+        return cor
+
+    class Meta:
+        model = Fase
+        fields = ['nome', 'descricao', 'cor', 'ativa']
 
         

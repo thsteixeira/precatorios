@@ -4,7 +4,8 @@ from .views import (
     novoPrec_view, home_view, precatorio_view, precatorio_detalhe_view, delete_precatorio_view,
     clientes_view, cliente_detail_view, novo_cliente_view, delete_cliente_view,
     alvaras_view, alvara_detail_view, delete_alvara_view,
-    requerimento_list_view, login_view, logout_view
+    requerimento_list_view, login_view, logout_view,
+    fases_view, nova_fase_view, editar_fase_view, deletar_fase_view, ativar_fase_view
 )
 
 urlpatterns = [
@@ -26,4 +27,11 @@ urlpatterns = [
     path('alvara/<int:alvara_id>/', alvara_detail_view, name='alvara_detail'),
     path('alvara/<int:alvara_id>/delete/', delete_alvara_view, name='delete_alvara'),
     path('requerimentos/', requerimento_list_view, name='requerimentos'),
+    
+    # Phase Management URLs
+    path('fases/', fases_view, name='fases'),
+    path('fases/nova/', nova_fase_view, name='nova_fase'),
+    path('fases/<int:fase_id>/editar/', editar_fase_view, name='editar_fase'),
+    path('fases/<int:fase_id>/deletar/', deletar_fase_view, name='deletar_fase'),
+    path('fases/<int:fase_id>/ativar/', ativar_fase_view, name='ativar_fase'),
 ]

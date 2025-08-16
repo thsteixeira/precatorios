@@ -4,8 +4,12 @@ from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
-from .models import Precatorio, Cliente, Alvara, Requerimento
-from .forms import PrecatorioForm, ClienteForm, AlvaraForm, PrecatorioSearchForm, ClienteSearchForm, RequerimentoForm, ClienteSimpleForm, AlvaraSimpleForm
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase
+from .forms import (
+    PrecatorioForm, ClienteForm, AlvaraForm, PrecatorioSearchForm, 
+    ClienteSearchForm, RequerimentoForm, ClienteSimpleForm, 
+    AlvaraSimpleForm, FaseForm
+)
 
 # Authentication Views
 def login_view(request):
@@ -587,4 +591,126 @@ def delete_precatorio_view(request, precatorio_cnj):
     
     # If not POST, redirect to precatorio detail
     return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
+
+
+# ===============================
+# FASE MANAGEMENT VIEWS
+# ===============================
+
+@login_required
+def fases_view(request):
+    """View to list all phases"""
+    fases = Fase.objects.all().order_by('nome')
+    
+    # Statistics
+    total_fases = fases.count()
+    fases_ativas = fases.filter(ativa=True).count()
+    fases_inativas = fases.filter(ativa=False).count()
+    
+    context = {
+        'fases': fases,
+        'total_fases': total_fases,
+        'fases_ativas': fases_ativas,
+        'fases_inativas': fases_inativas,
+    }
+    
+    return render(request, 'precapp/fases_list.html', context)
+
+
+@login_required
+def nova_fase_view(request):
+    """View to create a new phase"""
+    if request.method == 'POST':
+        form = FaseForm(request.POST)
+        if form.is_valid():
+            fase = form.save()
+            messages.success(request, f'Fase "{fase.nome}" criada com sucesso!')
+            return redirect('fases')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = FaseForm()
+    
+    context = {
+        'form': form,
+        'title': 'Nova Fase',
+        'submit_text': 'Criar Fase'
+    }
+    return render(request, 'precapp/fase_form.html', context)
+
+
+@login_required
+def editar_fase_view(request, fase_id):
+    """View to edit an existing phase"""
+    fase = get_object_or_404(Fase, id=fase_id)
+    
+    if request.method == 'POST':
+        form = FaseForm(request.POST, instance=fase)
+        if form.is_valid():
+            fase = form.save()
+            messages.success(request, f'Fase "{fase.nome}" atualizada com sucesso!')
+            return redirect('fases')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = FaseForm(instance=fase)
+    
+    context = {
+        'form': form,
+        'fase': fase,
+        'title': f'Editar Fase: {fase.nome}',
+        'submit_text': 'Salvar Alterações'
+    }
+    return render(request, 'precapp/fase_form.html', context)
+
+
+@login_required
+def deletar_fase_view(request, fase_id):
+    """View to delete a phase"""
+    fase = get_object_or_404(Fase, id=fase_id)
+    
+    if request.method == 'POST':
+        fase_nome = fase.nome
+        
+        # Check if fase is being used by any alvara
+        alvaras_using_fase = Alvara.objects.filter(fase=fase)
+        if alvaras_using_fase.exists():
+            messages.error(
+                request, 
+                f'Não é possível excluir a fase "{fase_nome}" pois ela está sendo usada por {alvaras_using_fase.count()} alvará(s). '
+                'Altere a fase desses alvarás primeiro.'
+            )
+            return redirect('fases')
+        
+        # Check if fase is being used by any requerimento
+        requerimentos_using_fase = Requerimento.objects.filter(fase=fase)
+        if requerimentos_using_fase.exists():
+            messages.error(
+                request, 
+                f'Não é possível excluir a fase "{fase_nome}" pois ela está sendo usada por {requerimentos_using_fase.count()} requerimento(s). '
+                'Altere a fase desses requerimentos primeiro.'
+            )
+            return redirect('fases')
+        
+        fase.delete()
+        messages.success(request, f'Fase "{fase_nome}" foi excluída com sucesso!')
+        return redirect('fases')
+    
+    # If not POST, redirect to fases list
+    return redirect('fases')
+
+
+@login_required
+def ativar_fase_view(request, fase_id):
+    """View to activate/deactivate a phase"""
+    fase = get_object_or_404(Fase, id=fase_id)
+    
+    if request.method == 'POST':
+        fase.ativa = not fase.ativa
+        fase.save()
+        
+        status_text = "ativada" if fase.ativa else "desativada"
+        messages.success(request, f'Fase "{fase.nome}" foi {status_text} com sucesso!')
+    
+    return redirect('fases')
 

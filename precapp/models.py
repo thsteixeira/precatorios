@@ -4,6 +4,27 @@ from django.core.exceptions import ValidationError
 from datetime import datetime
 
 # Create your models here.
+
+class Fase(models.Model):
+    """Model for custom phases that can be used in Alvarás and Requerimentos"""
+    nome = models.CharField(max_length=100, unique=True, help_text="Nome da fase")
+    descricao = models.TextField(blank=True, help_text="Descrição opcional da fase")
+    cor = models.CharField(
+        max_length=7, 
+        default='#6c757d', 
+        help_text="Cor da fase em hexadecimal (ex: #007bff)"
+    )
+    ativa = models.BooleanField(default=True, help_text="Se esta fase está ativa para uso")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.nome
+    
+    class Meta:
+        verbose_name = "Fase"
+        verbose_name_plural = "Fases"
+        ordering = ['nome']
 class Precatorio(models.Model):
     cnj = models.CharField(max_length=200, primary_key=True)
     data_oficio = models.DateField()
@@ -52,7 +73,13 @@ class Alvara(models.Model):
     honorarios_contratuais = models.FloatField()
     honorarios_sucumbenciais = models.FloatField()
     tipo = models.CharField(max_length=100)
-    fase = models.CharField(max_length=100)
+    fase = models.ForeignKey(
+        Fase, 
+        on_delete=models.PROTECT, 
+        null=True, 
+        blank=True,
+        help_text="Fase atual do alvará"
+    )
 
     def __str__(self):
         return f"{self.tipo} - {self.cliente.nome}"
@@ -76,7 +103,13 @@ class Requerimento(models.Model):
         choices=PEDIDO_CHOICES,
         help_text='Selecione apenas um pedido.'
     )
-    fase = models.CharField(max_length=100)
+    fase = models.ForeignKey(
+        Fase, 
+        on_delete=models.PROTECT, 
+        null=True, 
+        blank=True,
+        help_text="Fase atual do requerimento"
+    )
 
     def __str__(self):
         return f"Requerimento - {self.pedido} - {self.cliente.nome}"
