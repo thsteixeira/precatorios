@@ -134,25 +134,7 @@ class Command(BaseCommand):
                 'descricao': 'Honorários contratuais totalmente pagos',
                 'cor': '#28a745',
                 'ativa': True,
-            },
-            {
-                'nome': 'Em Negociação',
-                'descricao': 'Honorários contratuais em processo de negociação',
-                'cor': '#007bff',
-                'ativa': True,
-            },
-            {
-                'nome': 'Contestado',
-                'descricao': 'Honorários contratuais contestados pelo cliente',
-                'cor': '#dc3545',
-                'ativa': True,
-            },
-            {
-                'nome': 'Acordo Firmado',
-                'descricao': 'Acordo firmado sobre honorários contratuais',
-                'cor': '#20c997',
-                'ativa': True,
-            },
+            }
         ]
 
         # Sample data
