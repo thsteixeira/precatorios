@@ -33,7 +33,7 @@ class Fase(models.Model):
     
     def __str__(self):
         tipo_display = dict(self.TIPO_CHOICES).get(self.tipo, self.tipo)
-        return f"{self.nome} ({tipo_display})"
+        return f"{self.nome}"
     
     @classmethod
     def get_fases_for_alvara(cls):
@@ -56,6 +56,7 @@ class Fase(models.Model):
                 name='unique_fase_nome_tipo'
             )
         ]
+
 class Precatorio(models.Model):
     cnj = models.CharField(max_length=200, primary_key=True)
     orcamento = models.IntegerField(
