@@ -1454,6 +1454,41 @@ class ClienteFormTest(TestCase):
         self.assertTrue(form.is_valid())
         cliente = form.save()
         self.assertEqual(cliente.nome, 'João Silva')
+    
+    def test_cpf_input_formats(self):
+        """Test that CPF accepts both formatted and unformatted input"""
+        # Test formatted CPF (with dots and dash)
+        formatted_data = self.valid_form_data.copy()
+        formatted_data['cpf'] = '123.456.789-01'
+        form = ClienteForm(data=formatted_data)
+        self.assertTrue(form.is_valid())
+        cliente = form.save()
+        self.assertEqual(cliente.cpf, '12345678901')  # Should be stored without formatting
+        
+        # Test unformatted CPF (numbers only)
+        Cliente.objects.all().delete()  # Clear the previous client
+        unformatted_data = self.valid_form_data.copy()
+        unformatted_data['cpf'] = '98765432100'
+        unformatted_data['nome'] = 'Maria Santos'
+        form = ClienteForm(data=unformatted_data)
+        self.assertTrue(form.is_valid())
+        cliente = form.save()
+        self.assertEqual(cliente.cpf, '98765432100')  # Should be stored as-is
+        
+    def test_cpf_validation_errors(self):
+        """Test CPF validation error cases"""
+        # Test invalid CPF length
+        invalid_data = self.valid_form_data.copy()
+        invalid_data['cpf'] = '123456789'  # Only 9 digits
+        form = ClienteForm(data=invalid_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cpf', form.errors)
+        
+        # Test invalid CPF (all zeros)
+        invalid_data['cpf'] = '00000000000'
+        form = ClienteForm(data=invalid_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cpf', form.errors)
 
 
 class ValidatorTest(TestCase):

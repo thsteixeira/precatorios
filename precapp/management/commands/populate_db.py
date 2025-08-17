@@ -49,13 +49,6 @@ class Command(BaseCommand):
                 'tipo': 'alvara',
                 'ativa': True,
             },
-            {
-                'nome': 'Honorários Recebidos',
-                'descricao': 'Honorários já recebidos pelo escritório',
-                'cor': '#6f42c1',
-                'tipo': 'alvara',
-                'ativa': True,
-            },
             # Requerimento phases
             {
                 'nome': 'Protocolado',
@@ -283,7 +276,7 @@ class Command(BaseCommand):
                 'honorarios_sucumbenciais': 5400.00,
                 'tipo': 'acordo',
                 'fase': 'Depósito Judicial',
-                'fase_honorarios_contratuais': 'Acordo Firmado',
+                'fase_honorarios_contratuais': 'Aguardando Pagamento',
             },
             {
                 'precatorio_cnj': '5678901-23.2024.8.26.0500',
@@ -293,7 +286,7 @@ class Command(BaseCommand):
                 'honorarios_sucumbenciais': 37500.00,
                 'tipo': 'ordem cronológica',
                 'fase': 'Aguardando Depósito',
-                'fase_honorarios_contratuais': 'Em Negociação',
+                'fase_honorarios_contratuais': 'Aguardando Pagamento',
             },
         ]
 

@@ -257,13 +257,13 @@ class ClienteForm(forms.ModelForm):
     cpf = forms.CharField(
         max_length=14,
         label='CPF',
-        help_text='Formato: 000.000.000-00 (obrigatório)',
+        help_text='Formato: 000.000.000-00 ou 00000000000 (obrigatório)',
         required=True,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '000.000.000-00',
-            'pattern': r'\d{3}\.\d{3}\.\d{3}-\d{2}',
-            'title': 'CPF no formato: 000.000.000-00'
+            'placeholder': '000.000.000-00 ou 00000000000',
+            'pattern': r'(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})',
+            'title': 'CPF no formato: 000.000.000-00 ou 00000000000'
         })
     )
     
@@ -338,13 +338,13 @@ class ClienteSimpleForm(forms.ModelForm):
     cpf = forms.CharField(
         max_length=14,
         label='CPF',
-        help_text='Formato: 000.000.000-00 (obrigatório)',
+        help_text='Formato: 000.000.000-00 ou 00000000000 (obrigatório)',
         required=True,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '000.000.000-00',
-            'pattern': r'\d{3}\.\d{3}\.\d{3}-\d{2}',
-            'title': 'CPF no formato: 000.000.000-00'
+            'placeholder': '000.000.000-00 ou 00000000000',
+            'pattern': r'(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})',
+            'title': 'CPF no formato: 000.000.000-00 ou 00000000000'
         })
     )
     
@@ -410,12 +410,12 @@ class ClienteSearchForm(forms.Form):
     cpf = forms.CharField(
         max_length=14,
         label='CPF do Cliente',
-        help_text='Digite o CPF do cliente para vincular ao precatório. Formato: 000.000.000-00',
+        help_text='Digite o CPF do cliente para vincular ao precatório. Formato: 000.000.000-00 ou 00000000000',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '000.000.000-00',
-            'pattern': r'\d{3}\.\d{3}\.\d{3}-\d{2}',
-            'title': 'CPF no formato: 000.000.000-00'
+            'placeholder': '000.000.000-00 ou 00000000000',
+            'pattern': r'(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})',
+            'title': 'CPF no formato: 000.000.000-00 ou 00000000000'
         })
     )
     
@@ -440,12 +440,12 @@ class RequerimentoForm(forms.ModelForm):
     cliente_cpf = forms.CharField(
         max_length=14,
         label='CPF do Cliente',
-        help_text='Digite o CPF do cliente. Formato: 000.000.000-00',
+        help_text='Digite o CPF do cliente. Formato: 000.000.000-00 ou 00000000000',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '000.000.000-00',
-            'pattern': r'\d{3}\.\d{3}\.\d{3}-\d{2}',
-            'title': 'CPF no formato: 000.000.000-00'
+            'placeholder': '000.000.000-00 ou 00000000000',
+            'pattern': r'(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})',
+            'title': 'CPF no formato: 000.000.000-00 ou 00000000000'
         })
     )
     
@@ -535,12 +535,12 @@ class AlvaraSimpleForm(forms.ModelForm):
     cliente_cpf = forms.CharField(
         max_length=14,
         label='CPF do Cliente',
-        help_text='Digite o CPF do cliente. Formato: 000.000.000-00',
+        help_text='Digite o CPF do cliente. Formato: 000.000.000-00 ou 00000000000',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '000.000.000-00',
-            'pattern': r'\d{3}\.\d{3}\.\d{3}-\d{2}',
-            'title': 'CPF no formato: 000.000.000-00'
+            'placeholder': '000.000.000-00 ou 00000000000',
+            'pattern': r'(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})',
+            'title': 'CPF no formato: 000.000.000-00 ou 00000000000'
         })
     )
     
