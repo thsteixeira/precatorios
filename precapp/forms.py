@@ -524,7 +524,7 @@ class AlvaraForm(forms.ModelForm):
             'precatorio': 'Precatório',
             'cliente': 'Cliente',
             'tipo': 'Tipo',
-            'fase': 'Fase',
+            'fase': 'Fase Principal',
             'valor_principal': 'Valor Principal',
             'honorarios_contratuais': 'Honorários Contratuais',
             'honorarios_sucumbenciais': 'Honorários Sucumbenciais',
@@ -667,7 +667,7 @@ class RequerimentoForm(forms.ModelForm):
             'valor': 'Valor',
             'desagio': 'Deságio (%)',
             'pedido': 'Tipo de Pedido',
-            'fase': 'Fase',
+            'fase': 'Fase Principal',
         }
 
 
@@ -781,7 +781,7 @@ class AlvaraSimpleForm(forms.ModelForm):
         fields = ["tipo", "fase", "valor_principal", "honorarios_contratuais", "honorarios_sucumbenciais"]
         labels = {
             'tipo': 'Tipo',
-            'fase': 'Fase',
+            'fase': 'Fase Principal',
             'valor_principal': 'Valor Principal',
             'honorarios_contratuais': 'Honorários Contratuais',
             'honorarios_sucumbenciais': 'Honorários Sucumbenciais',

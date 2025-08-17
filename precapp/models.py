@@ -46,8 +46,8 @@ class Fase(models.Model):
         return cls.objects.filter(ativa=True, tipo__in=['requerimento', 'ambos'])
     
     class Meta:
-        verbose_name = "Fase"
-        verbose_name_plural = "Fases"
+        verbose_name = "Fase Principal"
+        verbose_name_plural = "Fases Principais"
         ordering = ['tipo', 'nome']
         # Remove unique constraint on nome to allow same names for different types
         constraints = [
@@ -109,7 +109,7 @@ class Alvara(models.Model):
         on_delete=models.PROTECT, 
         null=True, 
         blank=True,
-        help_text="Fase atual do alvará"
+        help_text="Fase principal atual do alvará"
     )
 
     def __str__(self):
@@ -139,7 +139,7 @@ class Requerimento(models.Model):
         on_delete=models.PROTECT, 
         null=True, 
         blank=True,
-        help_text="Fase atual do requerimento"
+        help_text="Fase principal atual do requerimento"
     )
 
     def __str__(self):

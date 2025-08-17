@@ -563,41 +563,6 @@ def alvaras_view(request):
 
 
 @login_required
-def alvara_detail_view(request, alvara_id):
-    """View to display and edit a specific alvará"""
-    alvara = get_object_or_404(Alvara, id=alvara_id)
-    
-    if request.method == 'POST':
-        if 'delete_alvara' in request.POST:
-            # Handle alvara deletion
-            precatorio_cnj = alvara.precatorio.cnj
-            cliente_nome = alvara.cliente.nome
-            alvara.delete()
-            messages.success(request, f'Alvará de {cliente_nome} foi excluído com sucesso!')
-            return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
-        else:
-            # Handle form submission for editing
-            form = AlvaraForm(request.POST, instance=alvara)
-            if form.is_valid():
-                form.save()
-                messages.success(request, f'Alvará de {alvara.cliente.nome} atualizado com sucesso!')
-                return redirect('alvara_detail', alvara_id=alvara.id)
-            else:
-                messages.error(request, 'Por favor, corrija os erros abaixo.')
-    else:
-        # Display the alvará details with form for editing
-        form = AlvaraForm(instance=alvara)
-    
-    context = {
-        'alvara': alvara,
-        'form': form,
-        'is_editing': request.method == 'POST' or 'edit' in request.GET,
-    }
-    
-    return render(request, 'precapp/alvara_detail.html', context)
-
-
-@login_required
 def delete_alvara_view(request, alvara_id):
     """View to delete a specific alvará"""
     alvara = get_object_or_404(Alvara, id=alvara_id)

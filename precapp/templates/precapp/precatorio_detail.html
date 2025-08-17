@@ -554,6 +554,334 @@
 </div>
 {% endif %}
 
+
+<!-- Requerimentos Section -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-signature me-2"></i>
+                        Requerimentos
+                        <span class="badge bg-light text-dark ms-2">{{ requerimentos.count }}</span>
+                    </h5>
+                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="collapse" data-bs-target="#novoRequerimentoForm">
+                        <i class="fas fa-plus me-1"></i>Novo Requerimento
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- New Requerimento Form (Collapsible) -->
+                <div class="collapse mb-4" id="novoRequerimentoForm">
+                    <div class="card bg-light">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-plus-circle me-2"></i>
+                                Adicionar Novo Requerimento
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ requerimento_form.cliente_cpf.label_tag }}
+                                            {{ requerimento_form.cliente_cpf }}
+                                            {% if requerimento_form.cliente_cpf.help_text %}
+                                                <small class="form-text text-muted">{{ requerimento_form.cliente_cpf.help_text }}</small>
+                                            {% endif %}
+                                            {% if requerimento_form.cliente_cpf.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in requerimento_form.cliente_cpf.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ requerimento_form.pedido.label_tag }}
+                                            {{ requerimento_form.pedido }}
+                                            {% if requerimento_form.pedido.help_text %}
+                                                <small class="form-text text-muted">{{ requerimento_form.pedido.help_text }}</small>
+                                            {% endif %}
+                                            {% if requerimento_form.pedido.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in requerimento_form.pedido.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            {{ requerimento_form.valor.label_tag }}
+                                            {{ requerimento_form.valor }}
+                                            {% if requerimento_form.valor.help_text %}
+                                                <small class="form-text text-muted">{{ requerimento_form.valor.help_text }}</small>
+                                            {% endif %}
+                                            {% if requerimento_form.valor.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in requerimento_form.valor.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            {{ requerimento_form.desagio.label_tag }}
+                                            {{ requerimento_form.desagio }}
+                                            {% if requerimento_form.desagio.help_text %}
+                                                <small class="form-text text-muted">{{ requerimento_form.desagio.help_text }}</small>
+                                            {% endif %}
+                                            {% if requerimento_form.desagio.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in requerimento_form.desagio.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            {{ requerimento_form.fase.label_tag }}
+                                            {{ requerimento_form.fase }}
+                                            {% if requerimento_form.fase.help_text %}
+                                                <small class="form-text text-muted">{{ requerimento_form.fase.help_text }}</small>
+                                            {% endif %}
+                                            {% if requerimento_form.fase.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in requerimento_form.fase.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button type="button" class="btn btn-secondary me-2" data-bs-toggle="collapse" data-bs-target="#novoRequerimentoForm">
+                                        <i class="fas fa-times me-1"></i>Cancelar
+                                    </button>
+                                    <button type="submit" name="create_requerimento" class="btn btn-success">
+                                        <i class="fas fa-save me-1"></i>Salvar Requerimento
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Requerimentos List -->
+                {% if requerimentos %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Tipo de Pedido</th>
+                                    <th>Valor</th>
+                                    <th>Deságio</th>
+                                    <th>Fase Principal</th>
+                                    <th><i class="fas fa-cog me-1"></i>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for requerimento in requerimentos %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-user-circle text-secondary me-2"></i>
+                                            <div>
+                                                <strong>{{ requerimento.cliente.nome }}</strong>
+                                                <br>
+                                                <small class="text-muted">CPF: {{ requerimento.cliente.cpf }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ requerimento.get_pedido_display }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-bold">R$ {{ requerimento.valor|floatformat:2 }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-warning">{{ requerimento.desagio|floatformat:2 }}%</span>
+                                    </td>
+                                    <td>
+                                        {% if requerimento.fase %}
+                                            <div class="d-flex align-items-center">
+                                                <div class="fase-color-dot me-2" style="background-color: {{ requerimento.fase.cor }};"></div>
+                                                <span class="badge" style="background-color: {{ requerimento.fase.cor }}; color: white;">
+                                                    {{ requerimento.fase.nome }}
+                                                </span>
+                                            </div>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Fase não definida</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-outline-primary" 
+                                                    data-bs-toggle="collapse" 
+                                                    data-bs-target="#editRequerimentoForm-{{ requerimento.id }}" 
+                                                    aria-expanded="false" 
+                                                    title="Editar requerimento">
+                                                <i class="fas fa-edit me-1"></i>Editar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Dropdown Edit Form for this Requerimento -->
+                                <tr>
+                                    <td colspan="6" class="p-0">
+                                        <div class="collapse" id="editRequerimentoForm-{{ requerimento.id }}">
+                                            <div class="card card-body m-2 bg-light">
+                                                <form method="post" action="{% url 'precatorio_detalhe' precatorio.cnj %}">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="requerimento_id" value="{{ requerimento.id }}">
+                                                    
+                                                    <div class="row mb-3">
+                                                        <div class="col-12">
+                                                            <h6 class="text-primary mb-3">
+                                                                <i class="fas fa-edit me-2"></i>Editar Requerimento - {{ requerimento.cliente.nome }}
+                                                            </h6>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="row g-3">
+                                                        <div class="col-md-6">
+                                                            <label for="pedido_{{ requerimento.id }}" class="form-label">Tipo de Pedido</label>
+                                                            <select class="form-select form-select-sm" id="pedido_{{ requerimento.id }}" name="pedido">
+                                                                <option value="">Selecione o tipo de pedido</option>
+                                                                <option value="prioridade doença" {% if requerimento.pedido == 'prioridade doença' %}selected{% endif %}>Prioridade por doença</option>
+                                                                <option value="prioridade idade" {% if requerimento.pedido == 'prioridade idade' %}selected{% endif %}>Prioridade por idade</option>
+                                                                <option value="acordo principal" {% if requerimento.pedido == 'acordo principal' %}selected{% endif %}>Acordo sobre o valor Principal</option>
+                                                                <option value="acordo honorários contratuais" {% if requerimento.pedido == 'acordo honorários contratuais' %}selected{% endif %}>Acordo sobre os Honorários Contratuais</option>
+                                                                <option value="acordo honorários sucumbenciais" {% if requerimento.pedido == 'acordo honorários sucumbenciais' %}selected{% endif %}>Acordo sobre os Honorários Sucumbenciais</option>
+                                                            </select>
+                                                        </div>
+                                                        
+                                                        <div class="col-md-6">
+                                                            <label for="fase_{{ requerimento.id }}" class="form-label">Fase Principal</label>
+                                                            <select class="form-select form-select-sm" id="fase_{{ requerimento.id }}" name="fase">
+                                                                <option value="">Selecione a fase principal</option>
+                                                                {% for fase in requerimento_fases %}
+                                                                    <option value="{{ fase.id }}" {% if requerimento.fase and requerimento.fase.id == fase.id %}selected{% endif %}>
+                                                                        {{ fase.nome }}
+                                                                    </option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+                                                        
+                                                        <div class="col-md-6">
+                                                            <label for="valor_{{ requerimento.id }}" class="form-label">Valor</label>
+                                                            <div class="input-group input-group-sm">
+                                                                <span class="input-group-text">R$</span>
+                                                                <input type="number" step="0.01" class="form-control" 
+                                                                       id="valor_{{ requerimento.id }}" 
+                                                                       name="valor" 
+                                                                       value="{{ requerimento.valor }}" required>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="col-md-6">
+                                                            <label for="desagio_{{ requerimento.id }}" class="form-label">Deságio (%)</label>
+                                                            <div class="input-group input-group-sm">
+                                                                <input type="number" step="0.01" class="form-control" 
+                                                                       id="desagio_{{ requerimento.id }}" 
+                                                                       name="desagio" 
+                                                                       value="{{ requerimento.desagio }}" 
+                                                                       min="0" max="100">
+                                                                <span class="input-group-text">%</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="row mt-3">
+                                                        <div class="col-12">
+                                                            <div class="d-flex justify-content-between">
+                                                                <div class="btn-group">
+                                                                    <button type="button" class="btn btn-secondary btn-sm" 
+                                                                            data-bs-toggle="collapse" 
+                                                                            data-bs-target="#editRequerimentoForm-{{ requerimento.id }}">
+                                                                        <i class="fas fa-times me-1"></i>Cancelar
+                                                                    </button>
+                                                                    <button type="submit" name="update_requerimento" class="btn btn-success btn-sm">
+                                                                        <i class="fas fa-save me-1"></i>Salvar Alterações
+                                                                    </button>
+                                                                </div>
+                                                                
+                                                                <button type="button" class="btn btn-danger btn-sm" 
+                                                                        data-bs-toggle="modal" 
+                                                                        data-bs-target="#deleteRequerimentoModal-{{ requerimento.id }}">
+                                                                    <i class="fas fa-trash me-1"></i>Excluir Requerimento
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Delete Confirmation Modal -->
+                                <div class="modal fade" id="deleteRequerimentoModal-{{ requerimento.id }}" tabindex="-1" aria-labelledby="deleteRequerimentoModalLabel-{{ requerimento.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title" id="deleteRequerimentoModalLabel-{{ requerimento.id }}">
+                                                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                                                </h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="text-center">
+                                                    <i class="fas fa-file-signature fa-3x text-danger mb-3"></i>
+                                                    <h6>Tem certeza que deseja excluir este requerimento?</h6>
+                                                    <p class="text-muted mb-0">
+                                                        <strong>Cliente:</strong> {{ requerimento.cliente.nome }}<br>
+                                                        <strong>Tipo:</strong> {{ requerimento.get_pedido_display }}<br>
+                                                        <strong>Valor:</strong> R$ {{ requerimento.valor|floatformat:2 }}
+                                                    </p>
+                                                    <div class="alert alert-warning mt-3">
+                                                        <small><i class="fas fa-warning me-1"></i>Esta ação não pode ser desfeita!</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                    <i class="fas fa-times me-1"></i>Cancelar
+                                                </button>
+                                                <form method="post" action="{% url 'precatorio_detalhe' precatorio.cnj %}" style="display: inline;">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="requerimento_id" value="{{ requerimento.id }}">
+                                                    <button type="submit" name="delete_requerimento" class="btn btn-danger">
+                                                        <i class="fas fa-trash me-1"></i>Excluir Definitivamente
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-file-signature fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">Nenhum requerimento encontrado</h6>
+                        <p class="text-muted">Clique em "Novo Requerimento" para adicionar o primeiro requerimento a este precatório.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <!-- Alvaras Section -->
 <div class="row mt-4">
     <div class="col-12">
@@ -695,7 +1023,7 @@
                                     <th><i class="fas fa-handshake me-1"></i>Hon. Contratuais</th>
                                     <th><i class="fas fa-gavel me-1"></i>Hon. Sucumbenciais</th>
                                     <th><i class="fas fa-tags me-1"></i>Tipo</th>
-                                    <th><i class="fas fa-layer-group me-1"></i>Fase</th>
+                                    <th><i class="fas fa-layer-group me-1"></i>Fase Principal</th>
                                     <th><i class="fas fa-cog me-1"></i>Ações</th>
                                 </tr>
                             </thead>
@@ -826,9 +1154,9 @@
                                                         </div>
                                                         
                                                         <div class="col-md-6">
-                                                            <label for="fase_{{ alvara.id }}" class="form-label">Fase</label>
+                                                            <label for="fase_{{ alvara.id }}" class="form-label">Fase Principal</label>
                                                             <select class="form-select form-select-sm" id="fase_{{ alvara.id }}" name="fase">
-                                                                <option value="">Selecione a fase</option>
+                                                                <option value="">Selecione a fase principal</option>
                                                                 {% for fase in alvara_fases %}
                                                                     <option value="{{ fase.id }}" {% if alvara.fase and alvara.fase.id == fase.id %}selected{% endif %}>
                                                                         {{ fase.nome }}
@@ -961,331 +1289,6 @@
     </div>
 </div>
 
-<!-- Requerimentos Section -->
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header bg-info text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-file-signature me-2"></i>
-                        Requerimentos
-                        <span class="badge bg-light text-dark ms-2">{{ requerimentos.count }}</span>
-                    </h5>
-                    <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="collapse" data-bs-target="#novoRequerimentoForm">
-                        <i class="fas fa-plus me-1"></i>Novo Requerimento
-                    </button>
-                </div>
-            </div>
-            <div class="card-body">
-                <!-- New Requerimento Form (Collapsible) -->
-                <div class="collapse mb-4" id="novoRequerimentoForm">
-                    <div class="card bg-light">
-                        <div class="card-header">
-                            <h6 class="mb-0">
-                                <i class="fas fa-plus-circle me-2"></i>
-                                Adicionar Novo Requerimento
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <form method="post">
-                                {% csrf_token %}
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            {{ requerimento_form.cliente_cpf.label_tag }}
-                                            {{ requerimento_form.cliente_cpf }}
-                                            {% if requerimento_form.cliente_cpf.help_text %}
-                                                <small class="form-text text-muted">{{ requerimento_form.cliente_cpf.help_text }}</small>
-                                            {% endif %}
-                                            {% if requerimento_form.cliente_cpf.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in requerimento_form.cliente_cpf.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            {{ requerimento_form.pedido.label_tag }}
-                                            {{ requerimento_form.pedido }}
-                                            {% if requerimento_form.pedido.help_text %}
-                                                <small class="form-text text-muted">{{ requerimento_form.pedido.help_text }}</small>
-                                            {% endif %}
-                                            {% if requerimento_form.pedido.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in requerimento_form.pedido.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            {{ requerimento_form.valor.label_tag }}
-                                            {{ requerimento_form.valor }}
-                                            {% if requerimento_form.valor.help_text %}
-                                                <small class="form-text text-muted">{{ requerimento_form.valor.help_text }}</small>
-                                            {% endif %}
-                                            {% if requerimento_form.valor.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in requerimento_form.valor.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            {{ requerimento_form.desagio.label_tag }}
-                                            {{ requerimento_form.desagio }}
-                                            {% if requerimento_form.desagio.help_text %}
-                                                <small class="form-text text-muted">{{ requerimento_form.desagio.help_text }}</small>
-                                            {% endif %}
-                                            {% if requerimento_form.desagio.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in requerimento_form.desagio.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            {{ requerimento_form.fase.label_tag }}
-                                            {{ requerimento_form.fase }}
-                                            {% if requerimento_form.fase.help_text %}
-                                                <small class="form-text text-muted">{{ requerimento_form.fase.help_text }}</small>
-                                            {% endif %}
-                                            {% if requerimento_form.fase.errors %}
-                                                <div class="text-danger small">
-                                                    {% for error in requerimento_form.fase.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="d-flex justify-content-end">
-                                    <button type="button" class="btn btn-secondary me-2" data-bs-toggle="collapse" data-bs-target="#novoRequerimentoForm">
-                                        <i class="fas fa-times me-1"></i>Cancelar
-                                    </button>
-                                    <button type="submit" name="create_requerimento" class="btn btn-success">
-                                        <i class="fas fa-save me-1"></i>Salvar Requerimento
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Requerimentos List -->
-                {% if requerimentos %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Cliente</th>
-                                    <th>Tipo de Pedido</th>
-                                    <th>Valor</th>
-                                    <th>Deságio</th>
-                                    <th>Fase</th>
-                                    <th><i class="fas fa-cog me-1"></i>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for requerimento in requerimentos %}
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-user-circle text-secondary me-2"></i>
-                                            <div>
-                                                <strong>{{ requerimento.cliente.nome }}</strong>
-                                                <br>
-                                                <small class="text-muted">CPF: {{ requerimento.cliente.cpf }}</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-primary">{{ requerimento.get_pedido_display }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="text-success fw-bold">R$ {{ requerimento.valor|floatformat:2 }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="text-warning">{{ requerimento.desagio|floatformat:2 }}%</span>
-                                    </td>
-                                    <td>
-                                        {% if requerimento.fase %}
-                                            <div class="d-flex align-items-center">
-                                                <div class="fase-color-dot me-2" style="background-color: {{ requerimento.fase.cor }};"></div>
-                                                <span class="badge" style="background-color: {{ requerimento.fase.cor }}; color: white;">
-                                                    {{ requerimento.fase.nome }}
-                                                </span>
-                                            </div>
-                                        {% else %}
-                                            <span class="badge bg-secondary">Fase não definida</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-outline-primary" 
-                                                    data-bs-toggle="collapse" 
-                                                    data-bs-target="#editRequerimentoForm-{{ requerimento.id }}" 
-                                                    aria-expanded="false" 
-                                                    title="Editar requerimento">
-                                                <i class="fas fa-edit me-1"></i>Editar
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                
-                                <!-- Dropdown Edit Form for this Requerimento -->
-                                <tr>
-                                    <td colspan="6" class="p-0">
-                                        <div class="collapse" id="editRequerimentoForm-{{ requerimento.id }}">
-                                            <div class="card card-body m-2 bg-light">
-                                                <form method="post" action="{% url 'precatorio_detalhe' precatorio.cnj %}">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="requerimento_id" value="{{ requerimento.id }}">
-                                                    
-                                                    <div class="row mb-3">
-                                                        <div class="col-12">
-                                                            <h6 class="text-primary mb-3">
-                                                                <i class="fas fa-edit me-2"></i>Editar Requerimento - {{ requerimento.cliente.nome }}
-                                                            </h6>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div class="row g-3">
-                                                        <div class="col-md-6">
-                                                            <label for="pedido_{{ requerimento.id }}" class="form-label">Tipo de Pedido</label>
-                                                            <select class="form-select form-select-sm" id="pedido_{{ requerimento.id }}" name="pedido">
-                                                                <option value="">Selecione o tipo de pedido</option>
-                                                                <option value="prioridade doença" {% if requerimento.pedido == 'prioridade doença' %}selected{% endif %}>Prioridade por doença</option>
-                                                                <option value="prioridade idade" {% if requerimento.pedido == 'prioridade idade' %}selected{% endif %}>Prioridade por idade</option>
-                                                                <option value="acordo principal" {% if requerimento.pedido == 'acordo principal' %}selected{% endif %}>Acordo sobre o valor Principal</option>
-                                                                <option value="acordo honorários contratuais" {% if requerimento.pedido == 'acordo honorários contratuais' %}selected{% endif %}>Acordo sobre os Honorários Contratuais</option>
-                                                                <option value="acordo honorários sucumbenciais" {% if requerimento.pedido == 'acordo honorários sucumbenciais' %}selected{% endif %}>Acordo sobre os Honorários Sucumbenciais</option>
-                                                            </select>
-                                                        </div>
-                                                        
-                                                        <div class="col-md-6">
-                                                            <label for="fase_{{ requerimento.id }}" class="form-label">Fase</label>
-                                                            <select class="form-select form-select-sm" id="fase_{{ requerimento.id }}" name="fase">
-                                                                <option value="">Selecione a fase</option>
-                                                                {% for fase in requerimento_fases %}
-                                                                    <option value="{{ fase.id }}" {% if requerimento.fase and requerimento.fase.id == fase.id %}selected{% endif %}>
-                                                                        {{ fase.nome }}
-                                                                    </option>
-                                                                {% endfor %}
-                                                            </select>
-                                                        </div>
-                                                        
-                                                        <div class="col-md-6">
-                                                            <label for="valor_{{ requerimento.id }}" class="form-label">Valor</label>
-                                                            <div class="input-group input-group-sm">
-                                                                <span class="input-group-text">R$</span>
-                                                                <input type="number" step="0.01" class="form-control" 
-                                                                       id="valor_{{ requerimento.id }}" 
-                                                                       name="valor" 
-                                                                       value="{{ requerimento.valor }}" required>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div class="col-md-6">
-                                                            <label for="desagio_{{ requerimento.id }}" class="form-label">Deságio (%)</label>
-                                                            <div class="input-group input-group-sm">
-                                                                <input type="number" step="0.01" class="form-control" 
-                                                                       id="desagio_{{ requerimento.id }}" 
-                                                                       name="desagio" 
-                                                                       value="{{ requerimento.desagio }}" 
-                                                                       min="0" max="100">
-                                                                <span class="input-group-text">%</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div class="row mt-3">
-                                                        <div class="col-12">
-                                                            <div class="d-flex justify-content-between">
-                                                                <div class="btn-group">
-                                                                    <button type="button" class="btn btn-secondary btn-sm" 
-                                                                            data-bs-toggle="collapse" 
-                                                                            data-bs-target="#editRequerimentoForm-{{ requerimento.id }}">
-                                                                        <i class="fas fa-times me-1"></i>Cancelar
-                                                                    </button>
-                                                                    <button type="submit" name="update_requerimento" class="btn btn-success btn-sm">
-                                                                        <i class="fas fa-save me-1"></i>Salvar Alterações
-                                                                    </button>
-                                                                </div>
-                                                                
-                                                                <button type="button" class="btn btn-danger btn-sm" 
-                                                                        data-bs-toggle="modal" 
-                                                                        data-bs-target="#deleteRequerimentoModal-{{ requerimento.id }}">
-                                                                    <i class="fas fa-trash me-1"></i>Excluir Requerimento
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                
-                                <!-- Delete Confirmation Modal -->
-                                <div class="modal fade" id="deleteRequerimentoModal-{{ requerimento.id }}" tabindex="-1" aria-labelledby="deleteRequerimentoModalLabel-{{ requerimento.id }}" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header bg-danger text-white">
-                                                <h5 class="modal-title" id="deleteRequerimentoModalLabel-{{ requerimento.id }}">
-                                                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
-                                                </h5>
-                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <div class="text-center">
-                                                    <i class="fas fa-file-signature fa-3x text-danger mb-3"></i>
-                                                    <h6>Tem certeza que deseja excluir este requerimento?</h6>
-                                                    <p class="text-muted mb-0">
-                                                        <strong>Cliente:</strong> {{ requerimento.cliente.nome }}<br>
-                                                        <strong>Tipo:</strong> {{ requerimento.get_pedido_display }}<br>
-                                                        <strong>Valor:</strong> R$ {{ requerimento.valor|floatformat:2 }}
-                                                    </p>
-                                                    <div class="alert alert-warning mt-3">
-                                                        <small><i class="fas fa-warning me-1"></i>Esta ação não pode ser desfeita!</small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                                    <i class="fas fa-times me-1"></i>Cancelar
-                                                </button>
-                                                <form method="post" action="{% url 'precatorio_detalhe' precatorio.cnj %}" style="display: inline;">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="requerimento_id" value="{{ requerimento.id }}">
-                                                    <button type="submit" name="delete_requerimento" class="btn btn-danger">
-                                                        <i class="fas fa-trash me-1"></i>Excluir Definitivamente
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="text-center py-5">
-                        <i class="fas fa-file-signature fa-3x text-muted mb-3"></i>
-                        <h6 class="text-muted">Nenhum requerimento encontrado</h6>
-                        <p class="text-muted">Clique em "Novo Requerimento" para adicionar o primeiro requerimento a este precatório.</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Delete Precatorio Modal -->
 <div class="modal fade" id="deletePrecatorioModal" tabindex="-1" aria-labelledby="deletePrecatorioModalLabel" aria-hidden="true">
