@@ -518,16 +518,19 @@ def cliente_detail_view(request, cpf):
 @login_required
 def alvaras_view(request):
     """View to display all alvarás with filtering support"""
-    alvaras = Alvara.objects.all().select_related('precatorio', 'cliente', 'fase').order_by('-id')
+    alvaras = Alvara.objects.all().select_related('precatorio', 'cliente', 'fase', 'fase_honorarios_contratuais').order_by('-id')
     
     # Get available fases for alvara
     available_fases = Fase.get_fases_for_alvara()
+    # Get available fases for honorários contratuais
+    available_fases_honorarios = FaseHonorariosContratuais.objects.all().order_by('nome')
     
     # Apply filters based on GET parameters
     nome_filter = request.GET.get('nome', '').strip()
     precatorio_filter = request.GET.get('precatorio', '').strip()
     tipo_filter = request.GET.get('tipo', '').strip()
     fase_filter = request.GET.get('fase', '').strip()
+    fase_honorarios_filter = request.GET.get('fase_honorarios', '').strip()
     
     if nome_filter:
         alvaras = alvaras.filter(cliente__nome__icontains=nome_filter)
@@ -540,6 +543,9 @@ def alvaras_view(request):
     
     if fase_filter:
         alvaras = alvaras.filter(fase__nome=fase_filter)  # Exact match for dropdown
+        
+    if fase_honorarios_filter:
+        alvaras = alvaras.filter(fase_honorarios_contratuais__nome=fase_honorarios_filter)  # Exact match for dropdown
     
     # Calculate summary statistics
     total_alvaras = alvaras.count()
@@ -568,8 +574,10 @@ def alvaras_view(request):
         'current_precatorio': precatorio_filter,
         'current_tipo': tipo_filter,
         'current_fase': fase_filter,
+        'current_fase_honorarios': fase_honorarios_filter,
         # Include available options for dropdowns
         'available_fases': available_fases,
+        'available_fases_honorarios': available_fases_honorarios,
     }
     
     return render(request, 'precapp/alvara_list.html', context)

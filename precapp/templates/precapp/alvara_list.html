@@ -43,7 +43,7 @@
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <label for="fase" class="form-label">Fase</label>
+                            <label for="fase" class="form-label">Fase Principal</label>
                             <select class="form-control" id="fase" name="fase">
                                 <option value="">Todas</option>
                                 {% for fase in available_fases %}
@@ -51,7 +51,16 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-2 d-flex align-items-end">
+                        <div class="col-md-2">
+                            <label for="fase_honorarios" class="form-label">Fase Honorários</label>
+                            <select class="form-control" id="fase_honorarios" name="fase_honorarios">
+                                <option value="">Todas</option>
+                                {% for fase_hon in available_fases_honorarios %}
+                                    <option value="{{ fase_hon.nome }}" {% if current_fase_honorarios == fase_hon.nome %}selected{% endif %}>{{ fase_hon.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 d-flex justify-content-start">
                             <button type="submit" class="btn btn-primary me-2">
                                 <i class="fas fa-search me-1"></i>Buscar
                             </button>
@@ -92,6 +101,7 @@
                                 <th>Hon. Sucumbenciais</th>
                                 <th>Tipo</th>
                                 <th>Fase</th>
+                                <th>Fase Honorários</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -145,6 +155,15 @@
                                     {% if alvara.fase %}
                                         <span class="badge" style="background-color: {{ alvara.fase.cor }}; color: white;">
                                             {{ alvara.fase.nome }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if alvara.fase_honorarios_contratuais %}
+                                        <span class="badge" style="background-color: {{ alvara.fase_honorarios_contratuais.cor }}; color: white;">
+                                            {{ alvara.fase_honorarios_contratuais.nome }}
                                         </span>
                                     {% else %}
                                         <span class="text-muted">-</span>
