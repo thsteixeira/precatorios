@@ -7,7 +7,7 @@ from decimal import Decimal
 from datetime import date
 from .models import Precatorio, Cliente, Alvara, Requerimento, Fase
 from .forms import (
-    PrecatorioForm, ClienteForm, AlvaraForm, AlvaraSimpleForm, 
+    PrecatorioForm, ClienteForm, AlvaraSimpleForm, 
     RequerimentoForm, FaseForm, validate_cnj, validate_currency
 )
 
@@ -379,7 +379,7 @@ class FaseFormTest(TestCase):
 
 
 class AlvaraFormTest(TestCase):
-    """Test cases for AlvaraForm and AlvaraSimpleForm"""
+    """Test cases for AlvaraSimpleForm"""
     
     def setUp(self):
         """Set up test data"""
@@ -422,17 +422,6 @@ class AlvaraFormTest(TestCase):
             cor='#4ECDC4',
             ativa=True
         )
-    
-    def test_alvara_form_fase_filtering(self):
-        """Test that AlvaraForm only shows alvara and ambos phases"""
-        form = AlvaraForm()
-        fase_queryset = form.fields['fase'].queryset
-        
-        # Should include alvara and ambos phases
-        self.assertIn(self.fase_alvara, fase_queryset)
-        self.assertIn(self.fase_ambos, fase_queryset)
-        # Should NOT include requerimento phases
-        self.assertNotIn(self.fase_requerimento, fase_queryset)
     
     def test_alvara_simple_form_fase_filtering(self):
         """Test that AlvaraSimpleForm only shows alvara and ambos phases"""

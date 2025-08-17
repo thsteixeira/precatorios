@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from .models import Precatorio, Cliente, Alvara, Requerimento, Fase
 from .forms import (
-    PrecatorioForm, ClienteForm, AlvaraForm, PrecatorioSearchForm, 
+    PrecatorioForm, ClienteForm, PrecatorioSearchForm, 
     ClienteSearchForm, RequerimentoForm, ClienteSimpleForm, 
     AlvaraSimpleForm, FaseForm
 )
