@@ -57,6 +57,33 @@ class Fase(models.Model):
             )
         ]
 
+class FaseHonorariosContratuais(models.Model):
+    """Model for custom phases specifically for Honorários Contratuais tracking"""
+    
+    nome = models.CharField(max_length=100, help_text="Nome da fase de honorários contratuais")
+    descricao = models.TextField(blank=True, help_text="Descrição opcional da fase")
+    cor = models.CharField(
+        max_length=7, 
+        default='#28a745', 
+        help_text="Cor da fase em hexadecimal (ex: #28a745)"
+    )
+    ativa = models.BooleanField(default=True, help_text="Se esta fase está ativa para uso")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.nome}"
+    
+    @classmethod
+    def get_fases_ativas(cls):
+        """Get active phases for honorários contratuais"""
+        return cls.objects.filter(ativa=True)
+    
+    class Meta:
+        verbose_name = "Fase Honorários Contratuais"
+        verbose_name_plural = "Fases Honorários Contratuais"
+        ordering = ['nome']
+
 class Precatorio(models.Model):
     cnj = models.CharField(max_length=200, primary_key=True)
     orcamento = models.IntegerField(
@@ -110,6 +137,14 @@ class Alvara(models.Model):
         null=True, 
         blank=True,
         help_text="Fase principal atual do alvará"
+    )
+    fase_honorarios_contratuais = models.ForeignKey(
+        FaseHonorariosContratuais,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text="Fase específica para honorários contratuais",
+        verbose_name="Fase Honorários Contratuais"
     )
 
     def __str__(self):

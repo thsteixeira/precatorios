@@ -4,11 +4,11 @@ from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
-from .models import Precatorio, Cliente, Alvara, Requerimento, Fase
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais
 from .forms import (
     PrecatorioForm, ClienteForm, PrecatorioSearchForm, 
     ClienteSearchForm, RequerimentoForm, ClienteSimpleForm, 
-    AlvaraSimpleForm, FaseForm
+    AlvaraSimpleForm, FaseForm, FaseHonorariosContratuaisForm
 )
 
 # Authentication Views
@@ -298,6 +298,18 @@ def precatorio_detalhe_view(request, precatorio_cnj):
                 else:
                     alvara.fase = None
                 
+                # Handle fase_honorarios_contratuais field properly (ForeignKey)
+                fase_honorarios_id = request.POST.get('fase_honorarios_contratuais')
+                if fase_honorarios_id:
+                    try:
+                        fase_honorarios = FaseHonorariosContratuais.objects.get(id=fase_honorarios_id)
+                        alvara.fase_honorarios_contratuais = fase_honorarios
+                    except FaseHonorariosContratuais.DoesNotExist:
+                        messages.error(request, 'Fase Honorários Contratuais selecionada não existe.')
+                        return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
+                else:
+                    alvara.fase_honorarios_contratuais = None
+                
                 alvara.save()
                 messages.success(request, f'Alvará do cliente {alvara.cliente.nome} atualizado com sucesso!')
                 return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
@@ -382,6 +394,7 @@ def precatorio_detalhe_view(request, precatorio_cnj):
         'requerimentos': requerimentos,
         'alvara_fases': Fase.get_fases_for_alvara(),
         'requerimento_fases': Fase.get_fases_for_requerimento(),
+        'fases_honorarios_contratuais': FaseHonorariosContratuais.objects.filter(ativa=True).order_by('nome'),
     }
     
     return render(request, 'precapp/precatorio_detail.html', context)
@@ -837,3 +850,142 @@ def ativar_fase_view(request, fase_id):
     
     return redirect('fases')
 
+
+# FASE HONORÁRIOS CONTRATUAIS MANAGEMENT VIEWS
+# ===============================
+
+@login_required
+def fases_honorarios_view(request):
+    """View to list all honorários contratuais phases"""
+    fases = FaseHonorariosContratuais.objects.all().order_by('nome')
+    
+    # Statistics
+    total_fases = fases.count()
+    fases_ativas = fases.filter(ativa=True).count()
+    fases_inativas = fases.filter(ativa=False).count()
+    
+    context = {
+        'fases': fases,
+        'total_fases': total_fases,
+        'fases_ativas': fases_ativas,
+        'fases_inativas': fases_inativas,
+    }
+    
+    return render(request, 'precapp/fases_honorarios_list.html', context)
+
+
+@login_required
+def nova_fase_honorarios_view(request):
+    """View to create a new honorários contratuais phase"""
+    if request.method == 'POST':
+        form = FaseHonorariosContratuaisForm(request.POST)
+        if form.is_valid():
+            fase = form.save()
+            messages.success(request, f'Fase de Honorários Contratuais "{fase.nome}" criada com sucesso!')
+            return redirect('fases_honorarios')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = FaseHonorariosContratuaisForm()
+    
+    context = {
+        'form': form,
+        'title': 'Nova Fase Honorários Contratuais',
+        'submit_text': 'Criar Fase'
+    }
+    return render(request, 'precapp/fase_honorarios_form.html', context)
+
+
+@login_required
+def editar_fase_honorarios_view(request, fase_id):
+    """View to edit an existing honorários contratuais phase"""
+    fase = get_object_or_404(FaseHonorariosContratuais, id=fase_id)
+    
+    if request.method == 'POST':
+        form = FaseHonorariosContratuaisForm(request.POST, instance=fase)
+        if form.is_valid():
+            fase = form.save()
+            messages.success(request, f'Fase de Honorários Contratuais "{fase.nome}" atualizada com sucesso!')
+            return redirect('fases_honorarios')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = FaseHonorariosContratuaisForm(instance=fase)
+    
+    context = {
+        'form': form,
+        'fase': fase,
+        'title': f'Editar Fase Honorários Contratuais: {fase.nome}',
+        'submit_text': 'Salvar Alterações'
+    }
+    return render(request, 'precapp/fase_honorarios_form.html', context)
+
+
+@login_required
+def deletar_fase_honorarios_view(request, fase_id):
+    """View to delete a honorários contratuais phase"""
+    fase = get_object_or_404(FaseHonorariosContratuais, id=fase_id)
+    
+    if request.method == 'POST':
+        fase_nome = fase.nome
+        
+        # Check if fase is being used by any alvara
+        alvaras_using_fase = Alvara.objects.filter(fase_honorarios_contratuais=fase)
+        if alvaras_using_fase.exists():
+            messages.error(
+                request, 
+                f'Não é possível excluir a fase de honorários contratuais "{fase_nome}" pois ela está sendo usada por {alvaras_using_fase.count()} alvará(s). '
+                'Altere a fase desses alvarás primeiro.'
+            )
+            return redirect('fases_honorarios')
+        
+        fase.delete()
+        messages.success(request, f'Fase de Honorários Contratuais "{fase_nome}" foi excluída com sucesso!')
+        return redirect('fases_honorarios')
+    
+    # If not POST, redirect to fases list
+    return redirect('fases_honorarios')
+
+
+@login_required
+def ativar_fase_honorarios_view(request, fase_id):
+    """View to activate/deactivate a honorários contratuais phase"""
+    fase = get_object_or_404(FaseHonorariosContratuais, id=fase_id)
+    
+    if request.method == 'POST':
+        fase.ativa = not fase.ativa
+        fase.save()
+        
+        status_text = "ativada" if fase.ativa else "desativada"
+        messages.success(request, f'Fase de Honorários Contratuais "{fase.nome}" foi {status_text} com sucesso!')
+    
+    return redirect('fases_honorarios')
+
+
+# CUSTOMIZAÇÃO PAGE
+# ===============================
+
+@login_required
+def customizacao_view(request):
+    """Central customization page for managing phases"""
+    # Get statistics for both phase types
+    fases_principais = Fase.objects.all()
+    fases_honorarios = FaseHonorariosContratuais.objects.all()
+    
+    context = {
+        # Fases Principais stats
+        'total_fases_principais': fases_principais.count(),
+        'fases_principais_ativas': fases_principais.filter(ativa=True).count(),
+        'fases_principais_inativas': fases_principais.filter(ativa=False).count(),
+        
+        # Fases Honorários stats
+        'total_fases_honorarios': fases_honorarios.count(),
+        'fases_honorarios_ativas': fases_honorarios.filter(ativa=True).count(),
+        'fases_honorarios_inativas': fases_honorarios.filter(ativa=False).count(),
+        
+        # Recent phases (last 5 of each type)
+        'recent_fases_principais': fases_principais.order_by('-criado_em')[:5],
+        'recent_fases_honorarios': fases_honorarios.order_by('-criado_em')[:5],
+    }
+    
+    return render(request, 'precapp/customizacao.html', context)

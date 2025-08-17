@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 import re
-from .models import Precatorio, Cliente, Alvara, Requerimento, Fase
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais
 
 
 class BrazilianDateInput(forms.DateInput):
@@ -567,6 +567,17 @@ class AlvaraSimpleForm(forms.ModelForm):
         })
     )
     
+    fase_honorarios_contratuais = forms.ModelChoiceField(
+        queryset=None,  # Will be set in __init__
+        empty_label='Selecione a fase (opcional)',
+        label='Fase Honorários Contratuais',
+        required=False,
+        help_text='Fase específica para acompanhar o status dos honorários contratuais',
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        })
+    )
+    
     valor_principal = forms.DecimalField(
         max_digits=15,
         decimal_places=2,
@@ -631,15 +642,17 @@ class AlvaraSimpleForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Set queryset to only show phases for Alvará
-        from .models import Fase
+        from .models import Fase, FaseHonorariosContratuais
         self.fields['fase'].queryset = Fase.get_fases_for_alvara()
+        self.fields['fase_honorarios_contratuais'].queryset = FaseHonorariosContratuais.get_fases_ativas()
 
     class Meta:
         model = Alvara
-        fields = ["tipo", "fase", "valor_principal", "honorarios_contratuais", "honorarios_sucumbenciais"]
+        fields = ["tipo", "fase", "fase_honorarios_contratuais", "valor_principal", "honorarios_contratuais", "honorarios_sucumbenciais"]
         labels = {
             'tipo': 'Tipo',
             'fase': 'Fase Principal',
+            'fase_honorarios_contratuais': 'Fase Honorários Contratuais',
             'valor_principal': 'Valor Principal',
             'honorarios_contratuais': 'Honorários Contratuais',
             'honorarios_sucumbenciais': 'Honorários Sucumbenciais',
@@ -734,5 +747,81 @@ class FaseForm(forms.ModelForm):
     class Meta:
         model = Fase
         fields = ['nome', 'descricao', 'tipo', 'cor', 'ativa']
+
+
+class FaseHonorariosContratuaisForm(forms.ModelForm):
+    """Form for creating and editing Fase Honorários Contratuais"""
+    
+    nome = forms.CharField(
+        max_length=100,
+        label='Nome da Fase',
+        help_text='Nome único para identificar a fase de honorários contratuais',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ex: Aguardando pagamento',
+            'required': True
+        })
+    )
+    
+    descricao = forms.CharField(
+        required=False,
+        label='Descrição',
+        help_text='Descrição opcional da fase',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Descreva esta fase (opcional)...'
+        })
+    )
+    
+    cor = forms.CharField(
+        max_length=7,
+        label='Cor',
+        help_text='Cor para identificar visualmente a fase',
+        widget=forms.TextInput(attrs={
+            'type': 'color',
+            'class': 'form-control form-control-color',
+            'value': '#28a745',
+            'title': 'Escolha uma cor para esta fase'
+        })
+    )
+    
+    ativa = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='Fase Ativa',
+        help_text='Marque para disponibilizar esta fase para uso',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
+    )
+    
+    def clean_nome(self):
+        """Validate nome field to ensure uniqueness"""
+        nome = self.cleaned_data.get('nome')
+        if nome:
+            nome = nome.strip()
+            # Check if another fase with the same name exists (excluding current instance if editing)
+            from .models import FaseHonorariosContratuais
+            existing_fase = FaseHonorariosContratuais.objects.filter(nome__iexact=nome)
+            if self.instance.pk:
+                existing_fase = existing_fase.exclude(pk=self.instance.pk)
+            
+            if existing_fase.exists():
+                raise forms.ValidationError(f'Já existe uma fase de honorários contratuais com o nome "{nome}".')
+        return nome
+    
+    def clean_cor(self):
+        """Validate color field format"""
+        cor = self.cleaned_data.get('cor')
+        if cor:
+            # Ensure it's a valid hex color
+            if not re.match(r'^#[0-9a-fA-F]{6}$', cor):
+                raise forms.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
+        return cor
+
+    class Meta:
+        model = FaseHonorariosContratuais
+        fields = ['nome', 'descricao', 'cor', 'ativa']
 
         

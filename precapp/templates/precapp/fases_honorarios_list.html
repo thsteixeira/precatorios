@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Fases Honorários Contratuais - Sistema de Precatórios{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'customizacao' %}" class="text-decoration-none">
+                    <i class="fas fa-cogs me-1"></i>Customização
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Fases Honorários Contratuais</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-0">
+                        <i class="fas fa-gavel me-2 text-success"></i>
+                        Gerenciamento de Fases Honorários Contratuais
+                    </h2>
+                    <p class="text-muted mb-0">Configure e gerencie as fases específicas para honorários contratuais</p>
+                </div>
+                <div>
+                    <a href="{% url 'customizacao' %}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left me-1"></i>Customização
+                    </a>
+                    <a href="{% url 'nova_fase_honorarios' %}" class="btn btn-success">
+                        <i class="fas fa-plus me-1"></i>Nova Fase Honorários Contratuais
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h3 class="text-success mb-0">{{ total_fases }}</h3>
+                    <small class="text-muted">Total de Fases Honorários</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h3 class="text-success mb-0">{{ fases_ativas }}</h3>
+                    <small class="text-muted">Fases Ativas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h3 class="text-warning mb-0">{{ fases_inativas }}</h3>
+                    <small class="text-muted">Fases Inativas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <a href="{% url 'fases' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-list-ul me-1"></i>Fases Principais
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fases List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-gavel me-2"></i>Fases Honorários Contratuais
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if fases %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>Descrição</th>
+                                        <th>Cor</th>
+                                        <th>Status</th>
+                                        <th>Criado em</th>
+                                        <th width="200px">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for fase in fases %}
+                                        <tr class="{% if not fase.ativa %}table-secondary{% endif %}">
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="fase-color-indicator me-2" 
+                                                         style="width: 12px; height: 12px; border-radius: 50%; background-color: {{ fase.cor }}; border: 1px solid #ddd;">
+                                                    </div>
+                                                    <strong>{{ fase.nome }}</strong>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if fase.descricao %}
+                                                    <span class="text-muted">{{ fase.descricao|truncatewords:8 }}</span>
+                                                {% else %}
+                                                    <span class="text-muted fst-italic">Sem descrição</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge" style="background-color: {{ fase.cor }}; color: white;">
+                                                    {{ fase.cor }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if fase.ativa %}
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check me-1"></i>Ativa
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">
+                                                        <i class="fas fa-pause me-1"></i>Inativa
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">{{ fase.criado_em|date:"d/m/Y H:i" }}</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                            data-bs-toggle="collapse" 
+                                                            data-bs-target="#editFaseHonorariosForm-{{ fase.id }}" 
+                                                            aria-expanded="false" 
+                                                            title="Editar fase">
+                                                        <i class="fas fa-edit me-1"></i>Editar
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- Dropdown Edit Form for this Fase -->
+                                        <tr>
+                                            <td colspan="6" class="p-0">
+                                                <div class="collapse" id="editFaseHonorariosForm-{{ fase.id }}">
+                                                    <div class="card card-body m-2 bg-light">
+                                                        <form method="post" action="{% url 'editar_fase_honorarios' fase.id %}">
+                                                            {% csrf_token %}
+                                                            
+                                                            <div class="row mb-3">
+                                                                <div class="col-12">
+                                                                    <h6 class="text-primary mb-3">
+                                                                        <i class="fas fa-edit me-2"></i>Editar Fase Honorários: {{ fase.nome }}
+                                                                    </h6>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div class="row">
+                                                                <!-- Nome Field -->
+                                                                <div class="col-md-4 mb-3">
+                                                                    <label class="form-label">Nome da Fase <span class="text-danger">*</span></label>
+                                                                    <input type="text" class="form-control" name="nome" value="{{ fase.nome }}" required>
+                                                                </div>
+                                                                
+                                                                <!-- Cor Field -->
+                                                                <div class="col-md-3 mb-3">
+                                                                    <label class="form-label">Cor</label>
+                                                                    <input type="color" class="form-control form-control-color" name="cor" value="{{ fase.cor }}">
+                                                                </div>
+                                                                
+                                                                <!-- Ativa Field -->
+                                                                <div class="col-md-3 mb-3">
+                                                                    <label class="form-label d-block">Status</label>
+                                                                    <div class="form-check">
+                                                                        <input type="checkbox" class="form-check-input" name="ativa" id="ativa-{{ fase.id }}" {% if fase.ativa %}checked{% endif %}>
+                                                                        <label class="form-check-label" for="ativa-{{ fase.id }}">Fase Ativa</label>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <!-- Descrição Field (full width) -->
+                                                            <div class="row">
+                                                                <div class="col-12 mb-3">
+                                                                    <label class="form-label">Descrição</label>
+                                                                    <textarea class="form-control" name="descricao" rows="2" placeholder="Descrição opcional da fase">{{ fase.descricao }}</textarea>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <!-- Actions -->
+                                                            <div class="row">
+                                                                <div class="col-12">
+                                                                    <div class="d-flex justify-content-between">
+                                                                        <div class="btn-group">
+                                                                            <button type="submit" name="update_fase" class="btn btn-success btn-sm">
+                                                                                <i class="fas fa-save me-1"></i>Salvar Alterações
+                                                                            </button>
+                                                                            <button type="button" class="btn btn-secondary btn-sm" 
+                                                                                    data-bs-toggle="collapse" 
+                                                                                    data-bs-target="#editFaseHonorariosForm-{{ fase.id }}" 
+                                                                                    title="Cancelar">
+                                                                                <i class="fas fa-times me-1"></i>Cancelar
+                                                                            </button>
+                                                                        </div>
+                                                                        
+                                                                        <div class="btn-group">
+                                                                            <form method="post" action="{% url 'ativar_fase_honorarios' fase.id %}" class="d-inline">
+                                                                                {% csrf_token %}
+                                                                                <button type="submit" class="btn btn-warning btn-sm" 
+                                                                                        onclick="return confirm('{% if fase.ativa %}Desativar{% else %}Ativar{% endif %} a fase {{ fase.nome }}?')">
+                                                                                    <i class="fas fa-{% if fase.ativa %}pause{% else %}play{% endif %} me-1"></i>
+                                                                                    {% if fase.ativa %}Desativar{% else %}Ativar{% endif %}
+                                                                                </button>
+                                                                            </form>
+                                                                            
+                                                                            <button type="button" class="btn btn-danger btn-sm" 
+                                                                                    data-bs-toggle="modal" 
+                                                                                    data-bs-target="#deleteFaseHonorariosModal-{{ fase.id }}" 
+                                                                                    title="Excluir fase">
+                                                                                <i class="fas fa-trash me-1"></i>Excluir
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- Delete Confirmation Modal -->
+                                        <div class="modal fade" id="deleteFaseHonorariosModal-{{ fase.id }}" tabindex="-1" aria-labelledby="deleteFaseHonorariosLabel-{{ fase.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header bg-danger text-white">
+                                                        <h5 class="modal-title" id="deleteFaseHonorariosLabel-{{ fase.id }}">
+                                                            <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                                                        </h5>
+                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="text-center">
+                                                            <i class="fas fa-gavel fa-3x text-danger mb-3"></i>
+                                                            <h6>Tem certeza que deseja excluir esta fase de honorários?</h6>
+                                                            <p class="text-muted mb-0">
+                                                                <strong>Fase:</strong> {{ fase.nome }}<br>
+                                                                <strong>Descrição:</strong> {{ fase.descricao|default:"Sem descrição" }}
+                                                            </p>
+                                                            <div class="alert alert-warning mt-3">
+                                                                <small><i class="fas fa-warning me-1"></i>Esta ação não pode ser desfeita!</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                            <i class="fas fa-times me-1"></i>Cancelar
+                                                        </button>
+                                                        <form method="post" action="{% url 'deletar_fase_honorarios' fase.id %}" style="display: inline;">
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="btn btn-danger">
+                                                                <i class="fas fa-trash me-1"></i>Excluir Definitivamente
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-3">
+                                <i class="fas fa-gavel text-muted" style="font-size: 3rem;"></i>
+                            </div>
+                            <h5 class="text-muted">Nenhuma Fase de Honorários Contratuais cadastrada</h5>
+                            <p class="text-muted mb-3">Comece criando sua primeira fase de honorários contratuais</p>
+                            <a href="{% url 'nova_fase_honorarios' %}" class="btn btn-success">
+                                <i class="fas fa-plus me-1"></i>Criar Primeira Fase
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h6 class="alert-heading">
+                    <i class="fas fa-info-circle me-1"></i>Sobre as Fases de Honorários Contratuais
+                </h6>
+                <p class="mb-2">
+                    As Fases de Honorários Contratuais permitem acompanhar especificamente o status dos honorários contratuais de cada alvará, 
+                    independentemente da fase principal do processo.
+                </p>
+                <ul class="mb-0">
+                    <li>Use cores diferentes para identificar visualmente cada fase</li>
+                    <li>Fases inativas não aparecem nos formulários de alvarás</li>
+                    <li>Não é possível excluir fases que estão sendo usadas por alvarás</li>
+                    <li>Essas fases são específicas para honorários contratuais e não se aplicam a requerimentos</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

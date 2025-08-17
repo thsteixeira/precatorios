@@ -958,6 +958,22 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
+                                            {{ alvara_form.fase_honorarios_contratuais.label_tag }}
+                                            {{ alvara_form.fase_honorarios_contratuais }}
+                                            {% if alvara_form.fase_honorarios_contratuais.help_text %}
+                                                <small class="form-text text-muted">{{ alvara_form.fase_honorarios_contratuais.help_text }}</small>
+                                            {% endif %}
+                                            {% if alvara_form.fase_honorarios_contratuais.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in alvara_form.fase_honorarios_contratuais.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
                                             {{ alvara_form.valor_principal.label_tag }}
                                             {{ alvara_form.valor_principal }}
                                             {% if alvara_form.valor_principal.help_text %}
@@ -1024,6 +1040,7 @@
                                     <th><i class="fas fa-gavel me-1"></i>Hon. Sucumbenciais</th>
                                     <th><i class="fas fa-tags me-1"></i>Tipo</th>
                                     <th><i class="fas fa-layer-group me-1"></i>Fase Principal</th>
+                                    <th><i class="fas fa-coins me-1"></i>Fase Hon. Contratuais</th>
                                     <th><i class="fas fa-cog me-1"></i>Ações</th>
                                 </tr>
                             </thead>
@@ -1080,6 +1097,16 @@
                                         {% endif %}
                                     </td>
                                     <td>
+                                        {% if alvara.fase_honorarios_contratuais %}
+                                            <div class="d-flex align-items-center">
+                                                <div class="fase-color-dot me-2" style="background-color: {{ alvara.fase_honorarios_contratuais.cor }};"></div>
+                                                <span class="text-muted">{{ alvara.fase_honorarios_contratuais.nome }}</span>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">Não definida</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
                                         <div class="btn-group" role="group">
                                             <button type="button" class="btn btn-outline-primary" 
                                                     data-bs-toggle="collapse" 
@@ -1094,7 +1121,7 @@
                                 
                                 <!-- Dropdown Edit Form for this Alvará -->
                                 <tr>
-                                    <td colspan="7" class="p-0">
+                                    <td colspan="8" class="p-0">
                                         <div class="collapse" id="editAlvaraForm-{{ alvara.id }}">
                                             <div class="card card-body m-2 bg-light">
                                                 <form method="post" action="{% url 'precatorio_detalhe' precatorio.cnj %}">
@@ -1143,7 +1170,7 @@
                                                             </div>
                                                         </div>
                                                         
-                                                        <div class="col-md-6">
+                                                        <div class="col-md-4">
                                                             <label for="tipo_{{ alvara.id }}" class="form-label">Tipo</label>
                                                             <select class="form-select form-select-sm" id="tipo_{{ alvara.id }}" name="tipo">
                                                                 <option value="">Selecione o tipo</option>
@@ -1153,13 +1180,25 @@
                                                             </select>
                                                         </div>
                                                         
-                                                        <div class="col-md-6">
+                                                        <div class="col-md-4">
                                                             <label for="fase_{{ alvara.id }}" class="form-label">Fase Principal</label>
                                                             <select class="form-select form-select-sm" id="fase_{{ alvara.id }}" name="fase">
                                                                 <option value="">Selecione a fase principal</option>
                                                                 {% for fase in alvara_fases %}
                                                                     <option value="{{ fase.id }}" {% if alvara.fase and alvara.fase.id == fase.id %}selected{% endif %}>
                                                                         {{ fase.nome }}
+                                                                    </option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+                                                        
+                                                        <div class="col-md-4">
+                                                            <label for="fase_honorarios_contratuais_{{ alvara.id }}" class="form-label">Fase Hon. Contratuais</label>
+                                                            <select class="form-select form-select-sm" id="fase_honorarios_contratuais_{{ alvara.id }}" name="fase_honorarios_contratuais">
+                                                                <option value="">Selecione a fase honorários</option>
+                                                                {% for fase_hon in fases_honorarios_contratuais %}
+                                                                    <option value="{{ fase_hon.id }}" {% if alvara.fase_honorarios_contratuais and alvara.fase_honorarios_contratuais.id == fase_hon.id %}selected{% endif %}>
+                                                                        {{ fase_hon.nome }}
                                                                     </option>
                                                                 {% endfor %}
                                                             </select>

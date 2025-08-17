@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Customização - Sistema de Precatórios{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="text-center">
+                <h2 class="h3 mb-2">
+                    <i class="fas fa-cogs me-2 text-primary"></i>
+                    Central de Customização
+                </h2>
+                <p class="text-muted mb-0">Gerencie e configure as fases do seu sistema</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Fases Principais Card -->
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list-ul me-2"></i>Fases Principais
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">
+                        Configure as fases principais para Alvarás e Requerimentos
+                    </p>
+                    
+                    <!-- Statistics -->
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <h4 class="text-primary mb-0">{{ total_fases_principais }}</h4>
+                                <small class="text-muted">Total</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <h4 class="text-success mb-0">{{ fases_principais_ativas }}</h4>
+                                <small class="text-muted">Ativas</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <h4 class="text-warning mb-0">{{ fases_principais_inativas }}</h4>
+                                <small class="text-muted">Inativas</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Phases -->
+                    {% if recent_fases_principais %}
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-clock me-1"></i>Fases Recentes:
+                        </h6>
+                        <div class="mb-3">
+                            {% for fase in recent_fases_principais %}
+                                <div class="d-flex align-items-center mb-1">
+                                    <div class="fase-color me-2" style="width: 8px; height: 8px; border-radius: 50%; background-color: {{ fase.cor }};"></div>
+                                    <small class="text-muted">{{ fase.nome }}</small>
+                                    {% if not fase.ativa %}
+                                        <span class="badge bg-secondary ms-1" style="font-size: 0.6em;">Inativa</span>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Actions -->
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'fases' %}" class="btn btn-primary">
+                            <i class="fas fa-list me-1"></i>Gerenciar Fases Principais
+                        </a>
+                        <a href="{% url 'nova_fase' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-plus me-1"></i>Criar Nova Fase Principal
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fases Honorários Card -->
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-gavel me-2"></i>Fases Honorários Contratuais
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">
+                        Configure as fases específicas para honorários contratuais
+                    </p>
+                    
+                    <!-- Statistics -->
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <h4 class="text-success mb-0">{{ total_fases_honorarios }}</h4>
+                                <small class="text-muted">Total</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <h4 class="text-success mb-0">{{ fases_honorarios_ativas }}</h4>
+                                <small class="text-muted">Ativas</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <h4 class="text-warning mb-0">{{ fases_honorarios_inativas }}</h4>
+                                <small class="text-muted">Inativas</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Phases -->
+                    {% if recent_fases_honorarios %}
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-clock me-1"></i>Fases Recentes:
+                        </h6>
+                        <div class="mb-3">
+                            {% for fase in recent_fases_honorarios %}
+                                <div class="d-flex align-items-center mb-1">
+                                    <div class="fase-color me-2" style="width: 8px; height: 8px; border-radius: 50%; background-color: {{ fase.cor }};"></div>
+                                    <small class="text-muted">{{ fase.nome }}</small>
+                                    {% if not fase.ativa %}
+                                        <span class="badge bg-secondary ms-1" style="font-size: 0.6em;">Inativa</span>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Actions -->
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'fases_honorarios' %}" class="btn btn-success">
+                            <i class="fas fa-list me-1"></i>Gerenciar Fases Honorários
+                        </a>
+                        <a href="{% url 'nova_fase_honorarios' %}" class="btn btn-outline-success">
+                            <i class="fas fa-plus me-1"></i>Criar Nova Fase Honorários
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Row -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-bolt me-1"></i>Ações Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'nova_fase' %}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-plus me-1"></i>
+                                <div>Nova Fase</div>
+                                <small class="text-muted">Principal</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'nova_fase_honorarios' %}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-plus me-1"></i>
+                                <div>Nova Fase</div>
+                                <small class="text-muted">Honorários</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'fases' %}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-eye me-1"></i>
+                                <div>Ver Todas</div>
+                                <small class="text-muted">Principais</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'fases_honorarios' %}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-eye me-1"></i>
+                                <div>Ver Todas</div>
+                                <small class="text-muted">Honorários</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help & Information -->
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h6 class="alert-heading">
+                    <i class="fas fa-info-circle me-1"></i>Sobre as Fases
+                </h6>
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <p class="mb-1"><strong>Fases Principais:</strong></p>
+                        <ul class="mb-0">
+                            <li>Usadas em Alvarás e Requerimentos</li>
+                            <li>Podem ter diferentes tipos: alvará, requerimento ou ambos</li>
+                            <li>Controlam o fluxo principal dos processos</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <p class="mb-1"><strong>Fases Honorários Contratuais:</strong></p>
+                        <ul class="mb-0">
+                            <li>Específicas para acompanhar honorários contratuais</li>
+                            <li>Usadas apenas em Alvarás</li>
+                            <li>Independentes da fase principal</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .fase-color {
+        box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+    }
+    .card {
+        transition: transform 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-2px);
+    }
+    .btn {
+        transition: all 0.2s;
+    }
+</style>
+{% endblock %}

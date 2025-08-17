@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from datetime import date, datetime
-from precapp.models import Precatorio, Cliente, Alvara, Requerimento, Fase
+from precapp.models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais
 
 
 class Command(BaseCommand):
@@ -22,6 +22,7 @@ class Command(BaseCommand):
             Cliente.objects.all().delete()
             Precatorio.objects.all().delete()
             Fase.objects.all().delete()
+            FaseHonorariosContratuais.objects.all().delete()
             self.stdout.write(self.style.SUCCESS('Existing data cleared.'))
 
         # Sample Fases data with tipos
@@ -104,6 +105,52 @@ class Command(BaseCommand):
                 'descricao': 'Aguardando documentação complementar',
                 'cor': '#ffc107',
                 'tipo': 'ambos',
+                'ativa': True,
+            },
+        ]
+
+        # Sample Fases Honorários Contratuais data
+        fases_honorarios_data = [
+            {
+                'nome': 'Não Aplicável',
+                'descricao': 'Caso não aplicável para honorários contratuais',
+                'cor': '#6c757d',
+                'ativa': True,
+            },
+            {
+                'nome': 'Aguardando Pagamento',
+                'descricao': 'Honorários contratuais aguardando pagamento',
+                'cor': '#ffc107',
+                'ativa': True,
+            },
+            {
+                'nome': 'Parcialmente Pago',
+                'descricao': 'Honorários contratuais parcialmente pagos',
+                'cor': '#fd7e14',
+                'ativa': True,
+            },
+            {
+                'nome': 'Totalmente Pago',
+                'descricao': 'Honorários contratuais totalmente pagos',
+                'cor': '#28a745',
+                'ativa': True,
+            },
+            {
+                'nome': 'Em Negociação',
+                'descricao': 'Honorários contratuais em processo de negociação',
+                'cor': '#007bff',
+                'ativa': True,
+            },
+            {
+                'nome': 'Contestado',
+                'descricao': 'Honorários contratuais contestados pelo cliente',
+                'cor': '#dc3545',
+                'ativa': True,
+            },
+            {
+                'nome': 'Acordo Firmado',
+                'descricao': 'Acordo firmado sobre honorários contratuais',
+                'cor': '#20c997',
                 'ativa': True,
             },
         ]
@@ -224,6 +271,7 @@ class Command(BaseCommand):
                 'honorarios_sucumbenciais': 12000.00,
                 'tipo': 'prioridade',
                 'fase': 'Depósito Judicial',
+                'fase_honorarios_contratuais': 'Parcialmente Pago',
             },
             {
                 'precatorio_cnj': '2345678-90.2023.8.26.0200',
@@ -233,6 +281,7 @@ class Command(BaseCommand):
                 'honorarios_sucumbenciais': 5440.00,
                 'tipo': 'acordo',
                 'fase': 'Recebido pelo Cliente',
+                'fase_honorarios_contratuais': 'Totalmente Pago',
             },
             {
                 'precatorio_cnj': '3456789-01.2024.8.26.0300',
@@ -242,6 +291,7 @@ class Command(BaseCommand):
                 'honorarios_sucumbenciais': 21600.00,
                 'tipo': 'prioridade',
                 'fase': 'Aguardando Depósito',
+                'fase_honorarios_contratuais': 'Aguardando Pagamento',
             },
             {
                 'precatorio_cnj': '4567890-12.2024.8.26.0400',
@@ -251,6 +301,7 @@ class Command(BaseCommand):
                 'honorarios_sucumbenciais': 5400.00,
                 'tipo': 'acordo',
                 'fase': 'Depósito Judicial',
+                'fase_honorarios_contratuais': 'Acordo Firmado',
             },
             {
                 'precatorio_cnj': '5678901-23.2024.8.26.0500',
@@ -260,6 +311,7 @@ class Command(BaseCommand):
                 'honorarios_sucumbenciais': 37500.00,
                 'tipo': 'ordem cronológica',
                 'fase': 'Aguardando Depósito',
+                'fase_honorarios_contratuais': 'Em Negociação',
             },
         ]
 
@@ -323,6 +375,20 @@ class Command(BaseCommand):
                     else:
                         self.stdout.write(f'  ⚠ Fase already exists: {fase.nome} ({fase.get_tipo_display()})')
 
+                # Create Fases Honorários Contratuais
+                self.stdout.write('Creating fases honorários contratuais...')
+                fases_honorarios_created = {}
+                for data in fases_honorarios_data:
+                    fase_honorarios, created = FaseHonorariosContratuais.objects.get_or_create(
+                        nome=data['nome'],
+                        defaults=data
+                    )
+                    fases_honorarios_created[data['nome']] = fase_honorarios
+                    if created:
+                        self.stdout.write(f'  ✓ Created fase honorários: {fase_honorarios.nome}')
+                    else:
+                        self.stdout.write(f'  ⚠ Fase honorários already exists: {fase_honorarios.nome}')
+
                 self.stdout.write('Creating precatórios...')
                 precatorios_created = []
                 for data in precatorios_data:
@@ -354,6 +420,7 @@ class Command(BaseCommand):
                     precatorio = Precatorio.objects.get(cnj=data['precatorio_cnj'])
                     cliente = Cliente.objects.get(cpf=data['cliente_cpf'])
                     fase = fases_created.get(data['fase'])
+                    fase_honorarios = fases_honorarios_created.get(data['fase_honorarios_contratuais'])
                     
                     alvara_data = {
                         'precatorio': precatorio,
@@ -363,6 +430,7 @@ class Command(BaseCommand):
                         'honorarios_sucumbenciais': data['honorarios_sucumbenciais'],
                         'tipo': data['tipo'],
                         'fase': fase,
+                        'fase_honorarios_contratuais': fase_honorarios,
                     }
                     
                     alvara, created = Alvara.objects.get_or_create(
@@ -419,7 +487,8 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS('\n🎉 Database populated successfully!'))
         self.stdout.write(self.style.SUCCESS('📊 Summary:'))
-        self.stdout.write(f'   • {Fase.objects.count()} Fases')
+        self.stdout.write(f'   • {Fase.objects.count()} Fases Principais')
+        self.stdout.write(f'   • {FaseHonorariosContratuais.objects.count()} Fases Honorários Contratuais')
         self.stdout.write(f'   • {Precatorio.objects.count()} Precatórios')
         self.stdout.write(f'   • {Cliente.objects.count()} Clientes')
         self.stdout.write(f'   • {Alvara.objects.count()} Alvarás')
