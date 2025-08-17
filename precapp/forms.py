@@ -116,14 +116,12 @@ class PrecatorioForm(forms.ModelForm):
         max_digits=15,
         decimal_places=2,
         label='Valor de Face',
-        help_text='Valor em reais (R$). Ex: 50000.00',
+        help_text='Valor em reais (R$). Ex: 50.000,00',
         validators=[validate_currency],
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'step': '0.01',
-            'min': '0',
-            'placeholder': '50000.00',
-            'title': 'Digite o valor em reais (use . para separar decimais)'
+        widget=forms.TextInput(attrs={
+            'class': 'form-control brazilian-currency',
+            'placeholder': '50.000,00',
+            'title': 'Digite o valor em reais (formato brasileiro: 50.000,00)'
         })
     )
     
@@ -132,14 +130,12 @@ class PrecatorioForm(forms.ModelForm):
         decimal_places=2,
         required=False,  # Made optional
         label='Última Atualização Monetária',
-        help_text='Valor atualizado em reais (R$). Ex: 75000.00 (Opcional)',
+        help_text='Valor atualizado em reais (R$). Ex: 75.000,00 (Opcional)',
         validators=[validate_currency],
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'step': '0.01',
-            'min': '0',
-            'placeholder': '75000.00',
-            'title': 'Digite o valor atualizado em reais (use . para separar decimais)'
+        widget=forms.TextInput(attrs={
+            'class': 'form-control brazilian-currency',
+            'placeholder': '75.000,00',
+            'title': 'Digite o valor atualizado em reais (formato brasileiro: 75.000,00)'
         })
     )
     
@@ -148,14 +144,11 @@ class PrecatorioForm(forms.ModelForm):
         decimal_places=2,
         required=False,
         label='% Honorários Contratuais (Assinado)',
-        help_text='Percentual entre 0% e 30%. Ex: 20.00',
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'step': '0.01',
-            'min': '0',
-            'max': '30',
-            'placeholder': '20.00',
-            'title': 'Digite o percentual (0 a 30%)'
+        help_text='Percentual entre 0% e 30%. Ex: 20,00',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control brazilian-number',
+            'placeholder': '20,00',
+            'title': 'Digite o percentual (0 a 30%) - formato brasileiro: 20,00'
         })
     )
     
@@ -164,14 +157,11 @@ class PrecatorioForm(forms.ModelForm):
         decimal_places=2,
         required=False,
         label='% Honorários Contratuais (Apartado)',
-        help_text='Percentual entre 0% e 30%. Ex: 15.00',
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'step': '0.01',
-            'min': '0',
-            'max': '30',
-            'placeholder': '15.00',
-            'title': 'Digite o percentual (0 a 30%)'
+        help_text='Percentual entre 0% e 30%. Ex: 15,00',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control brazilian-number',
+            'placeholder': '15,00',
+            'title': 'Digite o percentual (0 a 30%) - formato brasileiro: 15,00'
         })
     )
     
@@ -180,14 +170,11 @@ class PrecatorioForm(forms.ModelForm):
         decimal_places=2,
         required=False,
         label='% Honorários Sucumbenciais',
-        help_text='Percentual entre 0% e 30%. Ex: 10.00',
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'step': '0.01',
-            'min': '0',
-            'max': '30',
-            'placeholder': '10.00',
-            'title': 'Digite o percentual (0 a 30%)'
+        help_text='Percentual entre 0% e 30%. Ex: 10,00',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control brazilian-number',
+            'placeholder': '10,00',
+            'title': 'Digite o percentual (0 a 30%) - formato brasileiro: 10,00'
         })
     )
     
@@ -453,14 +440,12 @@ class RequerimentoForm(forms.ModelForm):
         max_digits=15,
         decimal_places=2,
         label='Valor',
-        help_text='Valor em reais (R$). Ex: 50000.00',
+        help_text='Valor em reais (R$). Ex: 50.000,00',
         validators=[validate_currency],
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'step': '0.01',
-            'min': '0',
-            'placeholder': '50000.00',
-            'title': 'Digite o valor em reais (use . para separar decimais)'
+        widget=forms.TextInput(attrs={
+            'class': 'form-control brazilian-currency',
+            'placeholder': '50.000,00',
+            'title': 'Digite o valor em reais (formato brasileiro: 50.000,00)'
         })
     )
     
@@ -468,14 +453,11 @@ class RequerimentoForm(forms.ModelForm):
         max_digits=5,
         decimal_places=2,
         label='Deságio (%)',
-        help_text='Percentual de deságio. Ex: 15.50',
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'step': '0.01',
-            'min': '0',
-            'max': '100',
-            'placeholder': '15.50',
-            'title': 'Digite o percentual de deságio (0 a 100%)'
+        help_text='Percentual de deságio. Ex: 15,50',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control brazilian-number',
+            'placeholder': '15,50',
+            'title': 'Digite o percentual de deságio (0 a 100%) - formato brasileiro: 15,50'
         })
     )
     
@@ -582,14 +564,12 @@ class AlvaraSimpleForm(forms.ModelForm):
         max_digits=15,
         decimal_places=2,
         label='Valor Principal',
-        help_text='Valor em reais (R$). Ex: 50000.00',
+        help_text='Valor em reais (R$). Ex: 50.000,00',
         validators=[validate_currency],
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'step': '0.01',
-            'min': '0',
-            'placeholder': '50000.00',
-            'title': 'Digite o valor em reais (use . para separar decimais)'
+        widget=forms.TextInput(attrs={
+            'class': 'form-control brazilian-currency',
+            'placeholder': '50.000,00',
+            'title': 'Digite o valor em reais (formato brasileiro: 50.000,00)'
         })
     )
     
@@ -598,13 +578,11 @@ class AlvaraSimpleForm(forms.ModelForm):
         decimal_places=2,
         required=False,
         label='Honorários Contratuais',
-        help_text='Valor em reais (R$). Ex: 10000.00',
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'step': '0.01',
-            'min': '0',
-            'placeholder': '10000.00',
-            'title': 'Digite o valor em reais (use . para separar decimais)'
+        help_text='Valor em reais (R$). Ex: 10.000,00',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control brazilian-currency',
+            'placeholder': '10.000,00',
+            'title': 'Digite o valor em reais (formato brasileiro: 10.000,00)'
         })
     )
     
@@ -613,13 +591,11 @@ class AlvaraSimpleForm(forms.ModelForm):
         decimal_places=2,
         required=False,
         label='Honorários Sucumbenciais',
-        help_text='Valor em reais (R$). Ex: 5000.00',
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'step': '0.01',
-            'min': '0',
-            'placeholder': '5000.00',
-            'title': 'Digite o valor em reais (use . para separar decimais)'
+        help_text='Valor em reais (R$). Ex: 5.000,00',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control brazilian-currency',
+            'placeholder': '5.000,00',
+            'title': 'Digite o valor em reais (formato brasileiro: 5.000,00)'
         })
     )
     

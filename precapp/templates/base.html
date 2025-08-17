@@ -263,6 +263,12 @@
         });
     </script>
     
+    <!-- Load static files -->
+    {% load static %}
+    
+    <!-- Brazilian Number Formatting -->
+    <script src="{% static 'precapp/js/brazilian-number-format.js' %}"></script>
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>
