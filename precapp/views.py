@@ -405,6 +405,7 @@ def clientes_view(request):
     # Apply filters based on GET parameters
     nome_filter = request.GET.get('nome', '').strip()
     cpf_filter = request.GET.get('cpf', '').strip()
+    idade_filter = request.GET.get('idade', '').strip()
     prioridade_filter = request.GET.get('prioridade', '')
     requerimento_prioridade_filter = request.GET.get('requerimento_prioridade', '')
     precatorio_filter = request.GET.get('precatorio', '').strip()
@@ -415,6 +416,28 @@ def clientes_view(request):
     if cpf_filter:
         clientes = clientes.filter(cpf__icontains=cpf_filter)
     
+    # Filter by age
+    if idade_filter:
+        try:
+            idade = int(idade_filter)
+            from datetime import date
+            from dateutil.relativedelta import relativedelta
+            
+            # Calculate the birth year range for clients of the specified age
+            today = date.today()
+            # For someone to be X years old today, they must have been born between:
+            # - (today - X+1 years + 1 day) and (today - X years)
+            min_birth_date = today - relativedelta(years=idade+1, days=-1)
+            max_birth_date = today - relativedelta(years=idade)
+            
+            clientes = clientes.filter(
+                nascimento__gte=min_birth_date,
+                nascimento__lte=max_birth_date
+            )
+        except ValueError:
+            # If idade_filter is not a valid integer, ignore the filter
+            pass
+
     if prioridade_filter in ['true', 'false']:
         prioridade_bool = prioridade_filter == 'true'
         clientes = clientes.filter(prioridade=prioridade_bool)
@@ -459,6 +482,7 @@ def clientes_view(request):
         # Include current filter values to maintain state in form
         'current_nome': nome_filter,
         'current_cpf': cpf_filter,
+        'current_idade': idade_filter,
         'current_prioridade': prioridade_filter,
         'current_requerimento_prioridade': requerimento_prioridade_filter,
         'current_precatorio': precatorio_filter,

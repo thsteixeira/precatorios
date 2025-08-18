@@ -45,6 +45,11 @@
                             <input type="text" class="form-control" id="cpf" name="cpf" 
                                    placeholder="Digite o CPF" value="{{ current_cpf }}">
                         </div>
+                        <div class="col-md-1">
+                            <label for="idade" class="form-label">Idade</label>
+                            <input type="number" class="form-control" id="idade" name="idade" 
+                                   placeholder="58" value="{{ current_idade }}" min="0" max="120">
+                        </div>
                         <div class="col-md-2">
                             <label for="prioridade" class="form-label">Prioridade Cliente</label>
                             <select class="form-control" id="prioridade" name="prioridade">

@@ -2071,14 +2071,110 @@ class ClienteViewFilterTest(TestCase):
     def test_filter_context_values(self):
         """Test that current filter values are passed to template context"""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get('/clientes/?nome=test&cpf=123&prioridade=true&requerimento_prioridade=sem_requerimento&precatorio=cnj123')
+        response = self.client.get('/clientes/?nome=test&cpf=123&idade=58&prioridade=true&requerimento_prioridade=sem_requerimento&precatorio=cnj123')
         
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['current_nome'], 'test')
         self.assertEqual(response.context['current_cpf'], '123')
+        self.assertEqual(response.context['current_idade'], '58')
         self.assertEqual(response.context['current_prioridade'], 'true')
         self.assertEqual(response.context['current_requerimento_prioridade'], 'sem_requerimento')
         self.assertEqual(response.context['current_precatorio'], 'cnj123')
+    
+    def test_filter_by_idade(self):
+        """Test filtering by age"""
+        from datetime import date
+        
+        self.client.login(username='testuser', password='testpass123')
+        
+        # Create a cliente with specific age
+        # Let's test for someone who is 58 years old today
+        today = date.today()
+        birth_year = today.year - 58
+        cliente_58 = Cliente.objects.create(
+            cpf='44444444444',
+            nome='Cliente 58 Anos',
+            nascimento=date(birth_year, 6, 15),  # Born in June of birth_year
+            prioridade=False
+        )
+        
+        # Test filtering by age 58
+        response = self.client.get('/clientes/?idade=58')
+        
+        self.assertEqual(response.status_code, 200)
+        clientes = response.context['clientes']
+        
+        # Should return only the 58-year-old cliente
+        self.assertEqual(len(clientes), 1)
+        self.assertEqual(clientes[0].nome, 'Cliente 58 Anos')
+    
+    def test_filter_by_idade_invalid(self):
+        """Test filtering by invalid age value"""
+        self.client.login(username='testuser', password='testpass123')
+        
+        # Test with invalid age value - should ignore the filter
+        response = self.client.get('/clientes/?idade=abc')
+        
+        self.assertEqual(response.status_code, 200)
+        clientes = response.context['clientes']
+        # Should return all clientes since invalid filter is ignored
+        self.assertEqual(len(clientes), 3)
+    
+    def test_idade_filter_context_value(self):
+        """Test that idade filter value is passed to template context"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get('/clientes/?idade=58')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['current_idade'], '58')
+    
+    def test_filter_by_idade_comprehensive(self):
+        """Test comprehensive age filtering scenarios"""
+        from datetime import date
+        
+        self.client.login(username='testuser', password='testpass123')
+        
+        today = date.today()
+        
+        # Create clients with different ages
+        # Client aged 25 (born 25 years ago)
+        cliente_25 = Cliente.objects.create(
+            cpf='55555555555',
+            nome='Cliente 25 Anos',
+            nascimento=date(today.year - 25, today.month, today.day),
+            prioridade=False
+        )
+        
+        # Client aged 60 (born 60 years ago)
+        cliente_60 = Cliente.objects.create(
+            cpf='66666666666',
+            nome='Cliente 60 Anos',
+            nascimento=date(today.year - 60, today.month, today.day),
+            prioridade=True
+        )
+        
+        # Test filtering by age 25
+        response = self.client.get('/clientes/?idade=25')
+        clientes = response.context['clientes']
+        self.assertEqual(len(clientes), 1)
+        self.assertEqual(clientes[0].nome, 'Cliente 25 Anos')
+        
+        # Test filtering by age 60
+        response = self.client.get('/clientes/?idade=60')
+        clientes = response.context['clientes']
+        self.assertEqual(len(clientes), 1)
+        self.assertEqual(clientes[0].nome, 'Cliente 60 Anos')
+        
+        # Test filtering by non-existent age
+        response = self.client.get('/clientes/?idade=99')
+        clientes = response.context['clientes']
+        self.assertEqual(len(clientes), 0)
+        
+        # Test combining idade filter with nome filter
+        response = self.client.get('/clientes/?idade=60&nome=Cliente')
+        clientes = response.context['clientes']
+        self.assertEqual(len(clientes), 1)
+        self.assertEqual(clientes[0].nome, 'Cliente 60 Anos')
 
 
 class ClienteRequerimentoPrioridadeFilterTest(TestCase):
