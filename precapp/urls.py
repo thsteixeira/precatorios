@@ -7,7 +7,8 @@ from .views import (
     requerimento_list_view, login_view, logout_view,
     fases_view, nova_fase_view, editar_fase_view, deletar_fase_view, ativar_fase_view,
     fases_honorarios_view, nova_fase_honorarios_view, editar_fase_honorarios_view, 
-    deletar_fase_honorarios_view, ativar_fase_honorarios_view, customizacao_view
+    deletar_fase_honorarios_view, ativar_fase_honorarios_view, customizacao_view,
+    update_priority_by_age
 )
 
 urlpatterns = [
@@ -22,6 +23,7 @@ urlpatterns = [
     path('precatorios/<str:precatorio_cnj>/', precatorio_detalhe_view, name='precatorio_detalhe'),
     path('precatorios/<str:precatorio_cnj>/delete/', delete_precatorio_view, name='delete_precatorio'),
     path('clientes/', clientes_view, name='clientes'),
+    path('clientes/update-priority/', update_priority_by_age, name='update_priority_by_age'),
     path('clientes/novo/', novo_cliente_view, name='novo_cliente'),
     path('clientes/<str:cpf>/', cliente_detail_view, name='cliente_detail'),
     path('clientes/<str:cpf>/delete/', delete_cliente_view, name='delete_cliente'),

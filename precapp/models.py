@@ -122,6 +122,17 @@ class Cliente(models.Model):
 
     def __str__(self):
         return f"{self.nome} - {self.cpf}"
+    
+    def get_priority_requerimentos(self):
+        """Get all priority requerimentos (idade/doença) for this cliente"""
+        priority_reqs = []
+        
+        # Only get requerimentos that actually belong to THIS cliente
+        for req in Requerimento.objects.filter(cliente=self):
+            if req.pedido in ['prioridade idade', 'prioridade doença']:
+                priority_reqs.append(req)
+        
+        return priority_reqs
 
 
 class Alvara(models.Model):

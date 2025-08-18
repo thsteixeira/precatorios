@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
+from django.views.decorators.http import require_http_methods
 from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais
 from .forms import (
     PrecatorioForm, ClienteForm, PrecatorioSearchForm, 
@@ -403,13 +404,17 @@ def precatorio_detalhe_view(request, precatorio_cnj):
 @login_required
 def clientes_view(request):
     """View to display all clients with filtering support"""
-    clientes = Cliente.objects.all().prefetch_related('precatorios')
+    clientes = Cliente.objects.all().prefetch_related(
+        'precatorios', 
+        'precatorios__requerimento_set', 
+        'precatorios__requerimento_set__fase'
+    )
     
     # Apply filters based on GET parameters
     nome_filter = request.GET.get('nome', '').strip()
     cpf_filter = request.GET.get('cpf', '').strip()
     prioridade_filter = request.GET.get('prioridade', '')
-    prioridade_precatorio_filter = request.GET.get('prioridade_precatorio', '')
+    requerimento_prioridade_filter = request.GET.get('requerimento_prioridade', '')
     precatorio_filter = request.GET.get('precatorio', '').strip()
     
     if nome_filter:
@@ -422,9 +427,29 @@ def clientes_view(request):
         prioridade_bool = prioridade_filter == 'true'
         clientes = clientes.filter(prioridade=prioridade_bool)
     
-    if prioridade_precatorio_filter in ['true', 'false']:
-        prioridade_precatorio_bool = prioridade_precatorio_filter == 'true'
-        clientes = clientes.filter(precatorios__prioridade_deferida=prioridade_precatorio_bool).distinct()
+    # Filter by requerimento prioridade (based on Deferido/Não Deferido status)
+    if requerimento_prioridade_filter:
+        if requerimento_prioridade_filter == 'deferido':
+            # Find clientes that have priority requerimentos with 'Deferido' phase
+            clientes_deferidos = Requerimento.objects.filter(
+                pedido__in=['prioridade idade', 'prioridade doença'],
+                fase__nome='Deferido'
+            ).values_list('cliente__cpf', flat=True).distinct()
+            clientes = clientes.filter(cpf__in=clientes_deferidos)
+        elif requerimento_prioridade_filter == 'nao_deferido':
+            # Find clientes that have priority requerimentos that are NOT 'Deferido'
+            clientes_nao_deferidos = Requerimento.objects.filter(
+                pedido__in=['prioridade idade', 'prioridade doença']
+            ).exclude(
+                fase__nome='Deferido'
+            ).values_list('cliente__cpf', flat=True).distinct()
+            clientes = clientes.filter(cpf__in=clientes_nao_deferidos)
+        elif requerimento_prioridade_filter == 'sem_requerimento':
+            # Find clientes that have NO priority requerimentos at all
+            clientes_com_requerimentos = Requerimento.objects.filter(
+                pedido__in=['prioridade idade', 'prioridade doença']
+            ).values_list('cliente__cpf', flat=True).distinct()
+            clientes = clientes.exclude(cpf__in=clientes_com_requerimentos)
     
     if precatorio_filter:
         clientes = clientes.filter(precatorios__cnj__icontains=precatorio_filter).distinct()
@@ -443,7 +468,7 @@ def clientes_view(request):
         'current_nome': nome_filter,
         'current_cpf': cpf_filter,
         'current_prioridade': prioridade_filter,
-        'current_prioridade_precatorio': prioridade_precatorio_filter,
+        'current_requerimento_prioridade': requerimento_prioridade_filter,
         'current_precatorio': precatorio_filter,
     }
     
@@ -1003,3 +1028,62 @@ def customizacao_view(request):
     }
     
     return render(request, 'precapp/customizacao.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_priority_by_age(request):
+    """Update priority status for clients over 60 years old"""
+    from datetime import date, timedelta
+    
+    try:
+        # Calculate date 60 years ago
+        sixty_years_ago = date.today() - timedelta(days=60*365.25)
+        
+        # Find clients born before this date (older than 60) without priority
+        clients_over_60 = Cliente.objects.filter(
+            nascimento__lt=sixty_years_ago,
+            prioridade=False
+        )
+        
+        count_before = clients_over_60.count()
+        
+        if count_before > 0:
+            # Update their priority status
+            updated_count = clients_over_60.update(prioridade=True)
+            
+            messages.success(
+                request, 
+                f'✅ {updated_count} cliente(s) com mais de 60 anos foram atualizados para status prioritário.'
+            )
+            
+            # Log some examples for transparency
+            if updated_count > 0:
+                examples = Cliente.objects.filter(
+                    nascimento__lt=sixty_years_ago,
+                    prioridade=True
+                )[:3]
+                
+                example_names = [client.nome for client in examples]
+                if len(example_names) > 0:
+                    examples_text = ", ".join(example_names)
+                    if updated_count > 3:
+                        examples_text += f" e mais {updated_count - 3} cliente(s)"
+                    
+                    messages.info(
+                        request,
+                        f'Exemplos atualizados: {examples_text}'
+                    )
+        else:
+            messages.info(
+                request,
+                '📋 Nenhum cliente encontrado que precise ser atualizado. Todos os clientes com mais de 60 anos já possuem status prioritário.'
+            )
+            
+    except Exception as e:
+        messages.error(
+            request,
+            f'❌ Erro ao atualizar prioridades: {str(e)}'
+        )
+    
+    return redirect('clientes')

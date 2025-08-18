@@ -4,7 +4,7 @@ from django.contrib.messages import get_messages
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from decimal import Decimal
-from datetime import date
+from datetime import date, timedelta
 from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais
 from .forms import (
     PrecatorioForm, ClienteForm, AlvaraSimpleForm, 
@@ -2093,13 +2093,216 @@ class ClienteViewFilterTest(TestCase):
     def test_filter_context_values(self):
         """Test that current filter values are passed to template context"""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get('/clientes/?nome=test&cpf=123&prioridade=true&precatorio=cnj123')
+        response = self.client.get('/clientes/?nome=test&cpf=123&prioridade=true&requerimento_prioridade=sem_requerimento&precatorio=cnj123')
         
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['current_nome'], 'test')
         self.assertEqual(response.context['current_cpf'], '123')
         self.assertEqual(response.context['current_prioridade'], 'true')
+        self.assertEqual(response.context['current_requerimento_prioridade'], 'sem_requerimento')
         self.assertEqual(response.context['current_precatorio'], 'cnj123')
+
+
+class ClienteRequerimentoPrioridadeFilterTest(TestCase):
+    """Test cliente list view filtering by requerimento prioridade (Deferido/Não Deferido)"""
+    
+    def setUp(self):
+        """Set up test data for requerimento prioridade filtering"""
+        # Create user for authentication
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        # Create test phases for requerimentos
+        self.fase_deferido = Fase.objects.create(
+            nome='Deferido',
+            tipo='requerimento',
+            cor='#28a745',
+            ativa=True
+        )
+        
+        self.fase_indeferido = Fase.objects.create(
+            nome='Indeferido',
+            tipo='requerimento', 
+            cor='#dc3545',
+            ativa=True
+        )
+        
+        self.fase_andamento = Fase.objects.create(
+            nome='Em Andamento',
+            tipo='requerimento',
+            cor='#4ECDC4',
+            ativa=True
+        )
+        
+        # Create test precatorios
+        self.precatorio1 = Precatorio.objects.create(
+            cnj='1111111-11.2023.8.26.0100',
+            orcamento=2023,
+            origem='Tribunal de São Paulo',
+            quitado=False,
+            valor_de_face=10000.00,
+            ultima_atualizacao=10000.00,
+            data_ultima_atualizacao=date(2023, 1, 15),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            prioridade_deferida=True,
+            acordo_deferido=False
+        )
+        
+        self.precatorio2 = Precatorio.objects.create(
+            cnj='2222222-22.2023.8.26.0200',
+            orcamento=2023,
+            origem='Tribunal de Campinas',
+            quitado=False,
+            valor_de_face=20000.00,
+            ultima_atualizacao=20000.00,
+            data_ultima_atualizacao=date(2023, 2, 20),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            prioridade_deferida=False,
+            acordo_deferido=False
+        )
+        
+        # Create test clientes
+        self.cliente_deferido = Cliente.objects.create(
+            cpf='11111111111',
+            nome='João Silva (Deferido)',
+            nascimento=date(1950, 5, 15),
+            prioridade=True
+        )
+        
+        self.cliente_indeferido = Cliente.objects.create(
+            cpf='22222222222',
+            nome='Maria Santos (Indeferido)',
+            nascimento=date(1980, 8, 20),
+            prioridade=False
+        )
+        
+        self.cliente_andamento = Cliente.objects.create(
+            cpf='33333333333',
+            nome='Pedro Costa (Em Andamento)',
+            nascimento=date(1975, 12, 10),
+            prioridade=False
+        )
+        
+        self.cliente_sem_prioridade = Cliente.objects.create(
+            cpf='44444444444',
+            nome='Ana Oliveira (Sem Prioridade)',
+            nascimento=date(1985, 3, 25),
+            prioridade=False
+        )
+        
+        # Link clientes to precatorios
+        self.precatorio1.clientes.add(self.cliente_deferido, self.cliente_indeferido)
+        self.precatorio2.clientes.add(self.cliente_andamento, self.cliente_sem_prioridade)
+        
+        # Create requerimentos with different phases
+        # Cliente with priority request that was DEFERIDO
+        Requerimento.objects.create(
+            precatorio=self.precatorio1,
+            cliente=self.cliente_deferido,
+            pedido='prioridade idade',
+            valor=5000.00,
+            desagio=0.0,
+            fase=self.fase_deferido
+        )
+        
+        # Cliente with priority request that was INDEFERIDO (not deferido)
+        Requerimento.objects.create(
+            precatorio=self.precatorio1,
+            cliente=self.cliente_indeferido,
+            pedido='prioridade doença',
+            valor=8000.00,
+            desagio=0.0,
+            fase=self.fase_indeferido
+        )
+        
+        # Cliente with priority request still EM ANDAMENTO (not deferido)
+        Requerimento.objects.create(
+            precatorio=self.precatorio2,
+            cliente=self.cliente_andamento,
+            pedido='prioridade idade',
+            valor=3000.00,
+            desagio=0.0,
+            fase=self.fase_andamento
+        )
+        
+        # cliente_sem_prioridade has no priority requerimentos
+        
+        # Cliente_sem_prioridade has no priority requerimentos (only normal ones if any)
+    
+    def test_filter_requerimento_prioridade_deferido(self):
+        """Test filtering by requerimento prioridade = deferido"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get('/clientes/?requerimento_prioridade=deferido')
+        
+        self.assertEqual(response.status_code, 200)
+        clientes = response.context['clientes']
+        
+        # Should include only cliente_deferido (has priority request with Deferido phase)
+        self.assertEqual(len(clientes), 1)
+        self.assertEqual(clientes[0].nome, 'João Silva (Deferido)')
+    
+    def test_filter_requerimento_prioridade_nao_deferido(self):
+        """Test filtering by requerimento prioridade = nao_deferido"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get('/clientes/?requerimento_prioridade=nao_deferido')
+        
+        self.assertEqual(response.status_code, 200)
+        clientes = response.context['clientes']
+        
+        # Should include cliente_indeferido and cliente_andamento (both have priority requests that are NOT Deferido)
+        self.assertEqual(len(clientes), 2)
+        cliente_names = [c.nome for c in clientes]
+        self.assertIn('Maria Santos (Indeferido)', cliente_names)
+        self.assertIn('Pedro Costa (Em Andamento)', cliente_names)
+    
+    def test_filter_requerimento_prioridade_sem_requerimento(self):
+        """Test filtering by requerimento prioridade = sem_requerimento"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get('/clientes/?requerimento_prioridade=sem_requerimento')
+        
+        self.assertEqual(response.status_code, 200)
+        clientes = response.context['clientes']
+        
+        # Should include only cliente_sem_prioridade (no priority requerimentos at all)
+        self.assertEqual(len(clientes), 1)
+        self.assertEqual(clientes[0].nome, 'Ana Oliveira (Sem Prioridade)')
+    
+    def test_filter_requerimento_prioridade_todos(self):
+        """Test filtering by requerimento prioridade = '' (todos)"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get('/clientes/?requerimento_prioridade=')
+        
+        self.assertEqual(response.status_code, 200)
+        clientes = response.context['clientes']
+        
+        # Should include all clientes
+        self.assertEqual(len(clientes), 4)
+    
+    def test_filter_context_requerimento_prioridade(self):
+        """Test that requerimento prioridade filter value is passed to context"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get('/clientes/?requerimento_prioridade=deferido')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['current_requerimento_prioridade'], 'deferido')
+    
+    def test_combined_filters_with_requerimento_prioridade(self):
+        """Test combining requerimento prioridade filter with other filters"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get('/clientes/?nome=João&requerimento_prioridade=deferido')
+        
+        self.assertEqual(response.status_code, 200)
+        clientes = response.context['clientes']
+        
+        # Should find only João who has deferido priority request
+        self.assertEqual(len(clientes), 1)
+        self.assertEqual(clientes[0].nome, 'João Silva (Deferido)')
 
 
 class AlvaraViewFilterTest(TestCase):
@@ -2958,4 +3161,655 @@ class JavaScriptFormattingIntegrationTest(TestCase):
         # (JavaScript handles the formatting flexibility)
 
 
+class PriorityUpdateByAgeTest(TestCase):
+    """Test cases for priority update by age functionality"""
+    
+    def setUp(self):
+        """Set up test data"""
+        from datetime import date, timedelta
+        
+        # Create user for authentication
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        # Calculate dates for testing
+        today = date.today()
+        sixty_years_ago = today - timedelta(days=60*365.25)
+        seventy_years_ago = today - timedelta(days=70*365.25)
+        fifty_years_ago = today - timedelta(days=50*365.25)
+        
+        # Create test clients with different ages
+        self.client_over_70 = Cliente.objects.create(
+            cpf='11111111111',
+            nome='João Silva (77 anos)',
+            nascimento=seventy_years_ago,
+            prioridade=False
+        )
+        
+        self.client_over_60 = Cliente.objects.create(
+            cpf='22222222222',
+            nome='Maria Santos (63 anos)',
+            nascimento=sixty_years_ago - timedelta(days=3*365),  # 63 years old
+            prioridade=False
+        )
+        
+        self.client_under_60 = Cliente.objects.create(
+            cpf='33333333333',
+            nome='Pedro Oliveira (50 anos)',
+            nascimento=fifty_years_ago,
+            prioridade=False
+        )
+        
+        self.client_already_priority = Cliente.objects.create(
+            cpf='44444444444',
+            nome='Ana Costa (65 anos)',
+            nascimento=sixty_years_ago - timedelta(days=5*365),  # 65 years old
+            prioridade=True  # Already has priority
+        )
+        
+        self.client_app = Client()
+    
+    def test_update_priority_by_age_view_authentication(self):
+        """Test that update priority view requires authentication"""
+        response = self.client_app.post(reverse('update_priority_by_age'))
+        self.assertEqual(response.status_code, 302)  # Redirect to login
+    
+    def test_update_priority_by_age_get_not_allowed(self):
+        """Test that GET requests are not allowed for update priority"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(reverse('update_priority_by_age'))
+        self.assertEqual(response.status_code, 405)  # Method not allowed
+    
+    def test_update_priority_by_age_success(self):
+        """Test successful priority update for clients over 60"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Verify initial state
+        self.assertFalse(self.client_over_70.prioridade)
+        self.assertFalse(self.client_over_60.prioridade)
+        self.assertFalse(self.client_under_60.prioridade)
+        self.assertTrue(self.client_already_priority.prioridade)
+        
+        # Execute the update
+        response = self.client_app.post(reverse('update_priority_by_age'))
+        self.assertEqual(response.status_code, 302)  # Redirect to client list
+        
+        # Refresh from database
+        self.client_over_70.refresh_from_db()
+        self.client_over_60.refresh_from_db()
+        self.client_under_60.refresh_from_db()
+        self.client_already_priority.refresh_from_db()
+        
+        # Verify results
+        self.assertTrue(self.client_over_70.prioridade)  # Should be updated
+        self.assertTrue(self.client_over_60.prioridade)  # Should be updated
+        self.assertFalse(self.client_under_60.prioridade)  # Should remain unchanged
+        self.assertTrue(self.client_already_priority.prioridade)  # Should remain unchanged
+    
+    def test_update_priority_messages(self):
+        """Test success and info messages for priority update"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Execute the update
+        response = self.client_app.post(reverse('update_priority_by_age'))
+        
+        # Check messages
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any('cliente(s) com mais de 60 anos foram atualizados' in str(m) for m in messages))
+    
+    def test_update_priority_no_clients_to_update(self):
+        """Test behavior when no clients need priority update"""
+        from datetime import timedelta
+        
+        # Update all senior clients to priority first
+        Cliente.objects.filter(nascimento__lt=date.today() - timedelta(days=60*365.25)).update(prioridade=True)
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.post(reverse('update_priority_by_age'))
+        
+        # Check info message
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any('Nenhum cliente encontrado que precise ser atualizado' in str(m) for m in messages))
+    
+    def test_update_priority_redirect(self):
+        """Test that update priority redirects to client list"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.post(reverse('update_priority_by_age'))
+        
+        self.assertRedirects(response, reverse('clientes'))
+
+
+class ManagementCommandUpdatePriorityByAgeTest(TestCase):
+    """Test cases for update_priority_by_age management command"""
+    
+    def setUp(self):
+        """Set up test data"""
+        from datetime import date, timedelta
+        from django.core.management import call_command
+        from io import StringIO
+        
+        # Calculate dates for testing
+        today = date.today()
+        sixty_years_ago = today - timedelta(days=60*365.25)
+        seventy_years_ago = today - timedelta(days=70*365.25)
+        fifty_years_ago = today - timedelta(days=50*365.25)
+        
+        # Create test clients with different ages
+        self.client_over_70 = Cliente.objects.create(
+            cpf='11111111111',
+            nome='João Silva (77 anos)',
+            nascimento=seventy_years_ago,
+            prioridade=False
+        )
+        
+        self.client_over_60 = Cliente.objects.create(
+            cpf='22222222222',
+            nome='Maria Santos (63 anos)',
+            nascimento=sixty_years_ago - timedelta(days=3*365),  # 63 years old
+            prioridade=False
+        )
+        
+        self.client_under_60 = Cliente.objects.create(
+            cpf='33333333333',
+            nome='Pedro Oliveira (50 anos)',
+            nascimento=fifty_years_ago,
+            prioridade=False
+        )
+        
+        self.client_already_priority = Cliente.objects.create(
+            cpf='44444444444',
+            nome='Ana Costa (65 anos)',
+            nascimento=sixty_years_ago - timedelta(days=5*365),  # 65 years old
+            prioridade=True  # Already has priority
+        )
+    
+    def test_management_command_dry_run(self):
+        """Test management command with dry-run option"""
+        from django.core.management import call_command
+        from io import StringIO
+        
+        out = StringIO()
+        call_command('update_priority_by_age', '--dry-run', stdout=out)
+        output = out.getvalue()
+        
+        # Should show what would be updated without making changes
+        self.assertIn('DRY RUN:', output)
+        self.assertIn('Would update', output)
+        self.assertIn('João Silva (77 anos)', output)
+        self.assertIn('Maria Santos (63 anos)', output)
+        
+        # Verify no actual changes were made
+        self.client_over_70.refresh_from_db()
+        self.client_over_60.refresh_from_db()
+        self.assertFalse(self.client_over_70.prioridade)
+        self.assertFalse(self.client_over_60.prioridade)
+    
+    def test_management_command_execute(self):
+        """Test management command execution"""
+        from django.core.management import call_command
+        from io import StringIO
+        
+        out = StringIO()
+        call_command('update_priority_by_age', stdout=out)
+        output = out.getvalue()
+        
+        # Should show successful update
+        self.assertIn('Successfully updated', output)
+        self.assertIn('clients over 60 years old to priority status', output)
+        
+        # Verify actual changes were made
+        self.client_over_70.refresh_from_db()
+        self.client_over_60.refresh_from_db()
+        self.client_under_60.refresh_from_db()
+        self.client_already_priority.refresh_from_db()
+        
+        self.assertTrue(self.client_over_70.prioridade)
+        self.assertTrue(self.client_over_60.prioridade)
+        self.assertFalse(self.client_under_60.prioridade)
+        self.assertTrue(self.client_already_priority.prioridade)
+    
+    def test_management_command_custom_age_limit(self):
+        """Test management command with custom age limit"""
+        from django.core.management import call_command
+        from io import StringIO
+        
+        out = StringIO()
+        call_command('update_priority_by_age', '--age-limit=65', '--dry-run', stdout=out)
+        output = out.getvalue()
+        
+        # Should only include clients over 65
+        self.assertIn('over 65 years old', output)
+        # Should show fewer clients to update since age limit is higher
+    
+    def test_management_command_no_clients_to_update(self):
+        """Test management command when no clients need update"""
+        from django.core.management import call_command
+        from io import StringIO
+        from datetime import timedelta
+        
+        # Update all senior clients to priority first
+        Cliente.objects.filter(nascimento__lt=date.today() - timedelta(days=60*365.25)).update(prioridade=True)
+        
+        out = StringIO()
+        call_command('update_priority_by_age', '--dry-run', stdout=out)
+        output = out.getvalue()
+        
+        # Should indicate no clients need update
+        self.assertIn('No clients found that need priority update', output)
+
+
+class ClienteListViewWithPriorityButtonTest(TestCase):
+    """Test cases for client list view with priority update button"""
+    
+    def setUp(self):
+        """Set up test data"""
+        from datetime import date, timedelta
+        
+        # Create user for authentication
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        # Create test client over 60
+        self.client_senior = Cliente.objects.create(
+            cpf='11111111111',
+            nome='João Silva (65 anos)',
+            nascimento=date.today() - timedelta(days=65*365.25),
+            prioridade=False
+        )
+        
+        self.client_app = Client()
+    
+    def test_client_list_contains_priority_button(self):
+        """Test that client list page contains priority update button"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(reverse('clientes'))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Atualizar Prioritários')
+        self.assertContains(response, reverse('update_priority_by_age'))
+    
+    def test_priority_button_has_confirmation(self):
+        """Test that priority button includes JavaScript confirmation"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(reverse('clientes'))
+        
+        self.assertContains(response, 'onsubmit="return confirm(')
+        self.assertContains(response, 'Tem certeza de que deseja atualizar')
+    
+    def test_priority_button_csrf_protection(self):
+        """Test that priority button includes CSRF protection"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(reverse('clientes'))
+        
+        self.assertContains(response, 'csrfmiddlewaretoken')
+
+
+class PriorityUpdateIntegrationTest(TestCase):
+    """Integration tests for the complete priority update workflow"""
+    
+    def setUp(self):
+        """Set up comprehensive test data"""
+        from datetime import date, timedelta
+        
+        # Create user for authentication
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        # Create precatorios
+        self.precatorio1 = Precatorio.objects.create(
+            cnj='1234567-89.2023.8.26.0100',
+            orcamento=2023,
+            origem='Tribunal de São Paulo',
+            quitado=False,
+            valor_de_face=100000.00,
+            ultima_atualizacao=100000.00,
+            data_ultima_atualizacao=date(2023, 1, 15),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            prioridade_deferida=True,
+            acordo_deferido=False
+        )
+        
+        self.precatorio2 = Precatorio.objects.create(
+            cnj='2345678-90.2023.8.26.0200',
+            orcamento=2023,
+            origem='Tribunal de Campinas',
+            quitado=False,
+            valor_de_face=75000.00,
+            ultima_atualizacao=75000.00,
+            data_ultima_atualizacao=date(2023, 2, 20),
+            percentual_contratuais_assinado=25.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=15.0,
+            prioridade_deferida=False,
+            acordo_deferido=False
+        )
+        
+        # Create clients with different ages and priority statuses
+        today = date.today()
+        sixty_years_ago = today - timedelta(days=60*365.25)
+        
+        self.client_senior_no_priority = Cliente.objects.create(
+            cpf='11111111111',
+            nome='Maria Santos (65 anos)',
+            nascimento=sixty_years_ago - timedelta(days=5*365),
+            prioridade=False
+        )
+        
+        self.client_senior_has_priority = Cliente.objects.create(
+            cpf='22222222222',
+            nome='João Silva (70 anos)',
+            nascimento=sixty_years_ago - timedelta(days=10*365),
+            prioridade=True
+        )
+        
+        self.client_young = Cliente.objects.create(
+            cpf='33333333333',
+            nome='Pedro Oliveira (45 anos)',
+            nascimento=today - timedelta(days=45*365.25),
+            prioridade=False
+        )
+        
+        # Link clients to precatorios
+        self.precatorio1.clientes.add(self.client_senior_no_priority, self.client_young)
+        self.precatorio2.clientes.add(self.client_senior_has_priority)
+        
+        # Create phases for testing complete workflow
+        self.fase_alvara = Fase.objects.create(
+            nome='Aguardando Depósito',
+            tipo='alvara',
+            cor='#FF6B35',
+            ativa=True
+        )
+        
+        # Create alvaras to test complete relationships
+        self.alvara1 = Alvara.objects.create(
+            precatorio=self.precatorio1,
+            cliente=self.client_senior_no_priority,
+            valor_principal=30000.00,
+            honorarios_contratuais=15000.00,
+            honorarios_sucumbenciais=5000.00,
+            tipo='prioridade',
+            fase=self.fase_alvara
+        )
+        
+        self.client_app = Client()
+    
+    def test_complete_priority_update_workflow(self):
+        """Test complete workflow from button click to database update"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # 1. Access client list page
+        response = self.client_app.get(reverse('clientes'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Atualizar Prioritários')
+        
+        # 2. Verify initial state
+        self.assertFalse(self.client_senior_no_priority.prioridade)
+        self.assertTrue(self.client_senior_has_priority.prioridade)
+        self.assertFalse(self.client_young.prioridade)
+        
+        # 3. Click priority update button
+        response = self.client_app.post(reverse('update_priority_by_age'))
+        self.assertEqual(response.status_code, 302)
+        
+        # 4. Verify database updates
+        self.client_senior_no_priority.refresh_from_db()
+        self.client_senior_has_priority.refresh_from_db()
+        self.client_young.refresh_from_db()
+        
+        # Senior without priority should now have priority
+        self.assertTrue(self.client_senior_no_priority.prioridade)
+        # Senior with priority should remain unchanged
+        self.assertTrue(self.client_senior_has_priority.prioridade)
+        # Young client should remain unchanged
+        self.assertFalse(self.client_young.prioridade)
+        
+        # 5. Verify redirect back to client list
+        self.assertRedirects(response, reverse('clientes'))
+    
+    def test_priority_update_with_filtering(self):
+        """Test priority update combined with client filtering"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Update priorities first
+        self.client_app.post(reverse('update_priority_by_age'))
+        
+        # Test filtering by priority status
+        response = self.client_app.get(reverse('clientes') + '?prioridade=true')
+        self.assertEqual(response.status_code, 200)
+        
+        clientes = response.context['clientes']
+        # Should include both senior clients now
+        priority_clients = [c for c in clientes if c.prioridade]
+        self.assertEqual(len(priority_clients), 2)
+    
+    def test_priority_update_with_statistics(self):
+        """Test priority update affects client statistics correctly"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Check initial statistics
+        response = self.client_app.get(reverse('clientes'))
+        initial_priority_count = response.context.get('clientes_com_prioridade', 0)
+        
+        # Update priorities
+        self.client_app.post(reverse('update_priority_by_age'))
+        
+        # Check updated statistics
+        response = self.client_app.get(reverse('clientes'))
+        updated_priority_count = response.context.get('clientes_com_prioridade', 0)
+        
+        # Should have one more priority client
+        self.assertEqual(updated_priority_count, initial_priority_count + 1)
+    
+    def test_priority_update_error_handling(self):
+        """Test error handling in priority update functionality"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Mock a database error by creating invalid state (this is a conceptual test)
+        # In practice, you'd use unittest.mock to simulate database errors
+        
+        # For now, test that the view handles the happy path correctly
+        response = self.client_app.post(reverse('update_priority_by_age'))
+        
+        # Should not raise unhandled exceptions
+        self.assertEqual(response.status_code, 302)
+
+
+class PriorityUpdateEdgeCasesTest(TestCase):
+    """Test edge cases for priority update functionality"""
+    
+    def setUp(self):
+        """Set up edge case test data"""
+        from datetime import date, timedelta
+        
+        # Create user
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        # Create client exactly 60 years old (edge case)
+        exactly_60_years_ago = date.today() - timedelta(days=60*365.25)
+        self.client_exactly_60 = Cliente.objects.create(
+            cpf='11111111111',
+            nome='Cliente Exatamente 60 Anos',
+            nascimento=exactly_60_years_ago,
+            prioridade=False
+        )
+        
+        # Create client just under 60 (should not be updated)
+        just_under_60 = date.today() - timedelta(days=60*365.25 - 1)
+        self.client_just_under_60 = Cliente.objects.create(
+            cpf='22222222222',
+            nome='Cliente 59 Anos e 364 Dias',
+            nascimento=just_under_60,
+            prioridade=False
+        )
+        
+        # Create client just over 60 (should be updated)
+        just_over_60 = date.today() - timedelta(days=60*365.25 + 1)
+        self.client_just_over_60 = Cliente.objects.create(
+            cpf='33333333333',
+            nome='Cliente 60 Anos e 1 Dia',
+            nascimento=just_over_60,
+            prioridade=False
+        )
+        
+        self.client_app = Client()
+    
+    def test_exactly_60_years_old(self):
+        """Test client who is exactly 60 years old"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Execute update
+        self.client_app.post(reverse('update_priority_by_age'))
+        
+        # Refresh from database
+        self.client_exactly_60.refresh_from_db()
+        
+        # Client exactly 60 should NOT be updated (using < comparison, so exactly 60 does not qualify)
+        self.assertFalse(self.client_exactly_60.prioridade)
+    
+    def test_just_under_60_years_old(self):
+        """Test client who is just under 60 years old"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Execute update
+        self.client_app.post(reverse('update_priority_by_age'))
+        
+        # Refresh from database
+        self.client_just_under_60.refresh_from_db()
+        
+        # Client just under 60 should NOT be updated
+        self.assertFalse(self.client_just_under_60.prioridade)
+    
+    def test_just_over_60_years_old(self):
+        """Test client who is just over 60 years old"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Execute update
+        self.client_app.post(reverse('update_priority_by_age'))
+        
+        # Refresh from database
+        self.client_just_over_60.refresh_from_db()
+        
+        # Client just over 60 should be updated
+        self.assertTrue(self.client_just_over_60.prioridade)
+    
+    def test_leap_year_handling(self):
+        """Test that leap years are handled correctly in age calculation"""
+        from datetime import date, timedelta
+        
+        # This is a conceptual test - in practice, the 365.25 calculation
+        # in the management command should handle leap years correctly
+        
+        # Create client born on February 29 (leap year)
+        leap_year_birth = date(1964, 2, 29)  # 1964 was a leap year
+        client_leap_year = Cliente.objects.create(
+            cpf='44444444444',
+            nome='Cliente Nascido em Ano Bissexto',
+            nascimento=leap_year_birth,
+            prioridade=False
+        )
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        self.client_app.post(reverse('update_priority_by_age'))
+        
+        client_leap_year.refresh_from_db()
+        # Should be updated as client is over 60
+        self.assertTrue(client_leap_year.prioridade)
+
+
+class PriorityUpdatePerformanceTest(TestCase):
+    """Test performance considerations for priority update functionality"""
+    
+    def setUp(self):
+        """Set up performance test data"""
+        from datetime import date, timedelta
+        
+        # Create user
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        # Create many clients for performance testing
+        today = date.today()
+        sixty_years_ago = today - timedelta(days=60*365.25)
+        
+        # Create 50 senior clients without priority
+        self.senior_clients = []
+        for i in range(50):
+            client = Cliente.objects.create(
+                cpf=f'{i:011d}',
+                nome=f'Cliente Senior {i}',
+                nascimento=sixty_years_ago - timedelta(days=i*30),  # Various ages over 60
+                prioridade=False
+            )
+            self.senior_clients.append(client)
+        
+        # Create 50 young clients
+        fifty_years_ago = today - timedelta(days=50*365.25)
+        for i in range(50, 100):
+            Cliente.objects.create(
+                cpf=f'{i:011d}',
+                nome=f'Cliente Young {i}',
+                nascimento=fifty_years_ago - timedelta(days=i*10),
+                prioridade=False
+            )
+        
+        self.client_app = Client()
+    
+    def test_bulk_priority_update_performance(self):
+        """Test that bulk priority update is efficient"""
+        import time
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Measure execution time
+        start_time = time.time()
+        response = self.client_app.post(reverse('update_priority_by_age'))
+        end_time = time.time()
+        
+        execution_time = end_time - start_time
+        
+        # Should complete reasonably quickly (less than 5 seconds for 100 clients)
+        self.assertLess(execution_time, 5.0)
+        
+        # Verify correct number of updates (should be most/all of the senior clients)
+        updated_count = Cliente.objects.filter(prioridade=True).count()
+        self.assertGreaterEqual(updated_count, 49)  # At least 49 of the 50 senior clients
+        self.assertLessEqual(updated_count, 50)  # At most 50
+    
+    def test_query_efficiency(self):
+        """Test that the database queries are efficient"""
+        from django.test.utils import override_settings
+        from django.db import connection
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Reset query count
+        connection.queries_log.clear()
+        
+        # Execute update
+        with override_settings(DEBUG=True):
+            self.client_app.post(reverse('update_priority_by_age'))
+        
+        # Check that we're not doing N+1 queries
+        query_count = len(connection.queries)
+        
+        # Should be a reasonable number of queries (not proportional to client count)
+        self.assertLess(query_count, 10)
+
+
+# Run tests with: python manage.py test precapp.tests.PriorityUpdateByAgeTest
+# Run all priority tests with: python manage.py test precapp.tests -k Priority
 # Run tests with: python manage.py test precapp

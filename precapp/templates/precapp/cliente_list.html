@@ -9,6 +9,13 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1><i class="fas fa-users"></i> Lista de Clientes</h1>
                 <div>
+                    <form method="post" action="{% url 'update_priority_by_age' %}" style="display: inline-block;" 
+                          onsubmit="return confirm('Tem certeza de que deseja atualizar todos os clientes com mais de 60 anos para status prioritário?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning btn-lg me-2" title="Atualizar todos os clientes com mais de 60 anos para status prioritário">
+                            <i class="fas fa-star me-2"></i>Atualizar Prioritários
+                        </button>
+                    </form>
                     <a href="{% url 'novo_cliente' %}" class="btn btn-success btn-lg">
                         <i class="fas fa-user-plus me-2"></i>Novo Cliente
                     </a>
@@ -47,11 +54,12 @@
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <label for="prioridade_precatorio" class="form-label">Prioridade Precatório</label>
-                            <select class="form-control" id="prioridade_precatorio" name="prioridade_precatorio">
-                                <option value="">Todas</option>
-                                <option value="true" {% if current_prioridade_precatorio == 'true' %}selected{% endif %}>Deferida</option>
-                                <option value="false" {% if current_prioridade_precatorio == 'false' %}selected{% endif %}>Não Deferida</option>
+                            <label for="requerimento_prioridade" class="form-label">Requerimento Prioridade</label>
+                            <select class="form-control" id="requerimento_prioridade" name="requerimento_prioridade">
+                                <option value="">Todos</option>
+                                <option value="deferido" {% if current_requerimento_prioridade == 'deferido' %}selected{% endif %}>Deferido</option>
+                                <option value="nao_deferido" {% if current_requerimento_prioridade == 'nao_deferido' %}selected{% endif %}>Não Deferido</option>
+                                <option value="sem_requerimento" {% if current_requerimento_prioridade == 'sem_requerimento' %}selected{% endif %}>Sem Requerimento</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -97,7 +105,7 @@
                                 <th>CPF</th>
                                 <th>Data de Nascimento</th>
                                 <th>Prioridade Cliente</th>
-                                <th>Prioridade Precatório</th>
+                                <th>Requerimento Prioridade</th>
                                 <th>Precatório</th>
                             </tr>
                         </thead>
@@ -139,20 +147,28 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% for precatorio in cliente.precatorios.all %}
-                                        {% if precatorio.prioridade_deferida %}
-                                            <span class="badge bg-success">
-                                                <i class="fas fa-check-circle"></i> Deferida
-                                            </span>
+                                    {% with priority_reqs=cliente.get_priority_requerimentos %}
+                                        {% if priority_reqs %}
+                                            {% for req in priority_reqs %}
+                                                <div class="mb-1">
+                                                    {% if req.pedido == 'prioridade idade' %}
+                                                        <span class="badge bg-info text-white">
+                                                            <i class="fas fa-calendar-alt"></i> Idade
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="fas fa-user-injured"></i> Doença
+                                                        </span>
+                                                    {% endif %}
+                                                    {% if req.fase %}
+                                                        <br><small class="text-muted" style="font-size: 0.75em;">{{ req.fase.nome }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
                                         {% else %}
-                                            <span class="badge bg-danger">
-                                                <i class="fas fa-times-circle"></i> Não Deferida
-                                            </span>
+                                            <span class="text-muted">-</span>
                                         {% endif %}
-                                        {% if not forloop.last %}<br>{% endif %}
-                                    {% empty %}
-                                        <span class="text-muted">-</span>
-                                    {% endfor %}
+                                    {% endwith %}
                                 </td>
                                 <td>
                                     {% for precatorio in cliente.precatorios.all %}
