@@ -28,7 +28,7 @@
                 </div>
                 <div class="card-body">
                     <form method="get" class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="nome" class="form-label">Nome</label>
                             <input type="text" class="form-control" id="nome" name="nome" 
                                    placeholder="Digite o nome" value="{{ current_nome }}">
@@ -39,7 +39,7 @@
                                    placeholder="Digite o CPF" value="{{ current_cpf }}">
                         </div>
                         <div class="col-md-2">
-                            <label for="prioridade" class="form-label">Prioridade</label>
+                            <label for="prioridade" class="form-label">Prioridade Cliente</label>
                             <select class="form-control" id="prioridade" name="prioridade">
                                 <option value="">Todas</option>
                                 <option value="true" {% if current_prioridade == 'true' %}selected{% endif %}>Prioritário</option>
@@ -47,11 +47,19 @@
                             </select>
                         </div>
                         <div class="col-md-2">
+                            <label for="prioridade_precatorio" class="form-label">Prioridade Precatório</label>
+                            <select class="form-control" id="prioridade_precatorio" name="prioridade_precatorio">
+                                <option value="">Todas</option>
+                                <option value="true" {% if current_prioridade_precatorio == 'true' %}selected{% endif %}>Deferida</option>
+                                <option value="false" {% if current_prioridade_precatorio == 'false' %}selected{% endif %}>Não Deferida</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
                             <label for="precatorio" class="form-label">Precatório (CNJ)</label>
                             <input type="text" class="form-control" id="precatorio" name="precatorio" 
                                    placeholder="Digite o CNJ" value="{{ current_precatorio }}">
                         </div>
-                        <div class="col-md-3 d-flex align-items-end">
+                        <div class="col-md-2 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary me-2">
                                 <i class="fas fa-search me-1"></i>Buscar
                             </button>
@@ -88,7 +96,8 @@
                                 <th>Nome</th>
                                 <th>CPF</th>
                                 <th>Data de Nascimento</th>
-                                <th>Prioridade</th>
+                                <th>Prioridade Cliente</th>
+                                <th>Prioridade Precatório</th>
                                 <th>Precatório</th>
                             </tr>
                         </thead>
@@ -128,6 +137,22 @@
                                             <i class="fas fa-user"></i> Normal
                                         </span>
                                     {% endif %}
+                                </td>
+                                <td>
+                                    {% for precatorio in cliente.precatorios.all %}
+                                        {% if precatorio.prioridade_deferida %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle"></i> Deferida
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times-circle"></i> Não Deferida
+                                            </span>
+                                        {% endif %}
+                                        {% if not forloop.last %}<br>{% endif %}
+                                    {% empty %}
+                                        <span class="text-muted">-</span>
+                                    {% endfor %}
                                 </td>
                                 <td>
                                     {% for precatorio in cliente.precatorios.all %}

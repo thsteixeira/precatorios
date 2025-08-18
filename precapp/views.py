@@ -409,6 +409,7 @@ def clientes_view(request):
     nome_filter = request.GET.get('nome', '').strip()
     cpf_filter = request.GET.get('cpf', '').strip()
     prioridade_filter = request.GET.get('prioridade', '')
+    prioridade_precatorio_filter = request.GET.get('prioridade_precatorio', '')
     precatorio_filter = request.GET.get('precatorio', '').strip()
     
     if nome_filter:
@@ -420,6 +421,10 @@ def clientes_view(request):
     if prioridade_filter in ['true', 'false']:
         prioridade_bool = prioridade_filter == 'true'
         clientes = clientes.filter(prioridade=prioridade_bool)
+    
+    if prioridade_precatorio_filter in ['true', 'false']:
+        prioridade_precatorio_bool = prioridade_precatorio_filter == 'true'
+        clientes = clientes.filter(precatorios__prioridade_deferida=prioridade_precatorio_bool).distinct()
     
     if precatorio_filter:
         clientes = clientes.filter(precatorios__cnj__icontains=precatorio_filter).distinct()
@@ -438,6 +443,7 @@ def clientes_view(request):
         'current_nome': nome_filter,
         'current_cpf': cpf_filter,
         'current_prioridade': prioridade_filter,
+        'current_prioridade_precatorio': prioridade_precatorio_filter,
         'current_precatorio': precatorio_filter,
     }
     
