@@ -143,7 +143,6 @@ class Command(BaseCommand):
                 'percentual_contratuais_assinado': 20.00,
                 'percentual_contratuais_apartado': 5.00,
                 'percentual_sucumbenciais': 10.00,
-                'prioridade_deferida': True,
                 'acordo_deferido': False,
             },
             {
@@ -157,7 +156,6 @@ class Command(BaseCommand):
                 'percentual_contratuais_assinado': 15.00,
                 'percentual_contratuais_apartado': 0.00,
                 'percentual_sucumbenciais': 8.00,
-                'prioridade_deferida': False,
                 'acordo_deferido': True,
             },
             {
@@ -185,7 +183,6 @@ class Command(BaseCommand):
                 'percentual_contratuais_assinado': 18.00,
                 'percentual_contratuais_apartado': 3.00,
                 'percentual_sucumbenciais': 9.00,
-                'prioridade_deferida': False,
                 'acordo_deferido': True,
             },
             {
@@ -199,7 +196,6 @@ class Command(BaseCommand):
                 'percentual_contratuais_assinado': 30.00,
                 'percentual_contratuais_apartado': 15.00,
                 'percentual_sucumbenciais': 15.00,
-                'prioridade_deferida': True,
                 'acordo_deferido': False,
             },
         ]

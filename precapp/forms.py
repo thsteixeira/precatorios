@@ -191,7 +191,6 @@ class PrecatorioForm(forms.ModelForm):
             "percentual_contratuais_assinado",
             "percentual_contratuais_apartado",
             "percentual_sucumbenciais",
-            "prioridade_deferida",
             "acordo_deferido",
         ]
         
@@ -206,7 +205,6 @@ class PrecatorioForm(forms.ModelForm):
             }),
             'data_ultima_atualizacao': BrazilianDateInput(attrs={'required': False}),
             'quitado': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'prioridade_deferida': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'acordo_deferido': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         
@@ -214,7 +212,6 @@ class PrecatorioForm(forms.ModelForm):
             'orcamento': 'Ano do Orçamento',
             'quitado': 'Quitado',
             'data_ultima_atualizacao': 'Data da Última Atualização (Opcional)',
-            'prioridade_deferida': 'Prioridade Deferida',
             'acordo_deferido': 'Acordo Deferido',
         }
 

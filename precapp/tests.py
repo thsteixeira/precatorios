@@ -276,7 +276,7 @@ class AlvaraModelWithHonorariosTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         self.cliente = Cliente.objects.create(
@@ -370,7 +370,7 @@ class AlvaraSimpleFormWithHonorariosTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -624,7 +624,7 @@ class PrecatorioDetailViewWithHonorariosTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -773,7 +773,7 @@ class IntegrationTestWithHonorarios(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -994,7 +994,7 @@ class PrecatorioModelTest(TestCase):
             'percentual_contratuais_apartado': Decimal('5.0'),
             'percentual_sucumbenciais': Decimal('20.0'),
             'quitado': False,
-            'prioridade_deferida': False,
+
             'acordo_deferido': False
         }
 
@@ -1073,7 +1073,7 @@ class AlvaraModelTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         self.cliente = Cliente.objects.create(
@@ -1138,7 +1138,7 @@ class RequerimentoModelTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         self.cliente = Cliente.objects.create(
@@ -1241,7 +1241,7 @@ class AlvaraFormTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         self.cliente = Cliente.objects.create(
@@ -1329,7 +1329,7 @@ class RequerimentoFormTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         self.cliente = Cliente.objects.create(
@@ -1399,7 +1399,7 @@ class PrecatorioFormTest(TestCase):
             'percentual_contratuais_apartado': '5.0',
             'percentual_sucumbenciais': '20.0',
             'quitado': False,
-            'prioridade_deferida': False,
+
             'acordo_deferido': False
         }
     
@@ -1432,7 +1432,7 @@ class ClienteFormTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -1564,7 +1564,7 @@ class IntegrationTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -1658,7 +1658,7 @@ class ViewTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -1716,7 +1716,7 @@ class ManyToManyRelationshipTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -1731,7 +1731,7 @@ class ManyToManyRelationshipTest(TestCase):
             percentual_contratuais_apartado=6.0,
             percentual_sucumbenciais=18.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -1811,7 +1811,7 @@ class PrecatorioViewFilterTest(TestCase):
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-            prioridade_deferida=True,
+
             acordo_deferido=False
         )
         
@@ -1826,7 +1826,7 @@ class PrecatorioViewFilterTest(TestCase):
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -1841,7 +1841,7 @@ class PrecatorioViewFilterTest(TestCase):
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
     
@@ -1895,48 +1895,26 @@ class PrecatorioViewFilterTest(TestCase):
         for precatorio in precatorios:
             self.assertFalse(precatorio.quitado)
     
-    def test_filter_by_prioridade_true(self):
-        """Test filtering by prioridade status (true)"""
-        self.client.login(username='testuser', password='testpass123')
-        response = self.client.get('/precatorios/?prioridade=true')
-        
-        self.assertEqual(response.status_code, 200)
-        precatorios = response.context['precatorios']
-        self.assertEqual(len(precatorios), 1)
-        self.assertTrue(precatorios[0].prioridade_deferida)
-    
-    def test_filter_by_prioridade_false(self):
-        """Test filtering by prioridade status (false)"""
-        self.client.login(username='testuser', password='testpass123')
-        response = self.client.get('/precatorios/?prioridade=false')
-        
-        self.assertEqual(response.status_code, 200)
-        precatorios = response.context['precatorios']
-        self.assertEqual(len(precatorios), 2)
-        for precatorio in precatorios:
-            self.assertFalse(precatorio.prioridade_deferida)
-    
     def test_multiple_filters(self):
         """Test combining multiple filters"""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get('/precatorios/?quitado=false&prioridade=true')
+        response = self.client.get('/precatorios/?cnj=test&quitado=false')
         
         self.assertEqual(response.status_code, 200)
         precatorios = response.context['precatorios']
-        self.assertEqual(len(precatorios), 1)
-        self.assertFalse(precatorios[0].quitado)
-        self.assertTrue(precatorios[0].prioridade_deferida)
+        # Should return no results since no precatorio has both cnj='test' and quitado=False
+        self.assertEqual(len(precatorios), 0)
+
     
     def test_filter_context_values(self):
         """Test that current filter values are passed to template context"""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get('/precatorios/?cnj=test&origem=tribunal&quitado=true&prioridade=false')
+        response = self.client.get('/precatorios/?cnj=test&origem=tribunal&quitado=true')
         
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['current_cnj'], 'test')
         self.assertEqual(response.context['current_origem'], 'tribunal')
         self.assertEqual(response.context['current_quitado'], 'true')
-        self.assertEqual(response.context['current_prioridade'], 'false')
 
 
 class ClienteViewFilterTest(TestCase):
@@ -1962,7 +1940,7 @@ class ClienteViewFilterTest(TestCase):
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-            prioridade_deferida=True,
+
             acordo_deferido=False
         )
         
@@ -1977,7 +1955,7 @@ class ClienteViewFilterTest(TestCase):
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -2148,7 +2126,7 @@ class ClienteRequerimentoPrioridadeFilterTest(TestCase):
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-            prioridade_deferida=True,
+
             acordo_deferido=False
         )
         
@@ -2163,7 +2141,7 @@ class ClienteRequerimentoPrioridadeFilterTest(TestCase):
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -2342,7 +2320,7 @@ class AlvaraViewFilterTest(TestCase):
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-            prioridade_deferida=True,
+
             acordo_deferido=False
         )
         
@@ -2357,7 +2335,7 @@ class AlvaraViewFilterTest(TestCase):
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -2565,7 +2543,7 @@ class AlvaraViewWithHonorariosFilterTest(TestCase):
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-            prioridade_deferida=True,
+
             acordo_deferido=False
         )
         
@@ -2580,7 +2558,7 @@ class AlvaraViewWithHonorariosFilterTest(TestCase):
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -2774,7 +2752,7 @@ class BrazilianFormattingTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -2837,7 +2815,7 @@ class BrazilianFormattingTest(TestCase):
             'percentual_contratuais_apartado': '6,25',  # Brazilian percentage
             'percentual_sucumbenciais': '20,0',  # Brazilian percentage
             'quitado': False,
-            'prioridade_deferida': False,
+
             'acordo_deferido': False
         }
         
@@ -3005,7 +2983,7 @@ class DatabaseCompatibilityTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             quitado=False,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         
@@ -3473,7 +3451,7 @@ class PriorityUpdateIntegrationTest(TestCase):
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-            prioridade_deferida=True,
+
             acordo_deferido=False
         )
         
@@ -3488,7 +3466,7 @@ class PriorityUpdateIntegrationTest(TestCase):
             percentual_contratuais_assinado=25.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=15.0,
-            prioridade_deferida=False,
+
             acordo_deferido=False
         )
         

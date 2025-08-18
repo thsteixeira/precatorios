@@ -120,7 +120,6 @@ def precatorio_view(request):
     cnj_filter = request.GET.get('cnj', '').strip()
     origem_filter = request.GET.get('origem', '').strip()
     quitado_filter = request.GET.get('quitado', '')
-    prioridade_filter = request.GET.get('prioridade', '')
     
     if cnj_filter:
         precatorios = precatorios.filter(cnj__icontains=cnj_filter)
@@ -132,27 +131,20 @@ def precatorio_view(request):
         quitado_bool = quitado_filter == 'true'
         precatorios = precatorios.filter(quitado=quitado_bool)
     
-    if prioridade_filter in ['true', 'false']:
-        prioridade_bool = prioridade_filter == 'true'
-        precatorios = precatorios.filter(prioridade_deferida=prioridade_bool)
-    
     # Calculate summary statistics
     total_precatorios = precatorios.count()
     quitados = precatorios.filter(quitado=True).count()
     pendentes = precatorios.filter(quitado=False).count()
-    prioritarios = precatorios.filter(prioridade_deferida=True).count()
     
     context = {
         'precatorios': precatorios,
         'total_precatorios': total_precatorios,
         'quitados': quitados,
         'pendentes': pendentes,
-        'prioritarios': prioritarios,
         # Include current filter values to maintain state in form
         'current_cnj': cnj_filter,
         'current_origem': origem_filter,
         'current_quitado': quitado_filter,
-        'current_prioridade': prioridade_filter,
     }
     
     return render(request, 'precapp/precatorio_list.html', context)

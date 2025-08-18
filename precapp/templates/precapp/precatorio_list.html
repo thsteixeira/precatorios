@@ -46,14 +46,6 @@
                             <option value="false" {% if current_quitado == 'false' %}selected{% endif %}>Não Quitado</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label for="prioridade" class="form-label">Prioridade</label>
-                        <select class="form-control" id="prioridade" name="prioridade">
-                            <option value="">Todas</option>
-                            <option value="true" {% if current_prioridade == 'true' %}selected{% endif %}>Prioritário</option>
-                            <option value="false" {% if current_prioridade == 'false' %}selected{% endif %}>Normal</option>
-                        </select>
-                    </div>
                     <div class="col-md-3 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2">
                             <i class="fas fa-search me-1"></i>Buscar
@@ -94,7 +86,6 @@
                                     <th scope="col">Origem</th>
                                     <th scope="col">Valor</th>
                                     <th scope="col">Status</th>
-                                    <th scope="col">Prioridade</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -121,17 +112,6 @@
                                             {% else %}
                                                 <span class="badge bg-warning text-dark">
                                                     <i class="fas fa-clock me-1"></i>Pendente
-                                                </span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if precatorio.prioridade_deferida %}
-                                                <span class="badge bg-info">
-                                                    <i class="fas fa-star me-1"></i>Prioritário
-                                                </span>
-                                            {% else %}
-                                                <span class="badge bg-secondary">
-                                                    <i class="fas fa-minus me-1"></i>Normal
                                                 </span>
                                             {% endif %}
                                         </td>

@@ -221,7 +221,7 @@ precatorios/
 - valor_de_face (DecimalField) - Valor original
 - ultima_atualizacao (DecimalField) - Valor atualizado
 - percentuais contratuais e sucumbenciais
-- status (quitado, prioridade_deferida, acordo_deferido)
+- status (quitado, acordo_deferido)
 ```
 
 ### **Cliente**

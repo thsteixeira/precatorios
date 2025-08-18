@@ -101,7 +101,6 @@ class Precatorio(models.Model):
     percentual_contratuais_assinado = models.FloatField(null=True, blank=True)
     percentual_contratuais_apartado = models.FloatField(null=True, blank=True)
     percentual_sucumbenciais = models.FloatField(null=True, blank=True)
-    prioridade_deferida = models.BooleanField()
     acordo_deferido = models.BooleanField()
     clientes = models.ManyToManyField('Cliente', related_name='precatorios')
 

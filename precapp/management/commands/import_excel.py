@@ -306,7 +306,6 @@ class Command(BaseCommand):
             'percentual_contratuais_apartado': 0.0,
             'percentual_sucumbenciais': 0.0,
             'quitado': False,
-            'prioridade_deferida': False,
             'acordo_deferido': False
         }
         
@@ -553,7 +552,6 @@ class Command(BaseCommand):
             'percentual_contratuais_apartado': 0.0,
             'percentual_sucumbenciais': 0.0,
             'quitado': False,
-            'prioridade_deferida': False,
             'acordo_deferido': False
         })
         
