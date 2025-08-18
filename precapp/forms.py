@@ -614,6 +614,16 @@ class AlvaraSimpleForm(forms.ModelForm):
             except Cliente.DoesNotExist:
                 raise forms.ValidationError(f'Não foi encontrado um cliente com o CPF "{cpf}". Verifique se o número está correto ou cadastre o cliente primeiro.')
         return cpf
+    
+    def clean_honorarios_contratuais(self):
+        """Clean honorarios_contratuais field to provide default value"""
+        honorarios = self.cleaned_data.get('honorarios_contratuais')
+        return honorarios if honorarios is not None else 0.0
+    
+    def clean_honorarios_sucumbenciais(self):
+        """Clean honorarios_sucumbenciais field to provide default value"""
+        honorarios = self.cleaned_data.get('honorarios_sucumbenciais')
+        return honorarios if honorarios is not None else 0.0
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

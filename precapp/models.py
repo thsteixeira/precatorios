@@ -128,8 +128,8 @@ class Alvara(models.Model):
     precatorio = models.ForeignKey(Precatorio, on_delete=models.CASCADE, to_field='cnj')
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, to_field='cpf')
     valor_principal = models.FloatField()
-    honorarios_contratuais = models.FloatField()
-    honorarios_sucumbenciais = models.FloatField()
+    honorarios_contratuais = models.FloatField(null=True, blank=True, default=0.0)
+    honorarios_sucumbenciais = models.FloatField(null=True, blank=True, default=0.0)
     tipo = models.CharField(max_length=100)
     fase = models.ForeignKey(
         Fase, 
