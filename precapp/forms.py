@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 import re
-from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, Diligencias, TipoDiligencia
 
 
 def validate_cpf(cpf):
@@ -67,6 +67,29 @@ class BrazilianDateInput(forms.DateInput):
         # Use Brazilian date format
         if format is None:
             format = '%d/%m/%Y'
+            
+        super().__init__(attrs=default_attrs, format=format)
+
+
+class BrazilianDateTimeInput(forms.DateTimeInput):
+    """
+    Custom DateTimeInput widget for Brazilian datetime format (dd/mm/yyyy hh:mm)
+    """
+    input_type = 'text'
+    
+    def __init__(self, attrs=None, format=None):
+        default_attrs = {
+            'class': 'form-control',
+            'placeholder': 'dd/mm/aaaa hh:mm',
+            'title': 'Digite a data e hora no formato dd/mm/aaaa hh:mm (ex: 31/12/2023 14:30)',
+            'maxlength': '16',
+        }
+        if attrs:
+            default_attrs.update(attrs)
+        
+        # Use Brazilian datetime format
+        if format is None:
+            format = '%d/%m/%Y %H:%M'
             
         super().__init__(attrs=default_attrs, format=format)
 
@@ -853,5 +876,125 @@ class FaseHonorariosContratuaisForm(forms.ModelForm):
     class Meta:
         model = FaseHonorariosContratuais
         fields = ['nome', 'descricao', 'cor', 'ativa']
+
+
+class DiligenciasForm(forms.ModelForm):
+    """Form for creating and editing diligencias"""
+    
+    class Meta:
+        model = Diligencias
+        fields = ['tipo', 'data_final', 'urgencia', 'descricao']
+        widgets = {
+            'data_final': BrazilianDateInput(),
+            'descricao': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'tipo': forms.Select(attrs={'class': 'form-control'}),
+            'urgencia': forms.Select(attrs={'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Filter tipo field to show only active tipos
+        self.fields['tipo'].queryset = TipoDiligencia.get_ativos()
+        
+        # Customize field labels
+        self.fields['tipo'].label = 'Tipo de Diligência'
+        self.fields['data_final'].label = 'Data Final'
+        self.fields['urgencia'].label = 'Urgência'
+        self.fields['descricao'].label = 'Descrição'
+        
+        # Add help texts
+        self.fields['data_final'].help_text = 'Data limite para conclusão da diligência'
+        self.fields['descricao'].help_text = 'Descrição detalhada da diligência (opcional)'
+        
+        # Make all fields required except description
+        self.fields['descricao'].required = False
+        
+    def clean_data_final(self):
+        """Validate that data_final is not in the past"""
+        data_final = self.cleaned_data.get('data_final')
+        if data_final:
+            from django.utils import timezone
+            if data_final < timezone.now().date():
+                raise forms.ValidationError('A data final não pode ser no passado.')
+        return data_final
+
+
+class DiligenciasUpdateForm(forms.ModelForm):
+    """Form for updating diligencias status"""
+    
+    class Meta:
+        model = Diligencias
+        fields = ['concluida', 'data_conclusao', 'descricao']
+        widgets = {
+            'data_conclusao': BrazilianDateTimeInput(),
+            'descricao': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'concluida': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Customize field labels
+        self.fields['concluida'].label = 'Marcar como concluída'
+        self.fields['data_conclusao'].label = 'Data de conclusão'
+        self.fields['descricao'].label = 'Observações'
+        
+        # Make fields optional
+        self.fields['data_conclusao'].required = False
+        self.fields['descricao'].required = False
+        
+    def clean(self):
+        """Validate that data_conclusao is set when concluida is True"""
+        cleaned_data = super().clean()
+        concluida = cleaned_data.get('concluida')
+        data_conclusao = cleaned_data.get('data_conclusao')
+        
+        if concluida and not data_conclusao:
+            from django.utils import timezone
+            cleaned_data['data_conclusao'] = timezone.now()
+        elif not concluida:
+            cleaned_data['data_conclusao'] = None
+            
+        return cleaned_data
+
+
+class TipoDiligenciaForm(forms.ModelForm):
+    """Form for creating and editing diligence types"""
+    
+    class Meta:
+        model = TipoDiligencia
+        fields = ['nome', 'descricao', 'cor', 'ativo']
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-control'}),
+            'descricao': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'cor': forms.TextInput(attrs={'type': 'color', 'class': 'form-control form-control-color'}),
+            'ativo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Customize field labels
+        self.fields['nome'].label = 'Nome do Tipo'
+        self.fields['descricao'].label = 'Descrição'
+        self.fields['cor'].label = 'Cor'
+        self.fields['ativo'].label = 'Ativo'
+        
+        # Add help texts
+        self.fields['nome'].help_text = 'Nome único para o tipo de diligência'
+        self.fields['descricao'].help_text = 'Descrição opcional do tipo (opcional)'
+        self.fields['cor'].help_text = 'Cor para identificação visual'
+        self.fields['ativo'].help_text = 'Se este tipo está disponível para uso'
+        
+        # Make description optional
+        self.fields['descricao'].required = False
+    
+    def clean_cor(self):
+        """Validate that cor is a valid hex color"""
+        cor = self.cleaned_data.get('cor')
+        if cor and not re.match(r'^#[0-9A-Fa-f]{6}$', cor):
+            raise forms.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
+        return cor
 
         

@@ -3,12 +3,14 @@ from django.urls import reverse
 from django.contrib.messages import get_messages
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from decimal import Decimal
 from datetime import date, timedelta
-from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, TipoDiligencia, Diligencias
 from .forms import (
     PrecatorioForm, ClienteForm, AlvaraSimpleForm, 
-    RequerimentoForm, FaseForm, FaseHonorariosContratuaisForm, validate_cnj, validate_currency
+    RequerimentoForm, FaseForm, FaseHonorariosContratuaisForm, validate_cnj, validate_currency,
+    TipoDiligenciaForm, DiligenciasForm, DiligenciasUpdateForm
 )
 
 
@@ -5264,4 +5266,1027 @@ class CPFFormValidationTest(TestCase):
 # Run requerimento display tests with: python manage.py test precapp.tests.RequerimentoDisplayTest  
 # Run CPF validation tests with: python manage.py test precapp.tests.CPFValidationTest
 # Run CPF form validation tests with: python manage.py test precapp.tests.CPFFormValidationTest
+# Run diligencias tests with: python manage.py test precapp.tests.TipoDiligenciaModelTest
+# Run diligencias tests with: python manage.py test precapp.tests.DiligenciasModelTest
 # Run tests with: python manage.py test precapp
+
+
+class TipoDiligenciaModelTest(TestCase):
+    """Test cases for TipoDiligencia model"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.tipo_diligencia_data = {
+            'nome': 'Documentação Pendente',
+            'descricao': 'Solicitação de documentos necessários',
+            'cor': '#007bff',
+            'ativo': True
+        }
+    
+    def test_tipo_diligencia_creation(self):
+        """Test creating a tipo diligencia with valid data"""
+        tipo = TipoDiligencia(**self.tipo_diligencia_data)
+        tipo.full_clean()
+        tipo.save()
+        self.assertEqual(tipo.nome, 'Documentação Pendente')
+        self.assertEqual(tipo.cor, '#007bff')
+        self.assertTrue(tipo.ativo)
+    
+    def test_tipo_diligencia_str_method(self):
+        """Test the __str__ method of TipoDiligencia"""
+        tipo = TipoDiligencia(**self.tipo_diligencia_data)
+        expected_str = tipo.nome
+        self.assertEqual(str(tipo), expected_str)
+    
+    def test_tipo_diligencia_default_values(self):
+        """Test default values for TipoDiligencia"""
+        tipo = TipoDiligencia.objects.create(nome='Tipo Teste')
+        self.assertEqual(tipo.cor, '#007bff')  # Default color
+        self.assertTrue(tipo.ativo)  # Default to active
+        self.assertIsNotNone(tipo.criado_em)
+        self.assertIsNotNone(tipo.atualizado_em)
+    
+    def test_tipo_diligencia_unique_nome(self):
+        """Test that nome must be unique"""
+        TipoDiligencia.objects.create(**self.tipo_diligencia_data)
+        with self.assertRaises(Exception):
+            duplicate_tipo = TipoDiligencia(**self.tipo_diligencia_data)
+            duplicate_tipo.full_clean()
+            duplicate_tipo.save()
+    
+    def test_get_ativos_class_method(self):
+        """Test get_ativos class method"""
+        # Create active and inactive tipos
+        ativo1 = TipoDiligencia.objects.create(nome='Ativo 1', ativo=True)
+        ativo2 = TipoDiligencia.objects.create(nome='Ativo 2', ativo=True)
+        inativo = TipoDiligencia.objects.create(nome='Inativo', ativo=False)
+        
+        ativos = TipoDiligencia.get_ativos()
+        self.assertIn(ativo1, ativos)
+        self.assertIn(ativo2, ativos)
+        self.assertNotIn(inativo, ativos)
+        self.assertEqual(ativos.count(), 2)
+    
+    def test_tipo_diligencia_color_validation(self):
+        """Test color field accepts valid hex colors"""
+        valid_colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFFFF', '#000000', '#123ABC']
+        for color in valid_colors:
+            with self.subTest(color=color):
+                data = self.tipo_diligencia_data.copy()
+                data['cor'] = color
+                data['nome'] = f'Test {color}'
+                tipo = TipoDiligencia(**data)
+                tipo.full_clean()
+                tipo.save()
+    
+    def test_tipo_diligencia_ordering(self):
+        """Test that tipos are ordered by nome"""
+        TipoDiligencia.objects.create(nome='Zebra Tipo')
+        TipoDiligencia.objects.create(nome='Alpha Tipo')
+        TipoDiligencia.objects.create(nome='Beta Tipo')
+        
+        tipos = TipoDiligencia.objects.all()
+        names = [tipo.nome for tipo in tipos]
+        self.assertEqual(names, ['Alpha Tipo', 'Beta Tipo', 'Zebra Tipo'])
+
+
+class TipoDiligenciaFormTest(TestCase):
+    """Test cases for TipoDiligenciaForm"""
+    
+    def setUp(self):
+        """Set up test form data"""
+        self.valid_form_data = {
+            'nome': 'Contato Cliente',
+            'descricao': 'Entrar em contato com o cliente',
+            'cor': '#28a745',
+            'ativo': True
+        }
+    
+    def test_valid_form(self):
+        """Test form with all valid data"""
+        form = TipoDiligenciaForm(data=self.valid_form_data)
+        self.assertTrue(form.is_valid())
+    
+    def test_form_save(self):
+        """Test form saving creates the object correctly"""
+        form = TipoDiligenciaForm(data=self.valid_form_data)
+        self.assertTrue(form.is_valid())
+        tipo = form.save()
+        self.assertEqual(tipo.nome, 'Contato Cliente')
+        self.assertEqual(tipo.cor, '#28a745')
+    
+    def test_form_required_fields(self):
+        """Test form with missing required fields"""
+        incomplete_data = {'descricao': 'Test'}
+        form = TipoDiligenciaForm(data=incomplete_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('nome', form.errors)
+    
+    def test_form_color_field(self):
+        """Test color field widget and validation"""
+        form = TipoDiligenciaForm()
+        color_field = form.fields['cor']
+        self.assertEqual(color_field.widget.input_type, 'color')
+    
+    def test_form_clean_cor_valid(self):
+        """Test form accepts valid hex colors"""
+        valid_colors = ['#FF0000', '#00ff00', '#0000FF', '#AbCdEf']
+        for color in valid_colors:
+            with self.subTest(color=color):
+                data = self.valid_form_data.copy()
+                data['cor'] = color
+                form = TipoDiligenciaForm(data=data)
+                self.assertTrue(form.is_valid(), f"Form should be valid for color {color}")
+    
+    def test_form_clean_cor_invalid(self):
+        """Test form rejects invalid hex colors"""
+        invalid_colors = ['invalid', '#FF', '#GGGGGG', 'red', '123456', '#1234567']
+        for color in invalid_colors:
+            with self.subTest(color=color):
+                data = self.valid_form_data.copy()
+                data['cor'] = color
+                form = TipoDiligenciaForm(data=data)
+                self.assertFalse(form.is_valid(), f"Form should be invalid for color {color}")
+                self.assertIn('cor', form.errors)
+    
+    def test_form_optional_description(self):
+        """Test that description field is optional"""
+        data = self.valid_form_data.copy()
+        data.pop('descricao')
+        form = TipoDiligenciaForm(data=data)
+        self.assertTrue(form.is_valid())
+        tipo = form.save()
+        self.assertEqual(tipo.descricao, '')
+
+
+class DiligenciasModelTest(TestCase):
+    """Test cases for Diligencias model"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.cliente = Cliente.objects.create(
+            cpf='12345678909',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        self.tipo_diligencia = TipoDiligencia.objects.create(
+            nome='Documentação',
+            cor='#007bff'
+        )
+        
+        self.diligencia_data = {
+            'cliente': self.cliente,
+            'tipo': self.tipo_diligencia,
+            'data_final': date.today() + timedelta(days=7),
+            'urgencia': 'media',
+            'criado_por': 'Test User',
+            'descricao': 'Teste de diligência'
+        }
+    
+    def test_diligencia_creation(self):
+        """Test creating a diligencia with valid data"""
+        diligencia = Diligencias(**self.diligencia_data)
+        diligencia.full_clean()
+        diligencia.save()
+        self.assertEqual(diligencia.tipo.nome, 'Documentação')
+        self.assertEqual(diligencia.cliente.nome, 'João Silva')
+        self.assertFalse(diligencia.concluida)
+    
+    def test_diligencia_str_method(self):
+        """Test the __str__ method of Diligencias"""
+        diligencia = Diligencias(**self.diligencia_data)
+        expected_str = f"{diligencia.tipo.nome} - {diligencia.cliente.nome} (Pendente)"
+        self.assertEqual(str(diligencia), expected_str)
+        
+        # Test with concluded diligencia
+        diligencia.concluida = True
+        expected_str = f"{diligencia.tipo.nome} - {diligencia.cliente.nome} (Concluída)"
+        self.assertEqual(str(diligencia), expected_str)
+    
+    def test_diligencia_default_values(self):
+        """Test default values for Diligencias"""
+        diligencia = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=date.today() + timedelta(days=7),
+            criado_por='Test User'
+        )
+        self.assertEqual(diligencia.urgencia, 'media')  # Default urgency
+        self.assertFalse(diligencia.concluida)  # Default not concluded
+        self.assertIsNotNone(diligencia.data_criacao)  # Auto timestamp
+        self.assertIsNone(diligencia.data_conclusao)  # No conclusion date yet
+    
+    def test_is_overdue_method(self):
+        """Test is_overdue method"""
+        # Test not overdue diligencia
+        future_date = date.today() + timedelta(days=7)
+        diligencia = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=future_date,
+            criado_por='Test User'
+        )
+        self.assertFalse(diligencia.is_overdue())
+        
+        # Test overdue diligencia
+        past_date = date.today() - timedelta(days=7)
+        diligencia_overdue = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=past_date,
+            criado_por='Test User'
+        )
+        self.assertTrue(diligencia_overdue.is_overdue())
+        
+        # Test concluded diligencia (should not be overdue)
+        diligencia_concluded = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=past_date,
+            criado_por='Test User',
+            concluida=True
+        )
+        self.assertFalse(diligencia_concluded.is_overdue())
+    
+    def test_days_until_deadline_method(self):
+        """Test days_until_deadline method"""
+        # Test future deadline
+        future_date = date.today() + timedelta(days=5)
+        diligencia = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=future_date,
+            criado_por='Test User'
+        )
+        self.assertEqual(diligencia.days_until_deadline(), 5)
+        
+        # Test past deadline
+        past_date = date.today() - timedelta(days=3)
+        diligencia_past = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=past_date,
+            criado_por='Test User'
+        )
+        self.assertEqual(diligencia_past.days_until_deadline(), -3)
+        
+        # Test concluded diligencia
+        diligencia_concluded = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=future_date,
+            criado_por='Test User',
+            concluida=True
+        )
+        self.assertIsNone(diligencia_concluded.days_until_deadline())
+    
+    def test_get_urgencia_color_method(self):
+        """Test get_urgencia_color method"""
+        urgencia_colors = {
+            'baixa': 'secondary',
+            'media': 'warning',
+            'alta': 'danger',
+        }
+        
+        for urgencia, expected_color in urgencia_colors.items():
+            with self.subTest(urgencia=urgencia):
+                data = self.diligencia_data.copy()
+                data['urgencia'] = urgencia
+                diligencia = Diligencias(**data)
+                self.assertEqual(diligencia.get_urgencia_color(), expected_color)
+    
+    def test_diligencia_properties(self):
+        """Test property methods"""
+        diligencia = Diligencias.objects.create(**self.diligencia_data)
+        
+        # Test criado_em property (alias for data_criacao)
+        self.assertEqual(diligencia.criado_em, diligencia.data_criacao)
+        
+        # Test criador property (alias for criado_por)
+        self.assertEqual(diligencia.criador, diligencia.criado_por)
+    
+    def test_diligencia_cliente_relationship(self):
+        """Test relationship between Diligencias and Cliente"""
+        diligencia = Diligencias.objects.create(**self.diligencia_data)
+        
+        # Test forward relationship
+        self.assertEqual(diligencia.cliente.nome, 'João Silva')
+        
+        # Test reverse relationship
+        cliente_diligencias = self.cliente.diligencias.all()
+        self.assertIn(diligencia, cliente_diligencias)
+    
+    def test_diligencia_tipo_relationship(self):
+        """Test relationship between Diligencias and TipoDiligencia"""
+        diligencia = Diligencias.objects.create(**self.diligencia_data)
+        
+        # Test forward relationship
+        self.assertEqual(diligencia.tipo.nome, 'Documentação')
+        
+        # Test PROTECT constraint
+        with self.assertRaises(Exception):
+            self.tipo_diligencia.delete()  # Should fail due to PROTECT
+    
+    def test_diligencia_ordering(self):
+        """Test that diligencias are ordered by -data_criacao"""
+        # Create multiple diligencias with slight delays
+        diligencia1 = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=date.today() + timedelta(days=1),
+            criado_por='User 1'
+        )
+        
+        # Add a small delay to ensure different timestamps
+        import time
+        time.sleep(0.01)
+        
+        diligencia2 = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=date.today() + timedelta(days=2),
+            criado_por='User 2'
+        )
+        
+        diligencias = Diligencias.objects.all()
+        # Should be ordered by most recent first
+        self.assertEqual(diligencias[0], diligencia2)
+        self.assertEqual(diligencias[1], diligencia1)
+
+
+class DiligenciasFormTest(TestCase):
+    """Test cases for DiligenciasForm"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.cliente = Cliente.objects.create(
+            cpf='12345678909',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        self.tipo_ativo = TipoDiligencia.objects.create(
+            nome='Ativo',
+            cor='#007bff',
+            ativo=True
+        )
+        
+        self.tipo_inativo = TipoDiligencia.objects.create(
+            nome='Inativo',
+            cor='#6c757d',
+            ativo=False
+        )
+        
+        self.valid_form_data = {
+            'tipo': self.tipo_ativo.id,
+            'data_final': (date.today() + timedelta(days=7)).strftime('%d/%m/%Y'),
+            'urgencia': 'media',
+            'descricao': 'Teste de diligência'
+        }
+    
+    def test_valid_form(self):
+        """Test form with all valid data"""
+        form = DiligenciasForm(data=self.valid_form_data)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+    
+    def test_form_save(self):
+        """Test form saving (requires cliente to be set separately)"""
+        form = DiligenciasForm(data=self.valid_form_data)
+        self.assertTrue(form.is_valid())
+        diligencia = form.save(commit=False)
+        diligencia.cliente = self.cliente
+        diligencia.criado_por = 'Test User'
+        diligencia.save()
+        
+        self.assertEqual(diligencia.tipo, self.tipo_ativo)
+        self.assertEqual(diligencia.cliente, self.cliente)
+        self.assertEqual(diligencia.urgencia, 'media')
+    
+    def test_form_required_fields(self):
+        """Test form with missing required fields"""
+        incomplete_data = {'descricao': 'Test'}
+        form = DiligenciasForm(data=incomplete_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('tipo', form.errors)
+        self.assertIn('data_final', form.errors)
+    
+    def test_form_tipo_filtering(self):
+        """Test that form only shows active tipos"""
+        form = DiligenciasForm()
+        tipo_queryset = form.fields['tipo'].queryset
+        
+        self.assertIn(self.tipo_ativo, tipo_queryset)
+        self.assertNotIn(self.tipo_inativo, tipo_queryset)
+    
+    def test_form_clean_data_final_future(self):
+        """Test that data_final must be in the future"""
+        # Test with past date
+        past_data = self.valid_form_data.copy()
+        past_date = (date.today() - timedelta(days=1)).strftime('%d/%m/%Y')
+        past_data['data_final'] = past_date
+        
+        form = DiligenciasForm(data=past_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('data_final', form.errors)
+        self.assertIn('passado', form.errors['data_final'][0])
+    
+    def test_form_clean_data_final_today(self):
+        """Test that data_final can be today"""
+        today_data = self.valid_form_data.copy()
+        today_data['data_final'] = date.today().strftime('%d/%m/%Y')
+        
+        form = DiligenciasForm(data=today_data)
+        self.assertTrue(form.is_valid())
+    
+    def test_form_brazilian_date_widget(self):
+        """Test that form uses Brazilian date widget"""
+        form = DiligenciasForm()
+        data_final_widget = form.fields['data_final'].widget
+        self.assertEqual(data_final_widget.__class__.__name__, 'BrazilianDateInput')
+        self.assertIn('dd/mm/aaaa', data_final_widget.attrs.get('placeholder', ''))
+    
+    def test_form_optional_description(self):
+        """Test that description field is optional"""
+        data = self.valid_form_data.copy()
+        data.pop('descricao')
+        form = DiligenciasForm(data=data)
+        self.assertTrue(form.is_valid())
+
+
+class DiligenciasUpdateFormTest(TestCase):
+    """Test cases for DiligenciasUpdateForm"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.cliente = Cliente.objects.create(
+            cpf='12345678909',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        self.tipo_diligencia = TipoDiligencia.objects.create(
+            nome='Documentação',
+            cor='#007bff'
+        )
+        
+        self.diligencia = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=date.today() + timedelta(days=7),
+            criado_por='Test User'
+        )
+    
+    def test_form_mark_as_concluded(self):
+        """Test marking diligencia as concluded"""
+        form_data = {
+            'concluida': True,
+            'descricao': 'Diligência concluída com sucesso'
+        }
+        
+        form = DiligenciasUpdateForm(data=form_data, instance=self.diligencia)
+        self.assertTrue(form.is_valid())
+        
+        diligencia = form.save()
+        self.assertTrue(diligencia.concluida)
+        self.assertIsNotNone(diligencia.data_conclusao)
+    
+    def test_form_mark_as_not_concluded(self):
+        """Test marking diligencia as not concluded"""
+        # First mark as concluded
+        self.diligencia.concluida = True
+        self.diligencia.data_conclusao = timezone.now()
+        self.diligencia.save()
+        
+        # Then mark as not concluded
+        form_data = {
+            'concluida': False,
+            'descricao': 'Diligência reaberta'
+        }
+        
+        form = DiligenciasUpdateForm(data=form_data, instance=self.diligencia)
+        self.assertTrue(form.is_valid())
+        
+        diligencia = form.save()
+        self.assertFalse(diligencia.concluida)
+        self.assertIsNone(diligencia.data_conclusao)
+    
+    def test_form_auto_set_conclusion_date(self):
+        """Test that conclusion date is auto-set when marking as concluded"""
+        form_data = {
+            'concluida': True
+        }
+        
+        form = DiligenciasUpdateForm(data=form_data, instance=self.diligencia)
+        self.assertTrue(form.is_valid())
+        
+        cleaned_data = form.clean()
+        self.assertIsNotNone(cleaned_data['data_conclusao'])
+    
+    def test_form_brazilian_datetime_widget(self):
+        """Test that form uses Brazilian datetime widget"""
+        form = DiligenciasUpdateForm()
+        data_conclusao_widget = form.fields['data_conclusao'].widget
+        self.assertEqual(data_conclusao_widget.__class__.__name__, 'BrazilianDateTimeInput')
+
+
+class DiligenciasViewTest(TestCase):
+    """Test cases for Diligencias views"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        self.cliente = Cliente.objects.create(
+            cpf='12345678909',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        self.tipo_diligencia = TipoDiligencia.objects.create(
+            nome='Documentação',
+            cor='#007bff'
+        )
+        
+        self.diligencia = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=date.today() + timedelta(days=7),
+            criado_por='Test User',
+            urgencia='alta'
+        )
+        
+        self.client_app = Client()
+    
+    def test_nova_diligencia_view_authentication(self):
+        """Test that nova diligencia view requires authentication"""
+        response = self.client_app.get(reverse('nova_diligencia', args=[self.cliente.cpf]))
+        self.assertEqual(response.status_code, 302)  # Redirect to login
+    
+    def test_nova_diligencia_view_authenticated(self):
+        """Test nova diligencia view with authentication"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(reverse('nova_diligencia', args=[self.cliente.cpf]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Nova Diligência')
+    
+    def test_nova_diligencia_post(self):
+        """Test creating nova diligencia via POST"""
+        self.client_app.login(username='testuser', password='testpass123')
+        form_data = {
+            'tipo': self.tipo_diligencia.id,
+            'data_final': (date.today() + timedelta(days=5)).strftime('%d/%m/%Y'),
+            'urgencia': 'alta',
+            'descricao': 'Nova diligência teste'
+        }
+        
+        response = self.client_app.post(
+            reverse('nova_diligencia', args=[self.cliente.cpf]),
+            data=form_data
+        )
+        self.assertEqual(response.status_code, 302)  # Redirect after success
+        
+        # Verify diligencia was created
+        self.assertEqual(self.cliente.diligencias.count(), 2)  # Original + new one
+    
+    def test_editar_diligencia_view(self):
+        """Test editing diligencia"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(
+            reverse('editar_diligencia', args=[self.cliente.cpf, self.diligencia.id])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Editar Diligência')
+    
+    def test_editar_diligencia_post(self):
+        """Test updating diligencia via POST"""
+        self.client_app.login(username='testuser', password='testpass123')
+        form_data = {
+            'tipo': self.tipo_diligencia.id,
+            'data_final': (date.today() + timedelta(days=10)).strftime('%d/%m/%Y'),
+            'urgencia': 'baixa',
+            'descricao': 'Diligência atualizada'
+        }
+        
+        response = self.client_app.post(
+            reverse('editar_diligencia', args=[self.cliente.cpf, self.diligencia.id]),
+            data=form_data
+        )
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify diligencia was updated
+        self.diligencia.refresh_from_db()
+        self.assertEqual(self.diligencia.urgencia, 'baixa')
+        self.assertEqual(self.diligencia.descricao, 'Diligência atualizada')
+    
+    def test_deletar_diligencia_view(self):
+        """Test deleting diligencia"""
+        self.client_app.login(username='testuser', password='testpass123')
+        diligencia_id = self.diligencia.id
+        
+        response = self.client_app.post(
+            reverse('deletar_diligencia', args=[self.cliente.cpf, diligencia_id])
+        )
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify diligencia was deleted
+        self.assertFalse(Diligencias.objects.filter(id=diligencia_id).exists())
+    
+    def test_marcar_diligencia_concluida_view(self):
+        """Test marking diligencia as concluded"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Check initial state
+        self.assertFalse(self.diligencia.concluida)
+        self.assertIsNone(self.diligencia.concluido_por)
+        
+        form_data = {
+            'concluida': True,
+            'descricao': 'Concluída com sucesso'
+        }
+        
+        response = self.client_app.post(
+            reverse('marcar_diligencia_concluida', args=[self.cliente.cpf, self.diligencia.id]),
+            data=form_data
+        )
+        
+        # Check response
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify diligencia was marked as concluded
+        self.diligencia.refresh_from_db()
+        self.assertTrue(self.diligencia.concluida, "Diligencia should be marked as concluded")
+        self.assertIsNotNone(self.diligencia.data_conclusao, "Should have conclusion date")
+        
+        # Check if concluido_por field is set correctly
+        # The view should set this to the current user's full name or username
+        expected_concluido_por = self.user.get_full_name() or self.user.username
+        self.assertEqual(self.diligencia.concluido_por, expected_concluido_por,
+                        f"Expected concluido_por to be '{expected_concluido_por}', got '{self.diligencia.concluido_por}'")
+    
+    def test_diligencias_list_view_authentication(self):
+        """Test that diligencias list view requires authentication"""
+        response = self.client_app.get(reverse('diligencias_list'))
+        self.assertEqual(response.status_code, 302)  # Redirect to login
+    
+    def test_diligencias_list_view_authenticated(self):
+        """Test diligencias list view with authentication"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(reverse('diligencias_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Lista de Diligências')
+    
+    def test_diligencias_list_view_filters(self):
+        """Test diligencias list view filters"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Test status filter
+        response = self.client_app.get(reverse('diligencias_list') + '?status=pendente')
+        self.assertEqual(response.status_code, 200)
+        
+        # Test urgency filter
+        response = self.client_app.get(reverse('diligencias_list') + '?urgencia=alta')
+        self.assertEqual(response.status_code, 200)
+        
+        # Test type filter
+        response = self.client_app.get(reverse('diligencias_list') + f'?tipo={self.tipo_diligencia.id}')
+        self.assertEqual(response.status_code, 200)
+        
+        # Test search
+        response = self.client_app.get(reverse('diligencias_list') + '?search=João')
+        self.assertEqual(response.status_code, 200)
+    
+    def test_diligencias_list_view_statistics(self):
+        """Test that diligencias list view provides correct statistics"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(reverse('diligencias_list'))
+        
+        self.assertEqual(response.context['total_diligencias'], 1)
+        self.assertEqual(response.context['pendentes_diligencias'], 1)
+        self.assertEqual(response.context['concluidas_diligencias'], 0)
+        self.assertEqual(response.context['atrasadas_diligencias'], 0)  # Not overdue yet
+
+
+class TipoDiligenciaViewTest(TestCase):
+    """Test cases for TipoDiligencia views"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        self.tipo_diligencia = TipoDiligencia.objects.create(
+            nome='Test Tipo',
+            descricao='Test description',
+            cor='#007bff',
+            ativo=True
+        )
+        
+        self.client_app = Client()
+    
+    def test_tipos_diligencia_view_authentication(self):
+        """Test that tipos diligencia view requires authentication"""
+        response = self.client_app.get(reverse('tipos_diligencia'))
+        self.assertEqual(response.status_code, 302)  # Redirect to login
+    
+    def test_tipos_diligencia_view_authenticated(self):
+        """Test tipos diligencia view with authentication"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(reverse('tipos_diligencia'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Tipos de Diligência')
+    
+    def test_novo_tipo_diligencia_view(self):
+        """Test creating new tipo diligencia"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(reverse('novo_tipo_diligencia'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Novo Tipo de Diligência')
+    
+    def test_novo_tipo_diligencia_post(self):
+        """Test creating tipo diligencia via POST"""
+        self.client_app.login(username='testuser', password='testpass123')
+        form_data = {
+            'nome': 'Novo Tipo Test',
+            'descricao': 'Test description',
+            'cor': '#28a745',
+            'ativo': True
+        }
+        response = self.client_app.post(reverse('novo_tipo_diligencia'), data=form_data)
+        self.assertEqual(response.status_code, 302)  # Redirect after success
+        
+        # Verify tipo was created
+        self.assertTrue(TipoDiligencia.objects.filter(nome='Novo Tipo Test').exists())
+    
+    def test_editar_tipo_diligencia_view(self):
+        """Test editing tipo diligencia"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(reverse('editar_tipo_diligencia', args=[self.tipo_diligencia.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Test Tipo')
+    
+    def test_editar_tipo_diligencia_post(self):
+        """Test updating tipo diligencia via POST"""
+        self.client_app.login(username='testuser', password='testpass123')
+        form_data = {
+            'nome': 'Updated Tipo Name',
+            'descricao': 'Updated description',
+            'cor': '#dc3545',
+            'ativo': False
+        }
+        response = self.client_app.post(
+            reverse('editar_tipo_diligencia', args=[self.tipo_diligencia.id]),
+            data=form_data
+        )
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify tipo was updated
+        self.tipo_diligencia.refresh_from_db()
+        self.assertEqual(self.tipo_diligencia.nome, 'Updated Tipo Name')
+        self.assertFalse(self.tipo_diligencia.ativo)
+    
+    def test_ativar_tipo_diligencia(self):
+        """Test activating/deactivating tipo diligencia"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Test that the view responds correctly
+        initial_status = self.tipo_diligencia.ativo  # True initially
+        response = self.client_app.post(reverse('ativar_tipo_diligencia', args=[self.tipo_diligencia.id]))
+        self.assertEqual(response.status_code, 302)  # Should redirect
+        
+        # Verify the status changed (toggle behavior)
+        self.tipo_diligencia.refresh_from_db()
+        new_status = self.tipo_diligencia.ativo
+        self.assertNotEqual(new_status, initial_status, "Status should change after toggle")
+    
+    def test_ativar_tipo_diligencia_with_parameter(self):
+        """Test activating/deactivating tipo diligencia with explicit parameter"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Test explicitly setting to False
+        form_data = {'ativo': 'false'}
+        response = self.client_app.post(
+            reverse('ativar_tipo_diligencia', args=[self.tipo_diligencia.id]),
+            data=form_data
+        )
+        self.assertEqual(response.status_code, 302)
+        
+        self.tipo_diligencia.refresh_from_db()
+        self.assertFalse(self.tipo_diligencia.ativo)
+        
+        # Test explicitly setting to True
+        form_data = {'ativo': 'true'}
+        response = self.client_app.post(
+            reverse('ativar_tipo_diligencia', args=[self.tipo_diligencia.id]),
+            data=form_data
+        )
+        
+        self.tipo_diligencia.refresh_from_db()
+        self.assertTrue(self.tipo_diligencia.ativo)
+    
+    def test_deletar_tipo_diligencia(self):
+        """Test deleting tipo diligencia"""
+        self.client_app.login(username='testuser', password='testpass123')
+        tipo_id = self.tipo_diligencia.id
+        
+        response = self.client_app.post(reverse('deletar_tipo_diligencia', args=[tipo_id]))
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify tipo was deleted
+        self.assertFalse(TipoDiligencia.objects.filter(id=tipo_id).exists())
+
+
+class DiligenciasIntegrationTest(TestCase):
+    """Integration tests for complete diligencias workflow"""
+    
+    def setUp(self):
+        """Set up comprehensive test data"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123',
+            first_name='Test',
+            last_name='User'
+        )
+        
+        self.cliente = Cliente.objects.create(
+            cpf='12345678909',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        self.tipo_urgente = TipoDiligencia.objects.create(
+            nome='Urgente',
+            cor='#dc3545',
+            ativo=True
+        )
+        
+        self.tipo_normal = TipoDiligencia.objects.create(
+            nome='Normal',
+            cor='#007bff',
+            ativo=True
+        )
+        
+        self.client_app = Client()
+    
+    def test_complete_diligencia_workflow(self):
+        """Test complete workflow from creation to completion"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # 1. Create new diligencia
+        form_data = {
+            'tipo': self.tipo_urgente.id,
+            'data_final': (date.today() + timedelta(days=3)).strftime('%d/%m/%Y'),
+            'urgencia': 'alta',
+            'descricao': 'Diligência urgente para teste'
+        }
+        
+        response = self.client_app.post(
+            reverse('nova_diligencia', args=[self.cliente.cpf]),
+            data=form_data
+        )
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify creation
+        diligencia = Diligencias.objects.first()
+        self.assertEqual(diligencia.tipo, self.tipo_urgente)
+        self.assertEqual(diligencia.urgencia, 'alta')
+        self.assertFalse(diligencia.concluida)
+        
+        # 2. Edit the diligencia
+        edit_data = {
+            'tipo': self.tipo_normal.id,
+            'data_final': (date.today() + timedelta(days=5)).strftime('%d/%m/%Y'),
+            'urgencia': 'media',
+            'descricao': 'Diligência atualizada'
+        }
+        
+        response = self.client_app.post(
+            reverse('editar_diligencia', args=[self.cliente.cpf, diligencia.id]),
+            data=edit_data
+        )
+        self.assertEqual(response.status_code, 302)
+        
+        diligencia.refresh_from_db()
+        self.assertEqual(diligencia.tipo, self.tipo_normal)
+        self.assertEqual(diligencia.urgencia, 'media')
+        
+        # 3. Mark as concluded
+        conclusion_data = {
+            'concluida': True,
+            'descricao': 'Diligência concluída com sucesso'
+        }
+        
+        response = self.client_app.post(
+            reverse('marcar_diligencia_concluida', args=[self.cliente.cpf, diligencia.id]),
+            data=conclusion_data,
+            follow=True  # Follow redirects to debug
+        )
+        
+        diligencia.refresh_from_db()
+        self.assertTrue(diligencia.concluida)
+        self.assertIsNotNone(diligencia.data_conclusao)
+        # Check that concluido_por is set (will be full name since user has first/last names)
+        expected_concluido_por = self.user.get_full_name() or self.user.username
+        self.assertEqual(diligencia.concluido_por, expected_concluido_por)
+        
+        # 4. Verify in list view
+        response = self.client_app.get(reverse('diligencias_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'João Silva')
+        self.assertEqual(response.context['concluidas_diligencias'], 1)
+    
+    def test_diligencia_with_cliente_detail_integration(self):
+        """Test diligencia integration with cliente detail page"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Create diligencia
+        diligencia = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_urgente,
+            data_final=date.today() + timedelta(days=2),
+            criado_por=self.user.get_full_name(),
+            urgencia='alta'
+        )
+        
+        # Check cliente detail page shows diligencia
+        response = self.client_app.get(reverse('cliente_detail', args=[self.cliente.cpf]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Urgente')
+        self.assertContains(response, 'Pendente')
+    
+    def test_overdue_diligencia_handling(self):
+        """Test handling of overdue diligencias"""
+        # Create overdue diligencia
+        overdue_diligencia = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_urgente,
+            data_final=date.today() - timedelta(days=1),  # Yesterday
+            criado_por='Test User',
+            urgencia='alta'
+        )
+        
+        # Test overdue detection
+        self.assertTrue(overdue_diligencia.is_overdue())
+        self.assertEqual(overdue_diligencia.days_until_deadline(), -1)
+        
+        # Test list view shows overdue
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(reverse('diligencias_list'))
+        self.assertEqual(response.context['atrasadas_diligencias'], 1)
+    
+    def test_tipo_diligencia_protection_with_usage(self):
+        """Test that tipo diligencia cannot be deleted when in use"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Create diligencia using the type
+        Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_urgente,
+            data_final=date.today() + timedelta(days=5),
+            criado_por='Test User'
+        )
+        
+        # Try to delete the type (should be prevented by PROTECT)
+        response = self.client_app.post(
+            reverse('deletar_tipo_diligencia', args=[self.tipo_urgente.id])
+        )
+        
+        # Check that type still exists (deletion should be handled gracefully)
+        self.assertTrue(TipoDiligencia.objects.filter(id=self.tipo_urgente.id).exists())
+    
+    def test_bulk_diligencia_operations(self):
+        """Test performance with multiple diligencias"""
+        # Create multiple diligencias
+        diligencias = []
+        for i in range(10):
+            diligencia = Diligencias.objects.create(
+                cliente=self.cliente,
+                tipo=self.tipo_normal if i % 2 == 0 else self.tipo_urgente,
+                data_final=date.today() + timedelta(days=i+1),
+                criado_por=f'User {i}',
+                urgencia=['baixa', 'media', 'alta'][i % 3]
+            )
+            diligencias.append(diligencia)
+        
+        # Test list view performance
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(reverse('diligencias_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['total_diligencias'], 10)
+        
+        # Test filtering
+        response = self.client_app.get(reverse('diligencias_list') + '?urgencia=alta')
+        diligencias_alta = response.context['page_obj']
+        # Should have 3-4 diligencias with alta urgency
+        self.assertGreaterEqual(len(diligencias_alta), 3)
+        self.assertLessEqual(len(diligencias_alta), 4)

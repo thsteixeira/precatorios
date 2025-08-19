@@ -1,0 +1,324 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lista de Diligências{% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-dark mb-0">
+            <i class="fas fa-tasks me-2"></i>
+            Lista de Diligências
+        </h2>
+        <div>
+            <a href="{% url 'tipos_diligencia' %}" class="btn btn-outline-primary">
+                <i class="fas fa-cogs me-1"></i>Gerenciar Tipos
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ total_diligencias }}</h4>
+                            <span>Total</span>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-tasks fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ pendentes_diligencias }}</h4>
+                            <span>Pendentes</span>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ concluidas_diligencias }}</h4>
+                            <span>Concluídas</span>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ atrasadas_diligencias }}</h4>
+                            <span>Atrasadas</span>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="card-title mb-0">
+                <i class="fas fa-filter me-2"></i>Filtros e Pesquisa
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Pesquisar</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ search_query }}" placeholder="Cliente, CPF, tipo ou descrição...">
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">Todos</option>
+                        <option value="pendente" {% if status_filter == 'pendente' %}selected{% endif %}>Pendentes</option>
+                        <option value="concluida" {% if status_filter == 'concluida' %}selected{% endif %}>Concluídas</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="urgencia" class="form-label">Urgência</label>
+                    <select class="form-select" id="urgencia" name="urgencia">
+                        <option value="">Todas</option>
+                        {% for value, label in urgencia_choices %}
+                            <option value="{{ value }}" {% if urgencia_filter == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="tipo" class="form-label">Tipo</label>
+                    <select class="form-select" id="tipo" name="tipo">
+                        <option value="">Todos</option>
+                        {% for tipo in tipos_diligencia %}
+                            <option value="{{ tipo.id }}" {% if tipo_filter == tipo.id|stringformat:"s" %}selected{% endif %}>{{ tipo.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-1"></i>Filtrar
+                    </button>
+                    <a href="{% url 'diligencias_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Diligencias List -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="card-title mb-0">
+                <i class="fas fa-list me-2"></i>
+                Diligências
+                {% if page_obj.paginator.count %}
+                    <span class="badge bg-primary ms-2">{{ page_obj.paginator.count }}</span>
+                {% endif %}
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            {% if page_obj %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Tipo</th>
+                                <th>Data Final</th>
+                                <th>Urgência</th>
+                                <th>Status</th>
+                                <th>Criado em</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for diligencia in page_obj %}
+                                <tr class="{% if diligencia.is_overdue and not diligencia.concluida %}table-danger{% endif %}">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="color-indicator me-2" 
+                                                 style="width: 12px; height: 12px; border-radius: 50%; background-color: {{ diligencia.tipo.cor }};"></div>
+                                            <div>
+                                                <a href="{% url 'cliente_detail' diligencia.cliente.cpf %}" class="text-decoration-none">
+                                                    <strong>{{ diligencia.cliente.nome }}</strong>
+                                                </a><br>
+                                                <small class="text-muted">{{ diligencia.cliente.cpf }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong>{{ diligencia.tipo.nome }}</strong>
+                                        {% if diligencia.tipo.descricao %}
+                                            <br><small class="text-muted">{{ diligencia.tipo.descricao|truncatechars:50 }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ diligencia.data_final|date:"d/m/Y" }}
+                                        {% if diligencia.is_overdue and not diligencia.concluida %}
+                                            <br><small class="text-danger">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>Atrasada
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ diligencia.get_urgencia_color }}">
+                                            {{ diligencia.get_urgencia_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if diligencia.concluida %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i>Concluída
+                                            </span>
+                                            {% if diligencia.data_conclusao %}
+                                                <br><small class="text-muted">{{ diligencia.data_conclusao|date:"d/m/Y H:i" }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-clock me-1"></i>Pendente
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ diligencia.data_criacao|date:"d/m/Y H:i" }}
+                                        {% if diligencia.criado_por %}
+                                            <br><small class="text-muted">{{ diligencia.criado_por }}</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                    <div class="card-footer">
+                        <nav aria-label="Navegação da página">
+                            <ul class="pagination pagination-sm justify-content-center mb-0">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}page=1">Primeira</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+                                    </li>
+                                {% endif %}
+
+                                <li class="page-item active">
+                                    <span class="page-link">
+                                        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                                    </span>
+                                </li>
+
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Nenhuma diligência encontrada</h5>
+                    <p class="text-muted">
+                        {% if search_query or status_filter or urgencia_filter or tipo_filter %}
+                            Tente alterar os filtros de pesquisa.
+                        {% else %}
+                            Não há diligências cadastradas no sistema.
+                        {% endif %}
+                    </p>
+                    {% if not search_query and not status_filter and not urgencia_filter and not tipo_filter %}
+                        <a href="{% url 'clientes' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Criar primeira diligência
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Help Card -->
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h6 class="card-title mb-0">
+                <i class="fas fa-question-circle me-2"></i>Como usar
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-info">
+                        <i class="fas fa-search me-1"></i>Pesquisar Diligências
+                    </h6>
+                    <p class="small text-muted">
+                        Use o campo de pesquisa para encontrar diligências por nome do cliente, 
+                        CPF, tipo de diligência ou descrição.
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-warning">
+                        <i class="fas fa-filter me-1"></i>Filtrar por Status
+                    </h6>
+                    <p class="small text-muted">
+                        Use os filtros para ver apenas diligências pendentes, concluídas, 
+                        por urgência ou tipo específico.
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-success">
+                        <i class="fas fa-user me-1"></i>Acessar Clientes
+                    </h6>
+                    <p class="small text-muted">
+                        Clique no nome do cliente para acessar a página de detalhes 
+                        e gerenciar suas diligências (criar, editar, excluir).
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-danger">
+                        <i class="fas fa-exclamation-triangle me-1"></i>Diligências Atrasadas
+                    </h6>
+                    <p class="small text-muted">
+                        Diligências com data final vencida são destacadas em vermelho 
+                        e contabilizadas no painel de estatísticas.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

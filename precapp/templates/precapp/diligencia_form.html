@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if action == 'edit' %}
+        Editar Diligência - {{ cliente.nome }}
+    {% else %}
+        Nova Diligência - {{ cliente.nome }}
+    {% endif %}
+{% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-dark mb-0">
+                    <i class="fas fa-tasks me-2"></i>
+                    {% if action == 'edit' %}
+                        Editar Diligência
+                    {% else %}
+                        Nova Diligência
+                    {% endif %}
+                </h2>
+                <a href="{% url 'cliente_detail' cliente.cpf %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Voltar para Cliente
+                </a>
+            </div>
+
+            <!-- Client Info Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        Cliente: {{ cliente.nome }}
+                        {% if cliente.prioridade %}
+                            <span class="badge bg-warning text-dark ms-2">Prioritário</span>
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="card-body py-2">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <small class="text-muted">CPF:</small><br>
+                            <strong>{{ cliente.cpf|default:"Não informado" }}</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">Nascimento:</small><br>
+                            <strong>{{ cliente.nascimento|date:"d/m/Y"|default:"Não informado" }}</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">Diligências:</small><br>
+                            <strong>{{ cliente.diligencias.count }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Card -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-{% if action == 'edit' %}edit{% else %}plus{% endif %} me-2"></i>
+                        {% if action == 'edit' %}
+                            Editando Diligência
+                        {% else %}
+                            Nova Diligência
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Error Messages -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="row g-3">
+                            <!-- Tipo Field -->
+                            <div class="col-md-6">
+                                <label for="{{ form.tipo.id_for_label }}" class="form-label">
+                                    {{ form.tipo.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.tipo }}
+                                {% if form.tipo.help_text %}
+                                    <div class="form-text">{{ form.tipo.help_text }}</div>
+                                {% endif %}
+                                {% if form.tipo.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.tipo.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Data Final Field -->
+                            <div class="col-md-6">
+                                <label for="{{ form.data_final.id_for_label }}" class="form-label">
+                                    {{ form.data_final.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.data_final }}
+                                {% if form.data_final.help_text %}
+                                    <div class="form-text">{{ form.data_final.help_text }}</div>
+                                {% endif %}
+                                {% if form.data_final.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.data_final.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Urgência Field -->
+                            <div class="col-md-6">
+                                <label for="{{ form.urgencia.id_for_label }}" class="form-label">
+                                    {{ form.urgencia.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.urgencia }}
+                                {% if form.urgencia.help_text %}
+                                    <div class="form-text">{{ form.urgencia.help_text }}</div>
+                                {% endif %}
+                                {% if form.urgencia.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.urgencia.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Auto-filled Creator Info (Display Only) -->
+                            {% if action == 'edit' and diligencia %}
+                                <div class="col-md-6">
+                                    <label class="form-label">Criado por</label>
+                                    <div class="form-control-plaintext">
+                                        <strong>{{ diligencia.criado_por }}</strong>
+                                        <small class="text-muted d-block">Campo preenchido automaticamente</small>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="col-md-6">
+                                    <label class="form-label">Criado por</label>
+                                    <div class="form-control-plaintext">
+                                        <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                                        <small class="text-muted d-block">Campo preenchido automaticamente</small>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            <!-- Descrição Field -->
+                            <div class="col-12">
+                                <label for="{{ form.descricao.id_for_label }}" class="form-label">
+                                    {{ form.descricao.label }}
+                                </label>
+                                {{ form.descricao }}
+                                {% if form.descricao.help_text %}
+                                    <div class="form-text">{{ form.descricao.help_text }}</div>
+                                {% endif %}
+                                {% if form.descricao.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.descricao.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            {% if action == 'edit' and diligencia %}
+                                <!-- Status Information -->
+                                <div class="col-12">
+                                    <div class="alert alert-info">
+                                        <h6 class="alert-heading">
+                                            <i class="fas fa-info-circle me-1"></i>Status Atual
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <strong>Status:</strong> 
+                                                {% if diligencia.concluida %}
+                                                    <span class="badge bg-success">Concluída</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Pendente</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-4">
+                                                <strong>Criada em:</strong> {{ diligencia.criado_em|date:"d/m/Y H:i" }}
+                                            </div>
+                                            {% if diligencia.data_conclusao %}
+                                                <div class="col-md-4">
+                                                    <strong>Concluída em:</strong> {{ diligencia.data_conclusao|date:"d/m/Y H:i" }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                            <a href="{% url 'cliente_detail' cliente.cpf %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                {% if action == 'edit' %}
+                                    Atualizar Diligência
+                                {% else %}
+                                    Criar Diligência
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-question-circle me-2"></i>Dicas de Uso
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">
+                                <i class="fas fa-tag me-1"></i>Tipo de Diligência
+                            </h6>
+                            <p class="small text-muted">
+                                Escolha o tipo adequado para a diligência. 
+                                Apenas tipos ativos aparecem na lista.
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-danger">
+                                <i class="fas fa-calendar me-1"></i>Data Final
+                            </h6>
+                            <p class="small text-muted">
+                                Defina uma data limite realista para conclusão. 
+                                Não é possível definir datas no passado.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Nível de Urgência
+                            </h6>
+                            <p class="small text-muted">
+                                Configure a urgência adequada para priorizar 
+                                as diligências conforme necessário.
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-info">
+                                <i class="fas fa-user me-1"></i>Criador Automático
+                            </h6>
+                            <p class="small text-muted">
+                                O campo "Criado por" é preenchido automaticamente 
+                                com o usuário logado no momento da criação.
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-info">
+                                <i class="fas fa-align-left me-1"></i>Descrição
+                            </h6>
+                            <p class="small text-muted">
+                                Use a descrição para detalhar informações específicas 
+                                sobre a diligência (campo opcional).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'precapp/js/brazilian-number-format.js' %}"></script>
+{% endblock content %}

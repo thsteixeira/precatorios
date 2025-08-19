@@ -134,6 +134,149 @@ class Cliente(models.Model):
         return priority_reqs
 
 
+class TipoDiligencia(models.Model):
+    """Model for customizable diligence types"""
+    
+    nome = models.CharField(
+        max_length=100, 
+        unique=True,
+        help_text="Nome do tipo de diligência"
+    )
+    descricao = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Descrição opcional do tipo de diligência"
+    )
+    cor = models.CharField(
+        max_length=7, 
+        default='#007bff',
+        help_text="Cor em hexadecimal para identificação visual (ex: #007bff)"
+    )
+    ativo = models.BooleanField(
+        default=True,
+        help_text="Se este tipo está ativo para uso"
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.nome
+    
+    @classmethod
+    def get_ativos(cls):
+        """Return only active diligence types"""
+        return cls.objects.filter(ativo=True)
+    
+    class Meta:
+        verbose_name = "Tipo de Diligência"
+        verbose_name_plural = "Tipos de Diligência"
+        ordering = ['nome']
+
+
+class Diligencias(models.Model):
+    """Model for diligences related to clients"""
+    
+    URGENCIA_CHOICES = [
+        ('baixa', 'Baixa'),
+        ('media', 'Média'),
+        ('alta', 'Alta'),
+    ]
+    
+    cliente = models.ForeignKey(
+        Cliente, 
+        on_delete=models.CASCADE, 
+        to_field='cpf',
+        related_name='diligencias',
+        help_text="Cliente relacionado à diligência"
+    )
+    tipo = models.ForeignKey(
+        TipoDiligencia,
+        on_delete=models.PROTECT,
+        limit_choices_to={'ativo': True},
+        help_text="Tipo da diligência"
+    )
+    data_final = models.DateField(
+        help_text="Data limite para conclusão da diligência"
+    )
+    urgencia = models.CharField(
+        max_length=20,
+        choices=URGENCIA_CHOICES,
+        default='media',
+        help_text="Nível de urgência da diligência"
+    )
+    criado_por = models.CharField(
+        max_length=200,
+        help_text="Nome do usuário que criou a diligência"
+    )
+    descricao = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Descrição opcional da diligência"
+    )
+    concluida = models.BooleanField(
+        default=False,
+        help_text="Indica se a diligência foi concluída"
+    )
+    data_criacao = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Data e hora de criação da diligência"
+    )
+    data_conclusao = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Data e hora de conclusão da diligência"
+    )
+    concluido_por = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Nome do usuário que concluiu a diligência"
+    )
+
+    def __str__(self):
+        status = "Concluída" if self.concluida else "Pendente"
+        return f"{self.tipo.nome} - {self.cliente.nome} ({status})"
+    
+    def is_overdue(self):
+        """Check if the diligence is overdue"""
+        from django.utils import timezone
+        if not self.concluida and self.data_final < timezone.now().date():
+            return True
+        return False
+    
+    def days_until_deadline(self):
+        """Calculate days until deadline"""
+        from django.utils import timezone
+        if self.concluida:
+            return None
+        delta = self.data_final - timezone.now().date()
+        return delta.days
+    
+    def get_urgencia_color(self):
+        """Get Bootstrap color class based on urgency level"""
+        urgencia_colors = {
+            'baixa': 'secondary',
+            'media': 'warning',
+            'alta': 'danger',
+        }
+        return urgencia_colors.get(self.urgencia, 'secondary')
+    
+    @property
+    def criado_em(self):
+        """Alias for data_criacao to maintain consistency with template"""
+        return self.data_criacao
+    
+    @property  
+    def criador(self):
+        """Alias for criado_por to maintain consistency with form field"""
+        return self.criado_por
+    
+    class Meta:
+        verbose_name = "Diligência"
+        verbose_name_plural = "Diligências"
+        ordering = ['-data_criacao']
+
+
 class Alvara(models.Model):
     precatorio = models.ForeignKey(Precatorio, on_delete=models.CASCADE, to_field='cnj')
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, to_field='cpf')

@@ -5,11 +5,14 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.views.decorators.http import require_http_methods
-from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais
+from django.db.models import Q
+from django.utils import timezone
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, TipoDiligencia, Diligencias
 from .forms import (
     PrecatorioForm, ClienteForm, PrecatorioSearchForm, 
     ClienteSearchForm, RequerimentoForm, ClienteSimpleForm, 
-    AlvaraSimpleForm, FaseForm, FaseHonorariosContratuaisForm
+    AlvaraSimpleForm, FaseForm, FaseHonorariosContratuaisForm, TipoDiligenciaForm,
+    DiligenciasForm, DiligenciasUpdateForm
 )
 
 # Authentication Views
@@ -581,6 +584,11 @@ def cliente_detail_view(request, cpf):
     # Get all precatorios associated with this client
     associated_precatorios = cliente.precatorios.all().order_by('cnj')
     
+    # Get all diligencias for this client
+    diligencias = cliente.diligencias.all().select_related('tipo').order_by('-data_criacao')
+    diligencias_pendentes = diligencias.filter(concluida=False)
+    diligencias_concluidas = diligencias.filter(concluida=True)
+    
     # Initialize forms
     client_form = None
     search_form = PrecatorioSearchForm()
@@ -639,6 +647,12 @@ def cliente_detail_view(request, cpf):
         'search_form': search_form,
         'associated_precatorios': associated_precatorios,
         'is_editing': request.method == 'POST' and 'edit_client' in request.POST or 'edit' in request.GET,
+        'diligencias': diligencias,
+        'diligencias_pendentes': diligencias_pendentes,
+        'diligencias_concluidas': diligencias_concluidas,
+        'total_diligencias': diligencias.count(),
+        'total_pendentes': diligencias_pendentes.count(),
+        'total_concluidas': diligencias_concluidas.count(),
     }
     
     return render(request, 'precapp/cliente_detail.html', context)
@@ -1099,15 +1113,172 @@ def ativar_fase_honorarios_view(request, fase_id):
     return redirect('fases_honorarios')
 
 
+# TIPO DILIGENCIA VIEWS
+# ===============================
+
+@login_required
+def tipos_diligencia_view(request):
+    """View to list all diligence types"""
+    tipos = TipoDiligencia.objects.all().order_by('nome')
+    
+    # Add diligencias count for each tipo
+    for tipo in tipos:
+        tipo.diligencias_count = tipo.diligencias_set.count()
+    
+    # Statistics
+    total_tipos = tipos.count()
+    tipos_ativos = tipos.filter(ativo=True).count()
+    tipos_inativos = tipos.filter(ativo=False).count()
+    
+    # Get count of total diligencias using the reverse relationship
+    total_diligencias = sum(tipo.diligencias_set.count() for tipo in tipos)
+    
+    context = {
+        'tipos_diligencia': tipos,  # Changed from 'tipos' to match template
+        'total_tipos': total_tipos,
+        'tipos_ativos': tipos_ativos,
+        'tipos_inativos': tipos_inativos,
+        'total_diligencias': total_diligencias,
+    }
+    
+    return render(request, 'precapp/tipos_diligencia_list.html', context)
+
+
+@login_required
+def novo_tipo_diligencia_view(request):
+    """View to create a new diligence type"""
+    if request.method == 'POST':
+        form = TipoDiligenciaForm(request.POST)
+        if form.is_valid():
+            tipo = form.save()
+            messages.success(request, f'Tipo de Diligência "{tipo.nome}" criado com sucesso!')
+            return redirect('tipos_diligencia')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = TipoDiligenciaForm()
+    
+    context = {
+        'form': form,
+        'title': 'Novo Tipo de Diligência',
+        'action': 'Criar'
+    }
+    
+    return render(request, 'precapp/tipo_diligencia_form.html', context)
+
+
+@login_required
+def editar_tipo_diligencia_view(request, tipo_id):
+    """View to edit an existing diligence type"""
+    tipo = get_object_or_404(TipoDiligencia, id=tipo_id)
+    
+    if request.method == 'POST':
+        # Check if this is an update from the dropdown form in list view
+        if 'update_tipo' in request.POST:
+            # Handle direct field updates from dropdown form
+            nome = request.POST.get('nome')
+            cor = request.POST.get('cor')
+            descricao = request.POST.get('descricao', '')
+            ativo = 'ativo' in request.POST
+            
+            if nome and cor:
+                tipo.nome = nome
+                tipo.cor = cor
+                tipo.descricao = descricao
+                tipo.ativo = ativo
+                tipo.save()
+                messages.success(request, f'Tipo de Diligência "{tipo.nome}" atualizado com sucesso!')
+                return redirect('tipos_diligencia')
+            else:
+                messages.error(request, 'Nome e cor são campos obrigatórios.')
+                return redirect('tipos_diligencia')
+        else:
+            # Handle regular form update
+            form = TipoDiligenciaForm(request.POST, instance=tipo)
+            if form.is_valid():
+                tipo = form.save()
+                messages.success(request, f'Tipo de Diligência "{tipo.nome}" atualizado com sucesso!')
+                return redirect('tipos_diligencia')
+            else:
+                messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = TipoDiligenciaForm(instance=tipo)
+    
+    context = {
+        'form': form,
+        'tipo': tipo,
+        'title': f'Editar Tipo: {tipo.nome}',
+        'action': 'Atualizar'
+    }
+    
+    return render(request, 'precapp/tipo_diligencia_form.html', context)
+
+
+@login_required
+def deletar_tipo_diligencia_view(request, tipo_id):
+    """View to delete a diligence type"""
+    tipo = get_object_or_404(TipoDiligencia, id=tipo_id)
+    
+    if request.method == 'POST':
+        try:
+            nome_tipo = tipo.nome
+            tipo.delete()
+            messages.success(request, f'Tipo de Diligência "{nome_tipo}" excluído com sucesso!')
+        except Exception as e:
+            messages.error(request, f'Erro ao excluir tipo: {str(e)}')
+        
+        return redirect('tipos_diligencia')
+    
+    # Count related diligencias
+    diligencias_count = tipo.diligencias.count() if hasattr(tipo, 'diligencias') else 0
+    
+    context = {
+        'tipo': tipo,
+        'diligencias_count': diligencias_count,
+        'can_delete': diligencias_count == 0
+    }
+    
+    return render(request, 'precapp/confirmar_delete_tipo_diligencia.html', context)
+
+
+@login_required  
+def ativar_tipo_diligencia_view(request, tipo_id):
+    """View to toggle active status of a diligence type"""
+    tipo = get_object_or_404(TipoDiligencia, id=tipo_id)
+    
+    if request.method == 'POST':
+        # Handle POST from dropdown form
+        ativo_value = request.POST.get('ativo', 'false')
+        tipo.ativo = ativo_value.lower() == 'true'
+    else:
+        # Handle GET for backward compatibility
+        ativo_param = request.GET.get('ativo', '').lower()
+        if ativo_param == 'true':
+            tipo.ativo = True
+        elif ativo_param == 'false':
+            tipo.ativo = False
+        else:
+            # Toggle if no parameter
+            tipo.ativo = not tipo.ativo
+    
+    tipo.save()
+    
+    status = "ativado" if tipo.ativo else "desativado"
+    messages.success(request, f'Tipo de Diligência "{tipo.nome}" {status} com sucesso!')
+    
+    return redirect('tipos_diligencia')
+
+
 # CUSTOMIZAÇÃO PAGE
 # ===============================
 
 @login_required
 def customizacao_view(request):
-    """Central customization page for managing phases"""
-    # Get statistics for both phase types
+    """Central customization page for managing phases and diligence types"""
+    # Get statistics for both phase types and diligence types
     fases_principais = Fase.objects.all()
     fases_honorarios = FaseHonorariosContratuais.objects.all()
+    tipos_diligencia = TipoDiligencia.objects.all()
     
     context = {
         # Fases Principais stats
@@ -1120,9 +1291,15 @@ def customizacao_view(request):
         'fases_honorarios_ativas': fases_honorarios.filter(ativa=True).count(),
         'fases_honorarios_inativas': fases_honorarios.filter(ativa=False).count(),
         
-        # Recent phases (last 5 of each type)
+        # Tipos Diligência stats
+        'total_tipos_diligencia': tipos_diligencia.count(),
+        'tipos_diligencia_ativos': tipos_diligencia.filter(ativo=True).count(),
+        'tipos_diligencia_inativos': tipos_diligencia.filter(ativo=False).count(),
+        
+        # Recent items (last 5 of each type)
         'recent_fases_principais': fases_principais.order_by('-criado_em')[:5],
         'recent_fases_honorarios': fases_honorarios.order_by('-criado_em')[:5],
+        'recent_tipos_diligencia': tipos_diligencia.order_by('-criado_em')[:5],
     }
     
     return render(request, 'precapp/customizacao.html', context)
@@ -1185,3 +1362,207 @@ def update_priority_by_age(request):
         )
     
     return redirect('clientes')
+
+
+# ===== DILIGENCIA CRUD VIEWS =====
+
+@login_required
+def nova_diligencia_view(request, cpf):
+    """Create a new diligencia for a specific client"""
+    cliente = get_object_or_404(Cliente, cpf=cpf)
+    
+    if request.method == 'POST':
+        form = DiligenciasForm(request.POST)
+        if form.is_valid():
+            diligencia = form.save(commit=False)
+            diligencia.cliente = cliente
+            # Automatically set the creator to the current logged-in user
+            diligencia.criado_por = request.user.get_full_name() or request.user.username
+            diligencia.save()
+            messages.success(request, f'Diligência criada com sucesso para {cliente.nome}!')
+            return redirect('cliente_detail', cpf=cliente.cpf)
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = DiligenciasForm()
+    
+    context = {
+        'form': form,
+        'cliente': cliente,
+        'action': 'create'
+    }
+    
+    return render(request, 'precapp/diligencia_form.html', context)
+
+
+@login_required
+def editar_diligencia_view(request, cpf, diligencia_id):
+    """Edit an existing diligencia"""
+    cliente = get_object_or_404(Cliente, cpf=cpf)
+    diligencia = get_object_or_404(Diligencias, id=diligencia_id, cliente=cliente)
+    
+    if request.method == 'POST':
+        form = DiligenciasForm(request.POST, instance=diligencia)
+        if form.is_valid():
+            # Save the form but preserve the original creator
+            updated_diligencia = form.save(commit=False)
+            # Ensure the creator is not changed during edit
+            updated_diligencia.criado_por = diligencia.criado_por
+            updated_diligencia.save()
+            messages.success(request, f'Diligência atualizada com sucesso!')
+            return redirect('cliente_detail', cpf=cliente.cpf)
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = DiligenciasForm(instance=diligencia)
+    
+    context = {
+        'form': form,
+        'cliente': cliente,
+        'diligencia': diligencia,
+        'action': 'edit'
+    }
+    
+    return render(request, 'precapp/diligencia_form.html', context)
+
+
+@login_required
+def deletar_diligencia_view(request, cpf, diligencia_id):
+    """Delete a diligencia"""
+    cliente = get_object_or_404(Cliente, cpf=cpf)
+    diligencia = get_object_or_404(Diligencias, id=diligencia_id, cliente=cliente)
+    
+    if request.method == 'POST':
+        diligencia_nome = str(diligencia)
+        diligencia.delete()
+        messages.success(request, f'Diligência "{diligencia_nome}" excluída com sucesso!')
+        return redirect('cliente_detail', cpf=cliente.cpf)
+    
+    context = {
+        'diligencia': diligencia,
+        'cliente': cliente,
+        'total_diligencias': cliente.diligencias.count(),
+        'pendentes_diligencias': cliente.diligencias.filter(concluida=False).count(),
+        'concluidas_diligencias': cliente.diligencias.filter(concluida=True).count(),
+    }
+    
+    return render(request, 'precapp/confirmar_delete_diligencia.html', context)
+
+
+@login_required
+def marcar_diligencia_concluida_view(request, cpf, diligencia_id):
+    """Toggle diligencia completion status"""
+    cliente = get_object_or_404(Cliente, cpf=cpf)
+    diligencia = get_object_or_404(Diligencias, id=diligencia_id, cliente=cliente)
+    
+    if request.method == 'POST':
+        # Save the original state from database before form processing
+        # since ModelForm.is_valid() can modify the instance
+        original_diligencia = Diligencias.objects.get(id=diligencia.id)
+        was_completed_before = original_diligencia.concluida
+        
+        form = DiligenciasUpdateForm(request.POST, instance=diligencia)
+        if form.is_valid():
+            updated_diligencia = form.save(commit=False)
+            
+            # Handle concluido_por field automatically
+            if updated_diligencia.concluida:
+                # If marking as completed, set the current user as completer
+                if not was_completed_before:  # Use saved state from database
+                    updated_diligencia.concluido_por = request.user.get_full_name() or request.user.username
+            else:
+                # If marking as not completed (reopening), clear the completer
+                updated_diligencia.concluido_por = None
+            
+            updated_diligencia.save()
+            status = "concluída" if updated_diligencia.concluida else "reaberta"
+            messages.success(request, f'Diligência marcada como {status}!')
+            return redirect('cliente_detail', cpf=cliente.cpf)
+        else:
+            messages.error(request, 'Erro ao atualizar a diligência.')
+    else:
+        form = DiligenciasUpdateForm(instance=diligencia)
+    
+    # Calculate statistics for the client
+    total_diligencias = cliente.diligencias.count()
+    pendentes_diligencias = cliente.diligencias.filter(concluida=False).count()
+    concluidas_diligencias = cliente.diligencias.filter(concluida=True).count()
+    
+    context = {
+        'form': form,
+        'diligencia': diligencia,
+        'cliente': cliente,
+        'total_diligencias': total_diligencias,
+        'pendentes_diligencias': pendentes_diligencias,
+        'concluidas_diligencias': concluidas_diligencias,
+    }
+    
+    return render(request, 'precapp/diligencia_conclusao_form.html', context)
+
+
+@login_required
+def diligencias_list_view(request):
+    """List all diligencias with filtering and search capabilities"""
+    diligencias = Diligencias.objects.select_related('cliente', 'tipo').order_by('-data_criacao')
+    
+    # Filter parameters
+    status_filter = request.GET.get('status', '')
+    urgencia_filter = request.GET.get('urgencia', '')
+    tipo_filter = request.GET.get('tipo', '')
+    search_query = request.GET.get('search', '')
+    
+    # Apply filters
+    if status_filter == 'pendente':
+        diligencias = diligencias.filter(concluida=False)
+    elif status_filter == 'concluida':
+        diligencias = diligencias.filter(concluida=True)
+    
+    if urgencia_filter:
+        diligencias = diligencias.filter(urgencia=urgencia_filter)
+    
+    if tipo_filter:
+        diligencias = diligencias.filter(tipo_id=tipo_filter)
+    
+    if search_query:
+        diligencias = diligencias.filter(
+            Q(cliente__nome__icontains=search_query) |
+            Q(cliente__cpf__icontains=search_query) |
+            Q(tipo__nome__icontains=search_query) |
+            Q(descricao__icontains=search_query)
+        )
+    
+    # Pagination
+    from django.core.paginator import Paginator
+    paginator = Paginator(diligencias, 25)  # 25 diligencias per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistics
+    total_diligencias = Diligencias.objects.count()
+    pendentes_diligencias = Diligencias.objects.filter(concluida=False).count()
+    concluidas_diligencias = Diligencias.objects.filter(concluida=True).count()
+    atrasadas_diligencias = Diligencias.objects.filter(
+        concluida=False,
+        data_final__lt=timezone.now().date()
+    ).count()
+    
+    # Get filter options
+    tipos_diligencia = TipoDiligencia.get_ativos()
+    urgencia_choices = Diligencias.URGENCIA_CHOICES
+    
+    context = {
+        'page_obj': page_obj,
+        'diligencias': page_obj,
+        'total_diligencias': total_diligencias,
+        'pendentes_diligencias': pendentes_diligencias,
+        'concluidas_diligencias': concluidas_diligencias,
+        'atrasadas_diligencias': atrasadas_diligencias,
+        'tipos_diligencia': tipos_diligencia,
+        'urgencia_choices': urgencia_choices,
+        'status_filter': status_filter,
+        'urgencia_filter': urgencia_filter,
+        'tipo_filter': tipo_filter,
+        'search_query': search_query,
+    }
+    
+    return render(request, 'precapp/diligencias_list.html', context)

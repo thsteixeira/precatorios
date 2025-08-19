@@ -21,7 +21,7 @@
     <!-- Main Cards -->
     <div class="row g-4 mb-4">
         <!-- Fases Principais Card -->
-        <div class="col-lg-6">
+        <div class="col-lg-4">
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h5 class="card-title mb-0">
@@ -87,7 +87,7 @@
         </div>
 
         <!-- Fases Honorários Card -->
-        <div class="col-lg-6">
+        <div class="col-lg-4">
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-success text-white">
                     <h5 class="card-title mb-0">
@@ -146,6 +146,72 @@
                         </a>
                         <a href="{% url 'nova_fase_honorarios' %}" class="btn btn-outline-success">
                             <i class="fas fa-plus me-1"></i>Criar Nova Fase Honorários
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tipos Diligência Card -->
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tasks me-2"></i>Tipos de Diligência
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">
+                        Configure os tipos de diligências para clientes
+                    </p>
+                    
+                    <!-- Statistics -->
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <h4 class="text-info mb-0">{{ total_tipos_diligencia }}</h4>
+                                <small class="text-muted">Total</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <h4 class="text-success mb-0">{{ tipos_diligencia_ativos }}</h4>
+                                <small class="text-muted">Ativos</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <h4 class="text-warning mb-0">{{ tipos_diligencia_inativos }}</h4>
+                                <small class="text-muted">Inativos</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Types -->
+                    {% if recent_tipos_diligencia %}
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-clock me-1"></i>Tipos Recentes:
+                        </h6>
+                        <div class="mb-3">
+                            {% for tipo in recent_tipos_diligencia %}
+                                <div class="d-flex align-items-center mb-1">
+                                    <div class="fase-color me-2" style="width: 8px; height: 8px; border-radius: 50%; background-color: {{ tipo.cor }};"></div>
+                                    <small class="text-muted">{{ tipo.nome }}</small>
+                                    {% if not tipo.ativo %}
+                                        <span class="badge bg-secondary ms-1" style="font-size: 0.6em;">Inativo</span>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Actions -->
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'tipos_diligencia' %}" class="btn btn-info">
+                            <i class="fas fa-list me-1"></i>Gerenciar Tipos Diligência
+                        </a>
+                        <a href="{% url 'novo_tipo_diligencia' %}" class="btn btn-outline-info">
+                            <i class="fas fa-plus me-1"></i>Criar Novo Tipo Diligência
                         </a>
                     </div>
                 </div>

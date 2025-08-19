@@ -8,7 +8,10 @@ from .views import (
     fases_view, nova_fase_view, editar_fase_view, deletar_fase_view, ativar_fase_view,
     fases_honorarios_view, nova_fase_honorarios_view, editar_fase_honorarios_view, 
     deletar_fase_honorarios_view, ativar_fase_honorarios_view, customizacao_view,
-    update_priority_by_age
+    tipos_diligencia_view, novo_tipo_diligencia_view, editar_tipo_diligencia_view,
+    deletar_tipo_diligencia_view, ativar_tipo_diligencia_view,
+    nova_diligencia_view, editar_diligencia_view, deletar_diligencia_view, marcar_diligencia_concluida_view,
+    diligencias_list_view, update_priority_by_age
 )
 
 urlpatterns = [
@@ -29,6 +32,7 @@ urlpatterns = [
     path('clientes/<str:cpf>/delete/', delete_cliente_view, name='delete_cliente'),
     path('alvaras/', alvaras_view, name='alvaras'),
     path('alvara/<int:alvara_id>/delete/', delete_alvara_view, name='delete_alvara'),
+    path('diligencias/', diligencias_list_view, name='diligencias_list'),
     path('requerimentos/', requerimento_list_view, name='requerimentos'),
     
     # Customization Page
@@ -47,4 +51,17 @@ urlpatterns = [
     path('fases-honorarios/<int:fase_id>/editar/', editar_fase_honorarios_view, name='editar_fase_honorarios'),
     path('fases-honorarios/<int:fase_id>/deletar/', deletar_fase_honorarios_view, name='deletar_fase_honorarios'),
     path('fases-honorarios/<int:fase_id>/ativar/', ativar_fase_honorarios_view, name='ativar_fase_honorarios'),
+    
+    # Tipo Diligencia Management URLs
+    path('tipos-diligencia/', tipos_diligencia_view, name='tipos_diligencia'),
+    path('tipos-diligencia/novo/', novo_tipo_diligencia_view, name='novo_tipo_diligencia'),
+    path('tipos-diligencia/<int:tipo_id>/editar/', editar_tipo_diligencia_view, name='editar_tipo_diligencia'),
+    path('tipos-diligencia/<int:tipo_id>/deletar/', deletar_tipo_diligencia_view, name='deletar_tipo_diligencia'),
+    path('tipos-diligencia/<int:tipo_id>/ativar/', ativar_tipo_diligencia_view, name='ativar_tipo_diligencia'),
+    
+    # Diligencia Management URLs (within client context)
+    path('clientes/<str:cpf>/diligencias/nova/', nova_diligencia_view, name='nova_diligencia'),
+    path('clientes/<str:cpf>/diligencias/<int:diligencia_id>/editar/', editar_diligencia_view, name='editar_diligencia'),
+    path('clientes/<str:cpf>/diligencias/<int:diligencia_id>/deletar/', deletar_diligencia_view, name='deletar_diligencia'),
+    path('clientes/<str:cpf>/diligencias/<int:diligencia_id>/concluir/', marcar_diligencia_concluida_view, name='marcar_diligencia_concluida'),
 ]

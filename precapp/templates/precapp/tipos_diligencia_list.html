@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tipos de Diligência{% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-dark mb-0">
+                    <i class="fas fa-tasks me-2"></i>Tipos de Diligência
+                </h2>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'customizacao' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Voltar para Customização
+                    </a>
+                    <a href="{% url 'novo_tipo_diligencia' %}" class="btn btn-info">
+                        <i class="fas fa-plus me-1"></i>Novo Tipo de Diligência
+                    </a>
+                </div>
+            </div>
+
+            <!-- Statistics Row -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h3 class="mb-0">{{ total_tipos }}</h3>
+                                    <p class="mb-0">Total de Tipos</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-tasks fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h3 class="mb-0">{{ tipos_ativos }}</h3>
+                                    <p class="mb-0">Tipos Ativos</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-check-circle fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h3 class="mb-0">{{ tipos_inativos }}</h3>
+                                    <p class="mb-0">Tipos Inativos</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-pause-circle fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-secondary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h3 class="mb-0">{{ total_diligencias }}</h3>
+                                    <p class="mb-0">Diligências Cadastradas</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-clipboard-list fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="nome" class="form-label">Nome do Tipo</label>
+                            <input type="text" class="form-control" id="nome" name="nome" value="{{ request.GET.nome }}" placeholder="Digite o nome...">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">Todos</option>
+                                <option value="ativo" {% if request.GET.status == 'ativo' %}selected{% endif %}>Ativos</option>
+                                <option value="inativo" {% if request.GET.status == 'inativo' %}selected{% endif %}>Inativos</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="ordenar" class="form-label">Ordenar por</label>
+                            <select class="form-select" id="ordenar" name="ordenar">
+                                <option value="nome" {% if request.GET.ordenar == 'nome' or not request.GET.ordenar %}selected{% endif %}>Nome</option>
+                                <option value="-criado_em" {% if request.GET.ordenar == '-criado_em' %}selected{% endif %}>Mais Recentes</option>
+                                <option value="criado_em" {% if request.GET.ordenar == 'criado_em' %}selected{% endif %}>Mais Antigos</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-info me-2">
+                                <i class="fas fa-search"></i> Filtrar
+                            </button>
+                            <a href="{% url 'tipos_diligencia' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Types List -->
+            <div class="card">
+                <div class="card-body">
+                    {% if tipos_diligencia %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 30px;"></th>
+                                        <th>Nome</th>
+                                        <th>Descrição</th>
+                                        <th class="text-center">Status</th>
+                                        <th class="text-center">Diligências</th>
+                                        <th class="text-center">Criado em</th>
+                                        <th class="text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for tipo in tipos_diligencia %}
+                                        <tr>
+                                            <td>
+                                                <div class="color-indicator" style="width: 20px; height: 20px; border-radius: 50%; background-color: {{ tipo.cor }}; border: 2px solid #ddd;"></div>
+                                            </td>
+                                            <td>
+                                                <strong>{{ tipo.nome }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="text-muted">{{ tipo.descricao|default:"Sem descrição" }}</span>
+                                            </td>
+                                            <td class="text-center">
+                                                {% if tipo.ativo %}
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check-circle me-1"></i>Ativo
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">
+                                                        <i class="fas fa-pause-circle me-1"></i>Inativo
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-info">{{ tipo.diligencias_count }}</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <small class="text-muted">{{ tipo.criado_em|date:"d/m/Y H:i" }}</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                            data-bs-toggle="collapse" 
+                                                            data-bs-target="#editTipoDiligenciaForm-{{ tipo.id }}" 
+                                                            aria-expanded="false" 
+                                                            title="Editar tipo">
+                                                        <i class="fas fa-edit me-1"></i>Editar
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- Dropdown Edit Form for this Tipo -->
+                                        <tr>
+                                            <td colspan="7" class="p-0">
+                                                <div class="collapse" id="editTipoDiligenciaForm-{{ tipo.id }}">
+                                                    <div class="card card-body m-2 bg-light">
+                                                        <form method="post" action="{% url 'editar_tipo_diligencia' tipo.id %}">
+                                                            {% csrf_token %}
+                                                            
+                                                            <div class="row mb-3">
+                                                                <div class="col-12">
+                                                                    <h6 class="text-primary mb-3">
+                                                                        <i class="fas fa-edit me-2"></i>Editar Tipo de Diligência: {{ tipo.nome }}
+                                                                    </h6>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div class="row">
+                                                                <!-- Nome Field -->
+                                                                <div class="col-md-4 mb-3">
+                                                                    <label class="form-label">Nome do Tipo <span class="text-danger">*</span></label>
+                                                                    <input type="text" class="form-control" name="nome" value="{{ tipo.nome }}" required>
+                                                                </div>
+                                                                
+                                                                <!-- Cor Field -->
+                                                                <div class="col-md-3 mb-3">
+                                                                    <label class="form-label">Cor</label>
+                                                                    <input type="color" class="form-control form-control-color" name="cor" value="{{ tipo.cor }}">
+                                                                </div>
+                                                                
+                                                                <!-- Ativo Field -->
+                                                                <div class="col-md-3 mb-3">
+                                                                    <label class="form-label d-block">Status</label>
+                                                                    <div class="form-check">
+                                                                        <input type="checkbox" class="form-check-input" name="ativo" id="ativo-{{ tipo.id }}" {% if tipo.ativo %}checked{% endif %}>
+                                                                        <label class="form-check-label" for="ativo-{{ tipo.id }}">Tipo Ativo</label>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <!-- Descrição Field (full width) -->
+                                                            <div class="row">
+                                                                <div class="col-12 mb-3">
+                                                                    <label class="form-label">Descrição</label>
+                                                                    <textarea class="form-control" name="descricao" rows="2" placeholder="Descrição opcional do tipo">{{ tipo.descricao }}</textarea>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <!-- Actions -->
+                                                            <div class="row">
+                                                                <div class="col-12">
+                                                                    <div class="d-flex justify-content-between">
+                                                                        <div class="btn-group">
+                                                                            <button type="submit" name="update_tipo" class="btn btn-success btn-sm">
+                                                                                <i class="fas fa-save me-1"></i>Salvar Alterações
+                                                                            </button>
+                                                                            <button type="button" class="btn btn-secondary btn-sm" 
+                                                                                    data-bs-toggle="collapse" 
+                                                                                    data-bs-target="#editTipoDiligenciaForm-{{ tipo.id }}" 
+                                                                                    title="Cancelar">
+                                                                                <i class="fas fa-times me-1"></i>Cancelar
+                                                                            </button>
+                                                                        </div>
+                                                                        
+                                                                        <div class="btn-group">
+                                                                            <form method="post" action="{% url 'ativar_tipo_diligencia' tipo.id %}" class="d-inline">
+                                                                                {% csrf_token %}
+                                                                                <input type="hidden" name="ativo" value="{% if tipo.ativo %}false{% else %}true{% endif %}">
+                                                                                <button type="submit" class="btn btn-warning btn-sm" 
+                                                                                        onclick="return confirm('{% if tipo.ativo %}Desativar{% else %}Ativar{% endif %} o tipo {{ tipo.nome }}?')">
+                                                                                    <i class="fas fa-{% if tipo.ativo %}pause{% else %}play{% endif %} me-1"></i>
+                                                                                    {% if tipo.ativo %}Desativar{% else %}Ativar{% endif %}
+                                                                                </button>
+                                                                            </form>
+                                                                            
+                                                                            {% if tipo.diligencias_count == 0 %}
+                                                                                <form method="post" action="{% url 'deletar_tipo_diligencia' tipo.id %}" class="d-inline">
+                                                                                    {% csrf_token %}
+                                                                                    <button type="submit" class="btn btn-danger btn-sm" 
+                                                                                            onclick="return confirm('Tem certeza que deseja excluir o tipo {{ tipo.nome }}? Esta ação não pode ser desfeita.')">
+                                                                                        <i class="fas fa-trash me-1"></i>Excluir
+                                                                                    </button>
+                                                                                </form>
+                                                                            {% else %}
+                                                                                <button class="btn btn-outline-danger btn-sm" 
+                                                                                        title="Não é possível excluir - existem {{ tipo.diligencias_count }} diligência(s) vinculada(s)" 
+                                                                                        disabled>
+                                                                                    <i class="fas fa-trash me-1"></i>Excluir
+                                                                                </button>
+                                                                            {% endif %}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if tipos_diligencia.has_other_pages %}
+                            <nav aria-label="Navegação da página">
+                                <ul class="pagination justify-content-center mt-3">
+                                    {% if tipos_diligencia.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% if request.GET.nome %}nome={{ request.GET.nome }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.ordenar %}ordenar={{ request.GET.ordenar }}&{% endif %}page={{ tipos_diligencia.previous_page_number }}">Anterior</a>
+                                        </li>
+                                    {% endif %}
+
+                                    {% for num in tipos_diligencia.paginator.page_range %}
+                                        {% if tipos_diligencia.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > tipos_diligencia.number|add:'-3' and num < tipos_diligencia.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?{% if request.GET.nome %}nome={{ request.GET.nome }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.ordenar %}ordenar={{ request.GET.ordenar }}&{% endif %}page={{ num }}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if tipos_diligencia.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% if request.GET.nome %}nome={{ request.GET.nome }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.ordenar %}ordenar={{ request.GET.ordenar }}&{% endif %}page={{ tipos_diligencia.next_page_number }}">Próxima</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">Nenhum tipo de diligência encontrado</h4>
+                            {% if request.GET.nome or request.GET.status %}
+                                <p class="text-muted">Tente ajustar os filtros de pesquisa.</p>
+                                <a href="{% url 'tipos_diligencia' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i>Limpar Filtros
+                                </a>
+                            {% else %}
+                                <p class="text-muted">Comece criando seu primeiro tipo de diligência.</p>
+                                <a href="{% url 'novo_tipo_diligencia' %}" class="btn btn-info">
+                                    <i class="fas fa-plus me-1"></i>Criar Primeiro Tipo
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

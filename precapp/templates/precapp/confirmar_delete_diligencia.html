@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Confirmar Exclusão - Diligência{% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <!-- Page Header -->
+            <div class="text-center mb-4">
+                <h2 class="text-danger mb-3">
+                    <i class="fas fa-exclamation-triangle fa-2x"></i>
+                </h2>
+                <h3 class="text-dark">Confirmar Exclusão</h3>
+                <p class="text-muted">Esta ação não pode ser desfeita</p>
+            </div>
+
+            <!-- Client Context Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        Cliente: {{ cliente.nome }}
+                    </h6>
+                </div>
+                <div class="card-body py-2">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <small class="text-muted">CPF:</small><br>
+                            <strong>{{ cliente.cpf|default:"Não informado" }}</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">Total Diligências:</small><br>
+                            <strong>{{ total_diligencias }}</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">Pendentes:</small><br>
+                            <strong>{{ pendentes_diligencias }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confirmation Card -->
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-trash me-2"></i>
+                        Excluir Diligência
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger" role="alert">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-warning me-1"></i>Atenção!
+                        </h6>
+                        Você está prestes a excluir permanentemente esta diligência:
+                    </div>
+
+                    <!-- Diligencia Details -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="color-indicator me-3" style="width: 30px; height: 30px; border-radius: 50%; background-color: {{ diligencia.tipo.cor }}; border: 2px solid #ddd;"></div>
+                                <div>
+                                    <h5 class="mb-1">{{ diligencia.tipo.nome }}</h5>
+                                    <small class="text-muted">{{ diligencia.tipo.descricao|default:"Sem descrição" }}</small>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Data Final:</strong><br>
+                                    <span class="text-muted">{{ diligencia.data_final|date:"d/m/Y" }}</span>
+                                    {% if diligencia.is_overdue %}
+                                        <span class="badge bg-danger ms-2">Atrasada</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Urgência:</strong><br>
+                                    <span class="badge bg-{{ diligencia.get_urgencia_color }}">{{ diligencia.get_urgencia_display }}</span>
+                                </div>
+                                <div class="col-md-6 mt-2">
+                                    <strong>Status:</strong><br>
+                                    {% if diligencia.concluida %}
+                                        <span class="badge bg-success">Concluída</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Pendente</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mt-2">
+                                    <strong>Criada em:</strong><br>
+                                    <span class="text-muted">{{ diligencia.criado_em|date:"d/m/Y H:i" }}</span>
+                                </div>
+                            </div>
+                            
+                            {% if diligencia.descricao %}
+                                <div class="mt-3">
+                                    <strong>Descrição:</strong><br>
+                                    <span class="text-muted">{{ diligencia.descricao }}</span>
+                                </div>
+                            {% endif %}
+                            
+                            {% if diligencia.data_conclusao %}
+                                <div class="mt-3">
+                                    <strong>Concluída em:</strong><br>
+                                    <span class="text-muted">{{ diligencia.data_conclusao|date:"d/m/Y H:i" }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Warning Information -->
+                    <div class="alert alert-warning" role="alert">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-1"></i>Informações importantes
+                        </h6>
+                        <ul class="mb-0">
+                            <li>Esta diligência será <strong>permanentemente excluída</strong></li>
+                            <li>Todos os dados relacionados serão perdidos</li>
+                            <li>Esta ação <strong>não pode ser desfeita</strong></li>
+                            <li>O histórico da diligência será removido do sistema</li>
+                        </ul>
+                    </div>
+
+                    <!-- Confirmation Form -->
+                    <form method="post" class="d-flex justify-content-between gap-2">
+                        {% csrf_token %}
+                        <a href="{% url 'cliente_detail' cliente.cpf %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i>Confirmar Exclusão
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Information Card -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-question-circle me-2"></i>Alternativas à Exclusão
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-warning">
+                                <i class="fas fa-edit me-1"></i>Editar Diligência
+                            </h6>
+                            <p class="small text-muted">
+                                Em vez de excluir, você pode editar os dados da diligência 
+                                para corrigi-la ou atualizá-la.
+                            </p>
+                            <a href="{% url 'editar_diligencia' cliente.cpf diligencia.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-success">
+                                <i class="fas fa-check me-1"></i>Marcar Status
+                            </h6>
+                            <p class="small text-muted">
+                                Você pode marcar a diligência como concluída ou 
+                                alterar seu status sem excluí-la.
+                            </p>
+                            <a href="{% url 'marcar_diligencia_concluida' cliente.cpf diligencia.id %}" class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-check me-1"></i>Alterar Status
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

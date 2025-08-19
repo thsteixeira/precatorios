@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Confirmar Exclusão - Tipo de Diligência{% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <!-- Page Header -->
+            <div class="text-center mb-4">
+                <h2 class="text-danger mb-3">
+                    <i class="fas fa-exclamation-triangle fa-2x"></i>
+                </h2>
+                <h3 class="text-dark">Confirmar Exclusão</h3>
+                <p class="text-muted">Esta ação não pode ser desfeita</p>
+            </div>
+
+            <!-- Confirmation Card -->
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-trash me-2"></i>
+                        Excluir Tipo de Diligência
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger" role="alert">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-warning me-1"></i>Atenção!
+                        </h6>
+                        Você está prestes a excluir permanentemente o tipo de diligência:
+                    </div>
+
+                    <!-- Type Details -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="color-indicator me-3" style="width: 40px; height: 40px; border-radius: 50%; background-color: {{ tipo_diligencia.cor }}; border: 3px solid #ddd;"></div>
+                                <div>
+                                    <h5 class="mb-1">{{ tipo_diligencia.nome }}</h5>
+                                    <p class="text-muted mb-1">{{ tipo_diligencia.descricao|default:"Sem descrição" }}</p>
+                                    <small class="text-muted">
+                                        Criado em {{ tipo_diligencia.criado_em|date:"d/m/Y H:i" }}
+                                        {% if not tipo_diligencia.ativo %}
+                                            <span class="badge bg-warning ms-2">Inativo</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Validation Checks -->
+                    {% if diligencias_count > 0 %}
+                        <div class="alert alert-warning" role="alert">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-ban me-1"></i>Não é possível excluir
+                            </h6>
+                            <p class="mb-2">
+                                Este tipo de diligência não pode ser excluído porque possui 
+                                <strong>{{ diligencias_count }} diligência{{ diligencias_count|pluralize }}</strong> vinculada{{ diligencias_count|pluralize }}.
+                            </p>
+                            <hr>
+                            <p class="mb-0">
+                                <strong>Opções disponíveis:</strong>
+                            </p>
+                            <ul class="mb-0">
+                                <li>Desative o tipo para ocultá-lo dos formulários</li>
+                                <li>Remova ou altere as diligências vinculadas primeiro</li>
+                            </ul>
+                        </div>
+
+                        <!-- Actions when cannot delete -->
+                        <div class="d-flex justify-content-between gap-2">
+                            <a href="{% url 'tipos_diligencia' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Voltar para Lista
+                            </a>
+                            <div class="d-flex gap-2">
+                                {% if tipo_diligencia.ativo %}
+                                    <a href="{% url 'ativar_tipo_diligencia' tipo_diligencia.id %}?ativo=false" 
+                                       class="btn btn-warning"
+                                       onclick="return confirm('Deseja desativar este tipo de diligência?');">
+                                        <i class="fas fa-pause me-1"></i>Desativar Tipo
+                                    </a>
+                                {% endif %}
+                                <a href="{% url 'editar_tipo_diligencia' tipo_diligencia.id %}" class="btn btn-primary">
+                                    <i class="fas fa-edit me-1"></i>Editar Tipo
+                                </a>
+                            </div>
+                        </div>
+
+                    {% else %}
+                        <!-- Confirmation when can delete -->
+                        <div class="alert alert-info" role="alert">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-info-circle me-1"></i>Verificação concluída
+                            </h6>
+                            <p class="mb-0">
+                                Este tipo de diligência não possui diligências vinculadas e pode ser excluído com segurança.
+                            </p>
+                        </div>
+
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="d-flex justify-content-between gap-2">
+                                <a href="{% url 'tipos_diligencia' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i>Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash me-1"></i>Confirmar Exclusão
+                                </button>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Information Card -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-question-circle me-2"></i>Informações sobre Exclusão
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-danger">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Exclusão Permanente
+                            </h6>
+                            <p class="small text-muted">
+                                Uma vez excluído, o tipo de diligência não pode ser recuperado. 
+                                Todos os dados relacionados serão perdidos permanentemente.
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-info">
+                                <i class="fas fa-shield-alt me-1"></i>Proteção de Dados
+                            </h6>
+                            <p class="small text-muted">
+                                Tipos com diligências vinculadas não podem ser excluídos 
+                                para manter a integridade dos dados históricos.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-warning">
+                                <i class="fas fa-eye-slash me-1"></i>Alternativa: Desativar
+                            </h6>
+                            <p class="small text-muted">
+                                Em vez de excluir, considere desativar o tipo. 
+                                Ele será ocultado dos formulários mas preservará o histórico.
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-success">
+                                <i class="fas fa-edit me-1"></i>Opção: Editar
+                            </h6>
+                            <p class="small text-muted">
+                                Você pode editar o nome, descrição ou cor do tipo 
+                                para adequá-lo melhor às suas necessidades.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

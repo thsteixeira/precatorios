@@ -340,6 +340,221 @@
         </div>
     </div>
 </div>
+
+<!-- Diligencias Management Section -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks me-2"></i>
+                        Diligências
+                        <span class="badge bg-dark ms-2">{{ total_diligencias }}</span>
+                    </h5>
+                    <a href="{% url 'nova_diligencia' cliente.cpf %}" class="btn btn-dark btn-sm">
+                        <i class="fas fa-plus me-1"></i>Nova Diligência
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Statistics Row -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center py-2">
+                                <h4 class="mb-1">{{ total_diligencias }}</h4>
+                                <small>Total</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-warning text-dark">
+                            <div class="card-body text-center py-2">
+                                <h4 class="mb-1">{{ total_pendentes }}</h4>
+                                <small>Pendentes</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center py-2">
+                                <h4 class="mb-1">{{ total_concluidas }}</h4>
+                                <small>Concluídas</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diligencias List -->
+                {% if diligencias %}
+                    <!-- Pending Diligencias -->
+                    {% if diligencias_pendentes %}
+                        <h6 class="text-warning mb-3">
+                            <i class="fas fa-clock me-1"></i>Diligências Pendentes ({{ total_pendentes }})
+                        </h6>
+                        <div class="row g-3 mb-4">
+                            {% for diligencia in diligencias_pendentes %}
+                                <div class="col-md-6">
+                                    <div class="card border-warning">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-start justify-content-between mb-2">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="color-indicator me-2" style="width: 12px; height: 12px; border-radius: 50%; background-color: {{ diligencia.tipo.cor }};"></div>
+                                                    <h6 class="mb-0">{{ diligencia.tipo.nome }}</h6>
+                                                </div>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                        <i class="fas fa-ellipsis-v"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <a class="dropdown-item" href="{% url 'marcar_diligencia_concluida' cliente.cpf diligencia.id %}">
+                                                                <i class="fas fa-check me-1"></i>Marcar Concluída
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="{% url 'editar_diligencia' cliente.cpf diligencia.id %}">
+                                                                <i class="fas fa-edit me-1"></i>Editar
+                                                            </a>
+                                                        </li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item text-danger" href="{% url 'deletar_diligencia' cliente.cpf diligencia.id %}">
+                                                                <i class="fas fa-trash me-1"></i>Excluir
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row text-center mb-2">
+                                                <div class="col-4">
+                                                    <small class="text-muted">Data Final:</small><br>
+                                                    <small class="fw-bold">{{ diligencia.data_final|date:"d/m/Y" }}</small>
+                                                    {% if diligencia.is_overdue %}
+                                                        <br><span class="badge bg-danger" style="font-size: 0.6em;">Atrasada</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="col-4">
+                                                    <small class="text-muted">Urgência:</small><br>
+                                                    <span class="badge bg-{{ diligencia.get_urgencia_color }}" style="font-size: 0.7em;">{{ diligencia.get_urgencia_display }}</span>
+                                                </div>
+                                                <div class="col-4">
+                                                    <small class="text-muted">Criado:</small><br>
+                                                    <small>{{ diligencia.criado_em|date:"d/m/Y" }}</small>
+                                                </div>
+                                            </div>
+                                            
+                                            {% if diligencia.descricao %}
+                                                <div class="mt-2">
+                                                    <small class="text-muted">{{ diligencia.descricao|truncatechars:80 }}</small>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <div class="mt-2">
+                                                <small class="text-muted">Por: {{ diligencia.criador }}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Completed Diligencias -->
+                    {% if diligencias_concluidas %}
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-check-circle me-1"></i>Diligências Concluídas ({{ total_concluidas }})
+                        </h6>
+                        <div class="row g-3">
+                            {% for diligencia in diligencias_concluidas|slice:":6" %}
+                                <div class="col-md-6">
+                                    <div class="card border-success">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-start justify-content-between mb-2">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="color-indicator me-2" style="width: 12px; height: 12px; border-radius: 50%; background-color: {{ diligencia.tipo.cor }};"></div>
+                                                    <h6 class="mb-0">{{ diligencia.tipo.nome }}</h6>
+                                                </div>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                        <i class="fas fa-ellipsis-v"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <a class="dropdown-item" href="{% url 'marcar_diligencia_concluida' cliente.cpf diligencia.id %}">
+                                                                <i class="fas fa-undo me-1"></i>Reabrir
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="{% url 'editar_diligencia' cliente.cpf diligencia.id %}">
+                                                                <i class="fas fa-edit me-1"></i>Editar
+                                                            </a>
+                                                        </li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item text-danger" href="{% url 'deletar_diligencia' cliente.cpf diligencia.id %}">
+                                                                <i class="fas fa-trash me-1"></i>Excluir
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="row text-center mb-2">
+                                                <div class="col-4">
+                                                    <small class="text-muted">Concluída:</small><br>
+                                                    <small class="fw-bold text-success">{{ diligencia.data_conclusao|date:"d/m/Y" }}</small>
+                                                </div>
+                                                <div class="col-4">
+                                                    <small class="text-muted">Urgência:</small><br>
+                                                    <span class="badge bg-{{ diligencia.get_urgencia_color }}" style="font-size: 0.7em;">{{ diligencia.get_urgencia_display }}</span>
+                                                </div>
+                                                <div class="col-4">
+                                                    <small class="text-muted">Criado:</small><br>
+                                                    <small>{{ diligencia.criado_em|date:"d/m/Y" }}</small>
+                                                </div>
+                                            </div>
+                                            
+                                            {% if diligencia.descricao %}
+                                                <div class="mt-2">
+                                                    <small class="text-muted">{{ diligencia.descricao|truncatechars:80 }}</small>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <div class="mt-2">
+                                                <small class="text-muted">Por: {{ diligencia.criador }}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if diligencias_concluidas.count > 6 %}
+                            <div class="text-center mt-3">
+                                <small class="text-muted">
+                                    Exibindo 6 de {{ diligencias_concluidas.count }} diligências concluídas
+                                </small>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Nenhuma diligência cadastrada</h5>
+                        <p class="text-muted">Este cliente ainda não possui diligências.</p>
+                        <a href="{% url 'nova_diligencia' cliente.cpf %}" class="btn btn-warning">
+                            <i class="fas fa-plus me-1"></i>Criar Primeira Diligência
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 {% endif %}
 
 <!-- Delete Cliente Modal -->
