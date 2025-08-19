@@ -264,7 +264,7 @@ def precatorio_detalhe_view(request, precatorio_cnj):
         
         elif 'link_cliente' in request.POST:
             # Handle client linking
-            client_search_form = ClienteSearchForm(request.POST)
+            client_search_form = ClienteSearchForm(request.POST)  # This creates the form with POST data
             if client_search_form.is_valid():
                 cpf = client_search_form.cleaned_data['cpf']
                 try:
@@ -280,6 +280,7 @@ def precatorio_detalhe_view(request, precatorio_cnj):
                     messages.error(request, f'Cliente com CPF {cpf} não encontrado. Verifique se o CPF está correto e se o cliente está cadastrado.')
             else:
                 messages.error(request, 'Por favor, corrija os erros no CPF.')
+            # Note: client_search_form now contains the POST data and any validation errors
         
         elif 'unlink_cliente' in request.POST:
             # Handle client unlinking
