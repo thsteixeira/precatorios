@@ -47,12 +47,10 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label for="tipo_requerimento" class="form-label">Tipo Requerimento</label>
+                        <label for="tipo_requerimento" class="form-label">Requerimento Acordo</label>
                         <select class="form-control" id="tipo_requerimento" name="tipo_requerimento">
                             <option value="">Todos</option>
-                            <option value="prioridade" {% if current_tipo_requerimento == 'prioridade' %}selected{% endif %}>Requerimento Prioridade</option>
                             <option value="acordo" {% if current_tipo_requerimento == 'acordo' %}selected{% endif %}>Requerimento Acordo</option>
-                            <option value="sem_prioridade" {% if current_tipo_requerimento == 'sem_prioridade' %}selected{% endif %}>Sem Requerimento de Prioridade</option>
                             <option value="sem_acordo" {% if current_tipo_requerimento == 'sem_acordo' %}selected{% endif %}>Sem Requerimento de Acordo</option>
                         </select>
                     </div>

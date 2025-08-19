@@ -4087,25 +4087,6 @@ class PrecatorioAdvancedFilterTest(TestCase):
         
         self.client_app = Client()
     
-    def test_filter_tipo_requerimento_prioridade(self):
-        """Test filtering by tipo_requerimento = prioridade"""
-        self.client_app.login(username='testuser', password='testpass123')
-        response = self.client_app.get('/precatorios/?tipo_requerimento=prioridade')
-        
-        self.assertEqual(response.status_code, 200)
-        precatorios = response.context['precatorios']
-        
-        # Should include precatorios that have priority requerimentos
-        cnjs = [p.cnj for p in precatorios]
-        self.assertIn(self.precatorio_prioridade_deferido.cnj, cnjs)
-        self.assertIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
-        self.assertIn(self.precatorio_misto.cnj, cnjs)
-        
-        # Should NOT include precatorios with only acordo or no requerimentos
-        self.assertNotIn(self.precatorio_acordo_deferido.cnj, cnjs)
-        self.assertNotIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
-        self.assertNotIn(self.precatorio_sem_requerimento.cnj, cnjs)
-    
     def test_filter_tipo_requerimento_acordo(self):
         """Test filtering by tipo_requerimento = acordo"""
         self.client_app.login(username='testuser', password='testpass123')
@@ -4142,25 +4123,6 @@ class PrecatorioAdvancedFilterTest(TestCase):
         # Should NOT include precatorios with acordo requerimentos
         self.assertNotIn(self.precatorio_acordo_deferido.cnj, cnjs)
         self.assertNotIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
-        self.assertNotIn(self.precatorio_misto.cnj, cnjs)
-    
-    def test_filter_tipo_requerimento_sem_prioridade(self):
-        """Test filtering by tipo_requerimento = sem_prioridade"""
-        self.client_app.login(username='testuser', password='testpass123')
-        response = self.client_app.get('/precatorios/?tipo_requerimento=sem_prioridade')
-        
-        self.assertEqual(response.status_code, 200)
-        precatorios = response.context['precatorios']
-        
-        # Should include precatorios that have NO prioridade requerimentos
-        cnjs = [p.cnj for p in precatorios]
-        self.assertIn(self.precatorio_acordo_deferido.cnj, cnjs)
-        self.assertIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
-        self.assertIn(self.precatorio_sem_requerimento.cnj, cnjs)
-        
-        # Should NOT include precatorios with prioridade requerimentos
-        self.assertNotIn(self.precatorio_prioridade_deferido.cnj, cnjs)
-        self.assertNotIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
         self.assertNotIn(self.precatorio_misto.cnj, cnjs)
     
     def test_filter_requerimento_deferido(self):
@@ -4201,25 +4163,6 @@ class PrecatorioAdvancedFilterTest(TestCase):
         self.assertNotIn(self.precatorio_acordo_deferido.cnj, cnjs)
         self.assertNotIn(self.precatorio_sem_requerimento.cnj, cnjs)
     
-    def test_combined_filter_prioridade_deferido(self):
-        """Test combined filtering: tipo_requerimento=prioridade AND requerimento_deferido=deferido"""
-        self.client_app.login(username='testuser', password='testpass123')
-        response = self.client_app.get('/precatorios/?tipo_requerimento=prioridade&requerimento_deferido=deferido')
-        
-        self.assertEqual(response.status_code, 200)
-        precatorios = response.context['precatorios']
-        
-        # Should include precatorios that have priority requerimentos that are deferido
-        cnjs = [p.cnj for p in precatorios]
-        self.assertIn(self.precatorio_prioridade_deferido.cnj, cnjs)
-        self.assertIn(self.precatorio_misto.cnj, cnjs)
-        
-        # Should NOT include others
-        self.assertNotIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
-        self.assertNotIn(self.precatorio_acordo_deferido.cnj, cnjs)
-        self.assertNotIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
-        self.assertNotIn(self.precatorio_sem_requerimento.cnj, cnjs)
-    
     def test_combined_filter_acordo_nao_deferido(self):
         """Test combined filtering: tipo_requerimento=acordo AND requerimento_deferido=nao_deferido"""
         self.client_app.login(username='testuser', password='testpass123')
@@ -4258,22 +4201,22 @@ class PrecatorioAdvancedFilterTest(TestCase):
         self.assertNotIn(self.precatorio_misto.cnj, cnjs)
         self.assertNotIn(self.precatorio_sem_requerimento.cnj, cnjs)
     
-    def test_combined_filter_sem_prioridade_nao_deferido(self):
-        """Test combined filtering: tipo_requerimento=sem_prioridade AND requerimento_deferido=nao_deferido"""
+    def test_combined_filter_sem_acordo_nao_deferido(self):
+        """Test combined filtering: tipo_requerimento=sem_acordo AND requerimento_deferido=nao_deferido"""
         self.client_app.login(username='testuser', password='testpass123')
-        response = self.client_app.get('/precatorios/?tipo_requerimento=sem_prioridade&requerimento_deferido=nao_deferido')
+        response = self.client_app.get('/precatorios/?tipo_requerimento=sem_acordo&requerimento_deferido=nao_deferido')
         
         self.assertEqual(response.status_code, 200)
         precatorios = response.context['precatorios']
         
-        # Should include precatorios that have NO prioridade AND have some non-deferido requerimento
+        # Should include precatorios that have NO acordo AND have some non-deferido requerimento
         cnjs = [p.cnj for p in precatorios]
-        self.assertIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
         
-        # Should NOT include precatorios with prioridade or those without non-deferido requerimentos
+        # Should NOT include precatorios with acordo or those without non-deferido requerimentos
         self.assertNotIn(self.precatorio_prioridade_deferido.cnj, cnjs)
-        self.assertNotIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
         self.assertNotIn(self.precatorio_acordo_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
         self.assertNotIn(self.precatorio_misto.cnj, cnjs)
         self.assertNotIn(self.precatorio_sem_requerimento.cnj, cnjs)
     
@@ -4289,13 +4232,13 @@ class PrecatorioAdvancedFilterTest(TestCase):
     def test_filter_statistics_calculation(self):
         """Test that filter statistics are calculated correctly"""
         self.client_app.login(username='testuser', password='testpass123')
-        response = self.client_app.get('/precatorios/?tipo_requerimento=prioridade')
+        response = self.client_app.get('/precatorios/?tipo_requerimento=acordo')
         
         self.assertEqual(response.status_code, 200)
         
         # Should calculate statistics based on filtered results
-        self.assertEqual(response.context['total_precatorios'], 3)  # 3 precatorios with prioridade
-        self.assertEqual(response.context['prioritarios'], 3)  # All 3 are prioritarios
+        self.assertEqual(response.context['total_precatorios'], 3)  # 3 precatorios with acordo
+        # No need to check prioritarios since we removed priority filtering
     
     def test_empty_filter_results(self):
         """Test behavior when filter returns no results"""
@@ -4636,7 +4579,7 @@ class RequerimentoFilterViewTest(TestCase):
     def test_requerimento_context_in_precatorio_detail(self):
         """Test that requerimento context is properly provided in precatorio detail"""
         self.client_app.login(username='testuser', password='testpass123')
-        response = self.client_app.get(f'/precatorio/{self.precatorio.cnj}/')
+        response = self.client_app.get(f'/precatorios/{self.precatorio.cnj}/')
         
         self.assertEqual(response.status_code, 200)
         
