@@ -60,6 +60,8 @@ def home_view(request):
     total_clientes = Cliente.objects.count()
     total_alvaras = Alvara.objects.count()
     total_requerimentos = Requerimento.objects.count()
+    total_diligencias = Diligencias.objects.count()
+    total_tipos_diligencia = TipoDiligencia.objects.filter(ativo=True).count()
     
     # Get financial statistics - using correct field names
     total_valor_precatorios = Precatorio.objects.aggregate(total=Sum('valor_de_face'))['total'] or 0
@@ -77,22 +79,42 @@ def home_view(request):
     
     total_valor_requerimentos = Requerimento.objects.aggregate(total=Sum('valor'))['total'] or 0
     
+    # Get diligencias statistics
+    diligencias_pendentes = Diligencias.objects.filter(concluida=False).count()
+    diligencias_concluidas = Diligencias.objects.filter(concluida=True).count()
+    diligencias_atrasadas = Diligencias.objects.filter(
+        concluida=False,
+        data_final__lt=timezone.now().date()
+    ).count()
+    diligencias_urgentes = Diligencias.objects.filter(
+        concluida=False,
+        urgencia='alta'
+    ).count()
+    
     # Get recent activity
     recent_precatorios = Precatorio.objects.prefetch_related('clientes').order_by('cnj')[:5]
     recent_alvaras = Alvara.objects.select_related('cliente', 'precatorio').order_by('-id')[:5]
     recent_requerimentos = Requerimento.objects.select_related('cliente', 'precatorio').order_by('-id')[:5]
+    recent_diligencias = Diligencias.objects.select_related('cliente', 'tipo').order_by('-data_criacao')[:5]
     
     context = {
         'total_precatorios': total_precatorios,
         'total_clientes': total_clientes,
         'total_alvaras': total_alvaras,
         'total_requerimentos': total_requerimentos,
+        'total_diligencias': total_diligencias,
+        'total_tipos_diligencia': total_tipos_diligencia,
         'total_valor_precatorios': total_valor_precatorios,
         'valor_alvaras': valor_alvaras,
         'total_valor_requerimentos': total_valor_requerimentos,
+        'diligencias_pendentes': diligencias_pendentes,
+        'diligencias_concluidas': diligencias_concluidas,
+        'diligencias_atrasadas': diligencias_atrasadas,
+        'diligencias_urgentes': diligencias_urgentes,
         'recent_precatorios': recent_precatorios,
         'recent_alvaras': recent_alvaras,
         'recent_requerimentos': recent_requerimentos,
+        'recent_diligencias': recent_diligencias,
     }
     
     return render(request, 'precapp/home.html', context)

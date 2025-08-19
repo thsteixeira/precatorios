@@ -5268,7 +5268,142 @@ class CPFFormValidationTest(TestCase):
 # Run CPF form validation tests with: python manage.py test precapp.tests.CPFFormValidationTest
 # Run diligencias tests with: python manage.py test precapp.tests.TipoDiligenciaModelTest
 # Run diligencias tests with: python manage.py test precapp.tests.DiligenciasModelTest
+# Run home page tests with: python manage.py test precapp.tests.HomePageTest
 # Run tests with: python manage.py test precapp
+
+
+class HomePageTest(TestCase):
+    """Test cases for the home page view with diligencias integration"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        self.cliente = Cliente.objects.create(
+            cpf='12345678909',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        self.tipo_diligencia = TipoDiligencia.objects.create(
+            nome='Documentação',
+            cor='#007bff'
+        )
+        
+        self.client_app = Client()
+    
+    def test_home_page_requires_authentication(self):
+        """Test that home page requires authentication"""
+        response = self.client_app.get('/')
+        self.assertEqual(response.status_code, 302)  # Redirect to login
+    
+    def test_home_page_with_authentication(self):
+        """Test home page with authentication includes diligencias data"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/')
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that diligencias context variables are present
+        self.assertIn('total_diligencias', response.context)
+        self.assertIn('diligencias_pendentes', response.context)
+        self.assertIn('diligencias_concluidas', response.context)
+        self.assertIn('diligencias_atrasadas', response.context)
+        self.assertIn('diligencias_urgentes', response.context)
+        self.assertIn('total_tipos_diligencia', response.context)
+        self.assertIn('recent_diligencias', response.context)
+    
+    def test_home_page_statistics_with_data(self):
+        """Test home page statistics with actual diligencias data"""
+        # Create some test diligencias
+        diligencia1 = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=date.today() + timedelta(days=7),
+            criado_por='Test User',
+            urgencia='alta'
+        )
+        
+        diligencia2 = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=date.today() - timedelta(days=1),  # Overdue
+            criado_por='Test User',
+            urgencia='media'
+        )
+        
+        # Mark one as concluded
+        diligencia1.concluida = True
+        diligencia1.data_conclusao = timezone.now()
+        diligencia1.save()
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/')
+        
+        # Check statistics
+        self.assertEqual(response.context['total_diligencias'], 2)
+        self.assertEqual(response.context['diligencias_pendentes'], 1)
+        self.assertEqual(response.context['diligencias_concluidas'], 1)
+        self.assertEqual(response.context['diligencias_atrasadas'], 1)  # One overdue
+        self.assertEqual(response.context['diligencias_urgentes'], 0)  # High urgency one is completed
+        self.assertEqual(response.context['total_tipos_diligencia'], 1)
+        
+        # Check that recent diligencias are included
+        self.assertEqual(len(response.context['recent_diligencias']), 2)
+    
+    def test_home_page_content_includes_diligencias(self):
+        """Test that the home page HTML content includes diligencias information"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/')
+        
+        content = response.content.decode('utf-8')
+        
+        # Check for diligencias-related content
+        self.assertIn('Gestão de Diligências', content)
+        self.assertIn('fa-tasks', content)  # Diligencias icon
+        self.assertIn('/diligencias/', content)  # URL path for diligencias list (rendered from URL tag)
+        self.assertIn('/tipos-diligencia/', content)  # URL path for tipos (rendered from URL tag)
+        self.assertIn('Controle de prazos', content)
+        self.assertIn('tipos ativos', content)  # Part of the rendered diligencias statistics
+        self.assertIn('Diligências</p>', content)  # Statistics card label
+    
+    def test_home_page_quick_actions_include_diligencias(self):
+        """Test that quick actions section includes diligencias links"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/')
+        
+        content = response.content.decode('utf-8')
+        
+        # Check for diligencias in quick actions
+        self.assertIn('Ver Diligências', content)
+        self.assertIn('fa-tasks', content)
+    
+    def test_home_page_recent_activity_includes_diligencias(self):
+        """Test that recent activity section can include diligencias"""
+        # Create a diligencia
+        diligencia = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=date.today() + timedelta(days=7),
+            criado_por='Test User',
+            urgencia='alta'
+        )
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/')
+        
+        # Check that recent diligencias are included
+        recent_diligencias = response.context['recent_diligencias']
+        self.assertEqual(len(recent_diligencias), 1)
+        self.assertEqual(recent_diligencias[0].id, diligencia.id)
+        
+        # Check content includes recent diligencia
+        content = response.content.decode('utf-8')
+        if recent_diligencias:  # Only check if we have diligencias
+            self.assertIn('Últimas Diligências', content)
 
 
 class TipoDiligenciaModelTest(TestCase):
