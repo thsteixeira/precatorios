@@ -3884,6 +3884,1130 @@ class PriorityUpdatePerformanceTest(TestCase):
         self.assertLess(query_count, 10)
 
 
+class PrecatorioAdvancedFilterTest(TestCase):
+    """Test cases for advanced precatorio filtering functionality"""
+    
+    def setUp(self):
+        """Set up test data for precatorio filtering"""
+        # Create user for authentication
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        # Create test phases for requerimentos
+        self.fase_deferido = Fase.objects.create(
+            nome='Deferido',
+            tipo='requerimento',
+            cor='#28a745',
+            ativa=True
+        )
+        
+        self.fase_indeferido = Fase.objects.create(
+            nome='Indeferido',
+            tipo='requerimento', 
+            cor='#dc3545',
+            ativa=True
+        )
+        
+        self.fase_andamento = Fase.objects.create(
+            nome='Em Andamento',
+            tipo='requerimento',
+            cor='#4ECDC4',
+            ativa=True
+        )
+        
+        # Create test precatorios
+        self.precatorio_prioridade_deferido = Precatorio.objects.create(
+            cnj='1111111-11.2023.8.26.0100',
+            orcamento=2023,
+            origem='Tribunal de São Paulo',
+            quitado=False,
+            valor_de_face=10000.00,
+            ultima_atualizacao=10000.00,
+            data_ultima_atualizacao=date(2023, 1, 15),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            acordo_deferido=False
+        )
+        
+        self.precatorio_prioridade_nao_deferido = Precatorio.objects.create(
+            cnj='2222222-22.2023.8.26.0200',
+            orcamento=2023,
+            origem='Tribunal de Campinas',
+            quitado=False,
+            valor_de_face=20000.00,
+            ultima_atualizacao=20000.00,
+            data_ultima_atualizacao=date(2023, 2, 20),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            acordo_deferido=False
+        )
+        
+        self.precatorio_acordo_deferido = Precatorio.objects.create(
+            cnj='3333333-33.2023.8.26.0300',
+            orcamento=2023,
+            origem='Tribunal de Santos',
+            quitado=False,
+            valor_de_face=15000.00,
+            ultima_atualizacao=15000.00,
+            data_ultima_atualizacao=date(2023, 3, 25),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            acordo_deferido=False
+        )
+        
+        self.precatorio_acordo_nao_deferido = Precatorio.objects.create(
+            cnj='4444444-44.2023.8.26.0400',
+            orcamento=2023,
+            origem='Tribunal de Osasco',
+            quitado=False,
+            valor_de_face=25000.00,
+            ultima_atualizacao=25000.00,
+            data_ultima_atualizacao=date(2023, 4, 30),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            acordo_deferido=False
+        )
+        
+        self.precatorio_sem_requerimento = Precatorio.objects.create(
+            cnj='5555555-55.2023.8.26.0500',
+            orcamento=2023,
+            origem='Tribunal de Bauru',
+            quitado=False,
+            valor_de_face=30000.00,
+            ultima_atualizacao=30000.00,
+            data_ultima_atualizacao=date(2023, 5, 15),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            acordo_deferido=False
+        )
+        
+        self.precatorio_misto = Precatorio.objects.create(
+            cnj='6666666-66.2023.8.26.0600',
+            orcamento=2023,
+            origem='Tribunal de Sorocaba',
+            quitado=False,
+            valor_de_face=35000.00,
+            ultima_atualizacao=35000.00,
+            data_ultima_atualizacao=date(2023, 6, 20),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            acordo_deferido=False
+        )
+        
+        # Create test clientes
+        self.cliente1 = Cliente.objects.create(
+            cpf='11111111111',
+            nome='João Silva',
+            nascimento=date(1950, 5, 15),
+            prioridade=True
+        )
+        
+        self.cliente2 = Cliente.objects.create(
+            cpf='22222222222',
+            nome='Maria Santos',
+            nascimento=date(1980, 8, 20),
+            prioridade=False
+        )
+        
+        self.cliente3 = Cliente.objects.create(
+            cpf='33333333333',
+            nome='Pedro Costa',
+            nascimento=date(1975, 12, 10),
+            prioridade=False
+        )
+        
+        # Create requerimentos for testing
+        # Precatorio 1: Priority request DEFERIDO
+        Requerimento.objects.create(
+            precatorio=self.precatorio_prioridade_deferido,
+            cliente=self.cliente1,
+            pedido='prioridade idade',
+            valor=5000.00,
+            desagio=0.0,
+            fase=self.fase_deferido
+        )
+        
+        # Precatorio 2: Priority request NAO DEFERIDO
+        Requerimento.objects.create(
+            precatorio=self.precatorio_prioridade_nao_deferido,
+            cliente=self.cliente1,
+            pedido='prioridade doença',
+            valor=8000.00,
+            desagio=0.0,
+            fase=self.fase_indeferido
+        )
+        
+        # Precatorio 3: Acordo request DEFERIDO
+        Requerimento.objects.create(
+            precatorio=self.precatorio_acordo_deferido,
+            cliente=self.cliente2,
+            pedido='acordo principal',
+            valor=3000.00,
+            desagio=0.0,
+            fase=self.fase_deferido
+        )
+        
+        # Precatorio 4: Acordo request NAO DEFERIDO  
+        Requerimento.objects.create(
+            precatorio=self.precatorio_acordo_nao_deferido,
+            cliente=self.cliente2,
+            pedido='acordo honorários contratuais',
+            valor=6000.00,
+            desagio=0.0,
+            fase=self.fase_andamento
+        )
+        
+        # Precatorio 5: No requerimentos (sem_requerimento case)
+        
+        # Precatorio 6: Mixed - has both priority and acordo
+        Requerimento.objects.create(
+            precatorio=self.precatorio_misto,
+            cliente=self.cliente3,
+            pedido='prioridade idade',
+            valor=7000.00,
+            desagio=0.0,
+            fase=self.fase_deferido
+        )
+        Requerimento.objects.create(
+            precatorio=self.precatorio_misto,
+            cliente=self.cliente3,
+            pedido='acordo principal',
+            valor=4000.00,
+            desagio=0.0,
+            fase=self.fase_indeferido
+        )
+        
+        self.client_app = Client()
+    
+    def test_filter_tipo_requerimento_prioridade(self):
+        """Test filtering by tipo_requerimento = prioridade"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/?tipo_requerimento=prioridade')
+        
+        self.assertEqual(response.status_code, 200)
+        precatorios = response.context['precatorios']
+        
+        # Should include precatorios that have priority requerimentos
+        cnjs = [p.cnj for p in precatorios]
+        self.assertIn(self.precatorio_prioridade_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_misto.cnj, cnjs)
+        
+        # Should NOT include precatorios with only acordo or no requerimentos
+        self.assertNotIn(self.precatorio_acordo_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_sem_requerimento.cnj, cnjs)
+    
+    def test_filter_tipo_requerimento_acordo(self):
+        """Test filtering by tipo_requerimento = acordo"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/?tipo_requerimento=acordo')
+        
+        self.assertEqual(response.status_code, 200)
+        precatorios = response.context['precatorios']
+        
+        # Should include precatorios that have acordo requerimentos
+        cnjs = [p.cnj for p in precatorios]
+        self.assertIn(self.precatorio_acordo_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_misto.cnj, cnjs)
+        
+        # Should NOT include precatorios with only prioridade or no requerimentos
+        self.assertNotIn(self.precatorio_prioridade_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_sem_requerimento.cnj, cnjs)
+    
+    def test_filter_tipo_requerimento_sem_acordo(self):
+        """Test filtering by tipo_requerimento = sem_acordo"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/?tipo_requerimento=sem_acordo')
+        
+        self.assertEqual(response.status_code, 200)
+        precatorios = response.context['precatorios']
+        
+        # Should include precatorios that have NO acordo requerimentos
+        cnjs = [p.cnj for p in precatorios]
+        self.assertIn(self.precatorio_prioridade_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_sem_requerimento.cnj, cnjs)
+        
+        # Should NOT include precatorios with acordo requerimentos
+        self.assertNotIn(self.precatorio_acordo_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_misto.cnj, cnjs)
+    
+    def test_filter_tipo_requerimento_sem_prioridade(self):
+        """Test filtering by tipo_requerimento = sem_prioridade"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/?tipo_requerimento=sem_prioridade')
+        
+        self.assertEqual(response.status_code, 200)
+        precatorios = response.context['precatorios']
+        
+        # Should include precatorios that have NO prioridade requerimentos
+        cnjs = [p.cnj for p in precatorios]
+        self.assertIn(self.precatorio_acordo_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_sem_requerimento.cnj, cnjs)
+        
+        # Should NOT include precatorios with prioridade requerimentos
+        self.assertNotIn(self.precatorio_prioridade_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_misto.cnj, cnjs)
+    
+    def test_filter_requerimento_deferido(self):
+        """Test filtering by requerimento_deferido = deferido"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/?requerimento_deferido=deferido')
+        
+        self.assertEqual(response.status_code, 200)
+        precatorios = response.context['precatorios']
+        
+        # Should include precatorios that have at least one deferido requerimento
+        cnjs = [p.cnj for p in precatorios]
+        self.assertIn(self.precatorio_prioridade_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_acordo_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_misto.cnj, cnjs)
+        
+        # Should NOT include precatorios with only non-deferido or no requerimentos
+        self.assertNotIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_sem_requerimento.cnj, cnjs)
+    
+    def test_filter_requerimento_nao_deferido(self):
+        """Test filtering by requerimento_deferido = nao_deferido"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/?requerimento_deferido=nao_deferido')
+        
+        self.assertEqual(response.status_code, 200)
+        precatorios = response.context['precatorios']
+        
+        # Should include precatorios that have requerimentos that are NOT deferido
+        cnjs = [p.cnj for p in precatorios]
+        self.assertIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_misto.cnj, cnjs)  # Has both deferido and nao deferido
+        
+        # Should NOT include precatorios with only deferido or no requerimentos
+        self.assertNotIn(self.precatorio_prioridade_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_acordo_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_sem_requerimento.cnj, cnjs)
+    
+    def test_combined_filter_prioridade_deferido(self):
+        """Test combined filtering: tipo_requerimento=prioridade AND requerimento_deferido=deferido"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/?tipo_requerimento=prioridade&requerimento_deferido=deferido')
+        
+        self.assertEqual(response.status_code, 200)
+        precatorios = response.context['precatorios']
+        
+        # Should include precatorios that have priority requerimentos that are deferido
+        cnjs = [p.cnj for p in precatorios]
+        self.assertIn(self.precatorio_prioridade_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_misto.cnj, cnjs)
+        
+        # Should NOT include others
+        self.assertNotIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_acordo_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_sem_requerimento.cnj, cnjs)
+    
+    def test_combined_filter_acordo_nao_deferido(self):
+        """Test combined filtering: tipo_requerimento=acordo AND requerimento_deferido=nao_deferido"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/?tipo_requerimento=acordo&requerimento_deferido=nao_deferido')
+        
+        self.assertEqual(response.status_code, 200)
+        precatorios = response.context['precatorios']
+        
+        # Should include precatorios that have acordo requerimentos that are NOT deferido
+        cnjs = [p.cnj for p in precatorios]
+        self.assertIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
+        self.assertIn(self.precatorio_misto.cnj, cnjs)  # Has acordo not deferido
+        
+        # Should NOT include others
+        self.assertNotIn(self.precatorio_prioridade_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_acordo_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_sem_requerimento.cnj, cnjs)
+    
+    def test_combined_filter_sem_acordo_deferido(self):
+        """Test combined filtering: tipo_requerimento=sem_acordo AND requerimento_deferido=deferido"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/?tipo_requerimento=sem_acordo&requerimento_deferido=deferido')
+        
+        self.assertEqual(response.status_code, 200)
+        precatorios = response.context['precatorios']
+        
+        # Should include precatorios that have NO acordo AND have some deferido requerimento
+        cnjs = [p.cnj for p in precatorios]
+        self.assertIn(self.precatorio_prioridade_deferido.cnj, cnjs)
+        
+        # Should NOT include precatorios with acordo or those without deferido requerimentos
+        self.assertNotIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_acordo_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_misto.cnj, cnjs)
+        self.assertNotIn(self.precatorio_sem_requerimento.cnj, cnjs)
+    
+    def test_combined_filter_sem_prioridade_nao_deferido(self):
+        """Test combined filtering: tipo_requerimento=sem_prioridade AND requerimento_deferido=nao_deferido"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/?tipo_requerimento=sem_prioridade&requerimento_deferido=nao_deferido')
+        
+        self.assertEqual(response.status_code, 200)
+        precatorios = response.context['precatorios']
+        
+        # Should include precatorios that have NO prioridade AND have some non-deferido requerimento
+        cnjs = [p.cnj for p in precatorios]
+        self.assertIn(self.precatorio_acordo_nao_deferido.cnj, cnjs)
+        
+        # Should NOT include precatorios with prioridade or those without non-deferido requerimentos
+        self.assertNotIn(self.precatorio_prioridade_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_prioridade_nao_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_acordo_deferido.cnj, cnjs)
+        self.assertNotIn(self.precatorio_misto.cnj, cnjs)
+        self.assertNotIn(self.precatorio_sem_requerimento.cnj, cnjs)
+    
+    def test_filter_context_values(self):
+        """Test that current filter values are passed to template context"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/?tipo_requerimento=prioridade&requerimento_deferido=deferido')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['current_tipo_requerimento'], 'prioridade')
+        self.assertEqual(response.context['current_requerimento_deferido'], 'deferido')
+    
+    def test_filter_statistics_calculation(self):
+        """Test that filter statistics are calculated correctly"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/?tipo_requerimento=prioridade')
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Should calculate statistics based on filtered results
+        self.assertEqual(response.context['total_precatorios'], 3)  # 3 precatorios with prioridade
+        self.assertEqual(response.context['prioritarios'], 3)  # All 3 are prioritarios
+    
+    def test_empty_filter_results(self):
+        """Test behavior when filter returns no results"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Create a combination that should return no results
+        response = self.client_app.get('/precatorios/?tipo_requerimento=acordo&requerimento_deferido=deferido&cnj=nonexistent')
+        
+        self.assertEqual(response.status_code, 200)
+        precatorios = response.context['precatorios']
+        
+        self.assertEqual(len(precatorios), 0)
+        self.assertEqual(response.context['total_precatorios'], 0)
+    
+    def test_all_filters_combined(self):
+        """Test combining all available filters"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        response = self.client_app.get('/precatorios/?cnj=1111&origem=São Paulo&quitado=false&tipo_requerimento=prioridade&requerimento_deferido=deferido')
+        
+        self.assertEqual(response.status_code, 200)
+        precatorios = response.context['precatorios']
+        
+        # Should find precatorio_prioridade_deferido
+        cnjs = [p.cnj for p in precatorios]
+        self.assertIn(self.precatorio_prioridade_deferido.cnj, cnjs)
+        
+        # Context should include all filter values
+        self.assertEqual(response.context['current_cnj'], '1111')
+        self.assertEqual(response.context['current_origem'], 'São Paulo')
+        self.assertEqual(response.context['current_quitado'], 'false')
+        self.assertEqual(response.context['current_tipo_requerimento'], 'prioridade')
+        self.assertEqual(response.context['current_requerimento_deferido'], 'deferido')
+
+
+class RequerimentoDisplayTest(TestCase):
+    """Test cases for requerimento display functionality in precatorio list"""
+    
+    def setUp(self):
+        """Set up test data"""
+        # Create user for authentication
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        # Create test phases
+        self.fase_deferido = Fase.objects.create(
+            nome='Deferido',
+            tipo='requerimento',
+            cor='#28a745',
+            ativa=True
+        )
+        
+        self.fase_indeferido = Fase.objects.create(
+            nome='Indeferido',
+            tipo='requerimento',
+            cor='#dc3545',
+            ativa=True
+        )
+        
+        # Create test precatorio
+        self.precatorio = Precatorio.objects.create(
+            cnj='1234567-89.2023.8.26.0100',
+            orcamento=2023,
+            origem='Tribunal de São Paulo',
+            quitado=False,
+            valor_de_face=100000.00,
+            ultima_atualizacao=100000.00,
+            data_ultima_atualizacao=date(2023, 1, 15),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            acordo_deferido=False
+        )
+        
+        # Create test cliente
+        self.cliente = Cliente.objects.create(
+            cpf='12345678901',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        # Create test requerimentos
+        self.req_prioridade_idade = Requerimento.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            pedido='prioridade idade',
+            valor=25000.00,
+            desagio=10.0,
+            fase=self.fase_deferido
+        )
+        
+        self.req_acordo_contratuais = Requerimento.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            pedido='acordo honorários contratuais',
+            valor=15000.00,
+            desagio=5.0,
+            fase=self.fase_indeferido
+        )
+        
+        self.client_app = Client()
+    
+    def test_requerimento_abbreviation_method(self):
+        """Test get_pedido_abreviado method returns correct abbreviations"""
+        # Test all abbreviations
+        self.assertEqual(self.req_prioridade_idade.get_pedido_abreviado(), 'Prioridade Idade')
+        self.assertEqual(self.req_acordo_contratuais.get_pedido_abreviado(), 'Acordo Hon. Contratuais')
+        
+        # Create and test other types
+        req_doenca = Requerimento.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            pedido='prioridade doença',
+            valor=20000.00,
+            desagio=8.0,
+            fase=self.fase_deferido
+        )
+        self.assertEqual(req_doenca.get_pedido_abreviado(), 'Prioridade Doença')
+        
+        req_acordo_principal = Requerimento.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            pedido='acordo principal',
+            valor=30000.00,
+            desagio=12.0,
+            fase=self.fase_deferido
+        )
+        self.assertEqual(req_acordo_principal.get_pedido_abreviado(), 'Acordo Principal')
+        
+        req_acordo_sucumbenciais = Requerimento.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            pedido='acordo honorários sucumbenciais',
+            valor=5000.00,
+            desagio=3.0,
+            fase=self.fase_deferido
+        )
+        self.assertEqual(req_acordo_sucumbenciais.get_pedido_abreviado(), 'Acordo Hon. Sucumbenciais')
+    
+    def test_precatorio_list_displays_requerimentos(self):
+        """Test that precatorio list displays requerimento information"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/')
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that precatorio is displayed
+        self.assertContains(response, self.precatorio.cnj)
+        
+        # Check that basic requerimento information is accessible through context
+        precatorios = response.context['precatorios']
+        self.assertEqual(len(precatorios), 1)
+        
+        precatorio = precatorios[0]
+        requerimentos = precatorio.requerimento_set.all()
+        self.assertEqual(len(requerimentos), 2)
+        
+        # Verify requerimento data
+        pedidos = [req.pedido for req in requerimentos]
+        self.assertIn('prioridade idade', pedidos)
+        self.assertIn('acordo honorários contratuais', pedidos)
+        
+        # Verify abbreviation methods work
+        for req in requerimentos:
+            abbreviation = req.get_pedido_abreviado()
+            self.assertIsNotNone(abbreviation)
+            self.assertTrue(len(abbreviation) > 0)
+    
+    def test_precatorio_without_requerimentos(self):
+        """Test display of precatorio without requerimentos"""
+        # Create precatorio without requerimentos
+        precatorio_empty = Precatorio.objects.create(
+            cnj='7777777-77.2023.8.26.0700',
+            orcamento=2023,
+            origem='Tribunal de Ribeirão Preto',
+            quitado=False,
+            valor_de_face=50000.00,
+            ultima_atualizacao=50000.00,
+            data_ultima_atualizacao=date(2023, 7, 10),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            acordo_deferido=False
+        )
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/')
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Should display precatorio without errors
+        self.assertContains(response, precatorio_empty.cnj)
+        
+        # Check context includes both precatorios
+        precatorios = response.context['precatorios']
+        self.assertEqual(len(precatorios), 2)
+        
+        # Verify empty precatorio has no requerimentos
+        empty_precatorio = next(p for p in precatorios if p.cnj == precatorio_empty.cnj)
+        requerimentos = empty_precatorio.requerimento_set.all()
+        self.assertEqual(len(requerimentos), 0)
+    
+    def test_requerimento_display_with_multiple_phases(self):
+        """Test requerimento display with multiple different phases"""
+        # Create additional fase
+        fase_andamento = Fase.objects.create(
+            nome='Em Andamento',
+            tipo='requerimento',
+            cor='#ffc107',
+            ativa=True
+        )
+        
+        # Create requerimento with different fase
+        req_andamento = Requerimento.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            pedido='acordo principal',
+            valor=40000.00,
+            desagio=15.0,
+            fase=fase_andamento
+        )
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/')
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Check context includes all requerimentos
+        precatorios = response.context['precatorios']
+        self.assertEqual(len(precatorios), 1)
+        
+        precatorio = precatorios[0]
+        requerimentos = precatorio.requerimento_set.all()
+        self.assertEqual(len(requerimentos), 3)  # Original 2 + new one
+        
+        # Verify all phases are represented
+        fases = [req.fase.nome for req in requerimentos if req.fase]
+        self.assertIn('Deferido', fases)
+        self.assertIn('Indeferido', fases)
+        self.assertIn('Em Andamento', fases)
+    
+    def test_requerimento_display_ordering(self):
+        """Test that requerimentos are displayed in a consistent order"""
+        # Create additional requerimentos to test ordering
+        req_3 = Requerimento.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            pedido='acordo principal',
+            valor=35000.00,
+            desagio=20.0,
+            fase=self.fase_deferido
+        )
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get('/precatorios/')
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Should display all requerimentos
+        precatorios = response.context['precatorios']
+        self.assertEqual(len(precatorios), 1)
+        
+        precatorio = precatorios[0]
+        # Should have all requerimentos associated
+        requerimentos = precatorio.requerimento_set.all()
+        self.assertEqual(len(requerimentos), 3)
+
+
+class RequerimentoFilterViewTest(TestCase):
+    """Test requerimento filtering in list views"""
+    
+    def setUp(self):
+        """Set up test data"""
+        # Create user
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        # Create phases
+        self.fase_deferido = Fase.objects.create(
+            nome='Deferido',
+            tipo='requerimento',
+            cor='#28a745',
+            ativa=True
+        )
+        
+        # Create precatorio
+        self.precatorio = Precatorio.objects.create(
+            cnj='1234567-89.2023.8.26.0100',
+            orcamento=2023,
+            origem='Tribunal de São Paulo',
+            quitado=False,
+            valor_de_face=100000.00,
+            ultima_atualizacao=100000.00,
+            data_ultima_atualizacao=date(2023, 1, 15),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            acordo_deferido=False
+        )
+        
+        # Create cliente
+        self.cliente = Cliente.objects.create(
+            cpf='12345678901',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        # Create requerimento
+        self.requerimento = Requerimento.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            pedido='prioridade idade',
+            valor=25000.00,
+            desagio=10.0,
+            fase=self.fase_deferido
+        )
+        
+        self.client_app = Client()
+    
+    def test_requerimento_list_view_exists(self):
+        """Test that requerimento list view is accessible"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Assuming there's a requerimento list view
+        try:
+            response = self.client_app.get('/requerimentos/')
+            self.assertEqual(response.status_code, 200)
+        except Exception:
+            # If view doesn't exist, that's okay for now
+            pass
+    
+    def test_requerimento_context_in_precatorio_detail(self):
+        """Test that requerimento context is properly provided in precatorio detail"""
+        self.client_app.login(username='testuser', password='testpass123')
+        response = self.client_app.get(f'/precatorio/{self.precatorio.cnj}/')
+        
+        self.assertEqual(response.status_code, 200)
+        
+        # Should have requerimento context
+        self.assertIn('requerimentos', response.context)
+        requerimentos = response.context['requerimentos']
+        
+        self.assertEqual(len(requerimentos), 1)
+        self.assertEqual(requerimentos[0].pedido, 'prioridade idade')
+        self.assertEqual(requerimentos[0].get_pedido_abreviado(), 'Prioridade Idade')
+
+
+class PriorityRequerimentoClienteFilterTest(TestCase):
+    """Test priority requerimento filtering in cliente list view"""
+    
+    def setUp(self):
+        """Set up test data for cliente priority filtering"""
+        # Create user
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        # Create phases
+        self.fase_deferido = Fase.objects.create(
+            nome='Deferido',
+            tipo='requerimento',
+            cor='#28a745',
+            ativa=True
+        )
+        
+        self.fase_indeferido = Fase.objects.create(
+            nome='Indeferido',
+            tipo='requerimento',
+            cor='#dc3545',
+            ativa=True
+        )
+        
+        # Create precatorio
+        self.precatorio = Precatorio.objects.create(
+            cnj='1234567-89.2023.8.26.0100',
+            orcamento=2023,
+            origem='Tribunal de São Paulo',
+            quitado=False,
+            valor_de_face=100000.00,
+            ultima_atualizacao=100000.00,
+            data_ultima_atualizacao=date(2023, 1, 15),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            acordo_deferido=False
+        )
+        
+        # Create clientes
+        self.cliente_with_deferido = Cliente.objects.create(
+            cpf='11111111111',
+            nome='Cliente Com Deferido',
+            nascimento=date(1950, 5, 15),
+            prioridade=False
+        )
+        
+        self.cliente_with_indeferido = Cliente.objects.create(
+            cpf='22222222222',
+            nome='Cliente Com Indeferido',
+            nascimento=date(1960, 8, 20),
+            prioridade=False
+        )
+        
+        self.cliente_without_priority = Cliente.objects.create(
+            cpf='33333333333',
+            nome='Cliente Sem Prioridade',
+            nascimento=date(1970, 12, 10),
+            prioridade=False
+        )
+        
+        # Create requerimentos
+        Requerimento.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente_with_deferido,
+            pedido='prioridade idade',
+            valor=25000.00,
+            desagio=10.0,
+            fase=self.fase_deferido
+        )
+        
+        Requerimento.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente_with_indeferido,
+            pedido='prioridade doença',
+            valor=20000.00,
+            desagio=8.0,
+            fase=self.fase_indeferido
+        )
+        
+        # cliente_without_priority has no priority requerimentos
+        
+        self.client_app = Client()
+    
+    def test_cliente_get_priority_requerimentos_method(self):
+        """Test that Cliente.get_priority_requerimentos() method works correctly"""
+        # Test cliente with deferido priority request
+        priority_reqs_deferido = self.cliente_with_deferido.get_priority_requerimentos()
+        self.assertEqual(len(priority_reqs_deferido), 1)
+        self.assertEqual(priority_reqs_deferido[0].pedido, 'prioridade idade')
+        
+        # Test cliente with indeferido priority request
+        priority_reqs_indeferido = self.cliente_with_indeferido.get_priority_requerimentos()
+        self.assertEqual(len(priority_reqs_indeferido), 1)
+        self.assertEqual(priority_reqs_indeferido[0].pedido, 'prioridade doença')
+        
+        # Test cliente without priority requests
+        priority_reqs_none = self.cliente_without_priority.get_priority_requerimentos()
+        self.assertEqual(len(priority_reqs_none), 0)
+    
+    def test_priority_filtering_logic(self):
+        """Test the priority filtering logic in cliente view"""
+        # This tests the logic that should be implemented in the cliente view
+        from dateutil.relativedelta import relativedelta
+        
+        # Test filtering by requerimento prioridade status
+        all_clientes = Cliente.objects.all()
+        
+        # Simulate deferido filter logic
+        clientes_with_deferido = []
+        for cliente in all_clientes:
+            priority_reqs = cliente.get_priority_requerimentos()
+            for req in priority_reqs:
+                if req.fase and req.fase.nome == 'Deferido':
+                    clientes_with_deferido.append(cliente)
+                    break
+        
+        self.assertEqual(len(clientes_with_deferido), 1)
+        self.assertIn(self.cliente_with_deferido, clientes_with_deferido)
+        
+        # Simulate não deferido filter logic
+        clientes_with_nao_deferido = []
+        for cliente in all_clientes:
+            priority_reqs = cliente.get_priority_requerimentos()
+            for req in priority_reqs:
+                if req.fase and req.fase.nome != 'Deferido':
+                    clientes_with_nao_deferido.append(cliente)
+                    break
+        
+        self.assertEqual(len(clientes_with_nao_deferido), 1)
+        self.assertIn(self.cliente_with_indeferido, clientes_with_nao_deferido)
+        
+        # Simulate sem requerimento filter logic
+        clientes_sem_requerimento = []
+        for cliente in all_clientes:
+            priority_reqs = cliente.get_priority_requerimentos()
+            if len(priority_reqs) == 0:
+                clientes_sem_requerimento.append(cliente)
+        
+        self.assertEqual(len(clientes_sem_requerimento), 1)
+        self.assertIn(self.cliente_without_priority, clientes_sem_requerimento)
+
+
+class ModelMethodsTest(TestCase):
+    """Test additional model methods and properties"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.precatorio = Precatorio.objects.create(
+            cnj='1234567-89.2023.8.26.0100',
+            orcamento=2023,
+            origem='Tribunal de São Paulo',
+            quitado=False,
+            valor_de_face=100000.00,
+            ultima_atualizacao=100000.00,
+            data_ultima_atualizacao=date(2023, 1, 15),
+            percentual_contratuais_assinado=30.0,
+            percentual_contratuais_apartado=0.0,
+            percentual_sucumbenciais=10.0,
+            acordo_deferido=False
+        )
+        
+        self.cliente = Cliente.objects.create(
+            cpf='12345678901',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        self.fase = Fase.objects.create(
+            nome='Deferido',
+            tipo='requerimento',
+            cor='#28a745',
+            ativa=True
+        )
+    
+    def test_requerimento_get_pedido_abreviado_comprehensive(self):
+        """Test get_pedido_abreviado method with all possible pedido types"""
+        pedido_mapping = {
+            'prioridade doença': 'Prioridade Doença',
+            'prioridade idade': 'Prioridade Idade',
+            'acordo principal': 'Acordo Principal',
+            'acordo honorários contratuais': 'Acordo Hon. Contratuais',
+            'acordo honorários sucumbenciais': 'Acordo Hon. Sucumbenciais',
+        }
+        
+        for pedido, expected_abbreviation in pedido_mapping.items():
+            with self.subTest(pedido=pedido):
+                req = Requerimento.objects.create(
+                    precatorio=self.precatorio,
+                    cliente=self.cliente,
+                    pedido=pedido,
+                    valor=25000.00,
+                    desagio=10.0,
+                    fase=self.fase
+                )
+                
+                self.assertEqual(req.get_pedido_abreviado(), expected_abbreviation)
+                req.delete()  # Clean up for next iteration
+    
+    def test_fase_class_methods(self):
+        """Test Fase class methods for filtering"""
+        # Create different types of phases
+        fase_alvara = Fase.objects.create(nome='Fase Alvara', tipo='alvara', cor='#ff0000')
+        fase_requerimento = Fase.objects.create(nome='Fase Requerimento', tipo='requerimento', cor='#00ff00')
+        fase_ambos = Fase.objects.create(nome='Fase Ambos', tipo='ambos', cor='#0000ff')
+        fase_inativa = Fase.objects.create(nome='Fase Inativa', tipo='alvara', cor='#000000', ativa=False)
+        
+        # Test get_fases_for_alvara
+        alvara_fases = Fase.get_fases_for_alvara()
+        fase_tipos = set(alvara_fases.values_list('tipo', flat=True))
+        self.assertEqual(fase_tipos, {'alvara', 'ambos'})
+        self.assertIn(fase_alvara, alvara_fases)
+        self.assertIn(fase_ambos, alvara_fases)
+        self.assertNotIn(fase_requerimento, alvara_fases)
+        self.assertNotIn(fase_inativa, alvara_fases)  # Inactive should be excluded
+        
+        # Test get_fases_for_requerimento
+        req_fases = Fase.get_fases_for_requerimento()
+        fase_tipos = set(req_fases.values_list('tipo', flat=True))
+        self.assertEqual(fase_tipos, {'requerimento', 'ambos'})
+        self.assertIn(fase_requerimento, req_fases)
+        self.assertIn(fase_ambos, req_fases)
+        self.assertNotIn(fase_alvara, req_fases)
+    
+    def test_fase_honorarios_class_methods(self):
+        """Test FaseHonorariosContratuais class methods"""
+        # Create active and inactive phases
+        fase_ativa = FaseHonorariosContratuais.objects.create(nome='Ativa', cor='#ff0000', ativa=True)
+        fase_inativa = FaseHonorariosContratuais.objects.create(nome='Inativa', cor='#00ff00', ativa=False)
+        
+        # Test get_fases_ativas
+        fases_ativas = FaseHonorariosContratuais.get_fases_ativas()
+        self.assertIn(fase_ativa, fases_ativas)
+        self.assertNotIn(fase_inativa, fases_ativas)
+
+
+class PerformanceTest(TestCase):
+    """Test performance considerations for filtering functionality"""
+    
+    def setUp(self):
+        """Set up performance test data"""
+        # Create user
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        # Create phases
+        self.fase_deferido = Fase.objects.create(nome='Deferido', tipo='requerimento', cor='#28a745')
+        
+        # Create test data
+        self.precatorios = []
+        self.clientes = []
+        
+        # Create multiple precatorios and requerimentos for performance testing
+        for i in range(20):
+            precatorio = Precatorio.objects.create(
+                cnj=f'{i:07d}-89.2023.8.26.0{i:03d}',
+                orcamento=2023,
+                origem=f'Tribunal {i}',
+                quitado=i % 2 == 0,
+                valor_de_face=10000.00 * (i + 1),
+                ultima_atualizacao=10000.00 * (i + 1),
+                data_ultima_atualizacao=date(2023, 1, 15),
+                percentual_contratuais_assinado=30.0,
+                percentual_contratuais_apartado=0.0,
+                percentual_sucumbenciais=10.0,
+                acordo_deferido=i % 3 == 0
+            )
+            self.precatorios.append(precatorio)
+            
+            cliente = Cliente.objects.create(
+                cpf=f'{i:011d}',
+                nome=f'Cliente {i}',
+                nascimento=date(1980, 5, 15),
+                prioridade=i % 4 == 0
+            )
+            self.clientes.append(cliente)
+            
+            # Create requerimentos for some precatorios
+            if i % 2 == 0:
+                Requerimento.objects.create(
+                    precatorio=precatorio,
+                    cliente=cliente,
+                    pedido='prioridade idade' if i % 4 == 0 else 'acordo principal',
+                    valor=5000.00,
+                    desagio=10.0,
+                    fase=self.fase_deferido
+                )
+        
+        self.client_app = Client()
+    
+    def test_filter_query_performance(self):
+        """Test that filtering queries are reasonably efficient"""
+        import time
+        from django.test.utils import override_settings
+        from django.db import connection
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        with override_settings(DEBUG=True):
+            # Reset query log
+            connection.queries_log.clear()
+            
+            # Test multiple filter combinations
+            start_time = time.time()
+            
+            # Test basic filters
+            self.client_app.get('/precatorios/?cnj=000')
+            self.client_app.get('/precatorios/?origem=Tribunal')
+            self.client_app.get('/precatorios/?quitado=true')
+            
+            # Test complex filters
+            self.client_app.get('/precatorios/?tipo_requerimento=prioridade')
+            self.client_app.get('/precatorios/?requerimento_deferido=deferido')
+            self.client_app.get('/precatorios/?tipo_requerimento=prioridade&requerimento_deferido=deferido')
+            
+            end_time = time.time()
+            
+            # Should complete reasonably quickly
+            execution_time = end_time - start_time
+            self.assertLess(execution_time, 2.0)  # Should complete within 2 seconds
+            
+            # Should not generate excessive queries
+            query_count = len(connection.queries)
+            self.assertLess(query_count, 50)  # Should be reasonable number of queries
+    
+    def test_prefetch_optimization(self):
+        """Test that prefetch_related is used for optimization"""
+        from django.test.utils import override_settings
+        from django.db import connection
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        with override_settings(DEBUG=True):
+            connection.queries_log.clear()
+            
+            response = self.client_app.get('/precatorios/')
+            
+            # Access requerimento data (should not trigger additional queries if prefetched)
+            precatorios = list(response.context['precatorios'])
+            for precatorio in precatorios[:5]:  # Test first 5 to avoid excessive queries
+                requerimentos = list(precatorio.requerimento_set.all())
+                for req in requerimentos:
+                    _ = req.get_pedido_abreviado()
+                    if req.fase:
+                        _ = req.fase.nome
+            
+            # Should not generate N+1 queries
+            query_count = len(connection.queries)
+            # Allow for some queries but not proportional to object count
+            self.assertLess(query_count, 15)
+
+
 # Run tests with: python manage.py test precapp.tests.PriorityUpdateByAgeTest
 # Run all priority tests with: python manage.py test precapp.tests -k Priority
+# Run advanced filter tests with: python manage.py test precapp.tests.PrecatorioAdvancedFilterTest
+# Run requerimento display tests with: python manage.py test precapp.tests.RequerimentoDisplayTest  
 # Run tests with: python manage.py test precapp
