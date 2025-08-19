@@ -4,6 +4,49 @@ import re
 from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais
 
 
+def validate_cpf(cpf):
+    """
+    Validate Brazilian CPF using the official algorithm
+    Returns True if valid, False otherwise
+    """
+    # Remove any non-digit characters
+    cpf = ''.join(filter(str.isdigit, cpf))
+    
+    # Check if it has 11 digits
+    if len(cpf) != 11:
+        return False
+    
+    # Check if all digits are the same (invalid CPFs)
+    if cpf == cpf[0] * 11:
+        return False
+    
+    # Calculate first check digit
+    sum1 = 0
+    for i in range(9):
+        sum1 += int(cpf[i]) * (10 - i)
+    
+    remainder1 = sum1 % 11
+    digit1 = 11 - remainder1 if remainder1 > 1 else 0
+    
+    # Check first digit
+    if int(cpf[9]) != digit1:
+        return False
+    
+    # Calculate second check digit
+    sum2 = 0
+    for i in range(10):
+        sum2 += int(cpf[i]) * (11 - i)
+    
+    remainder2 = sum2 % 11
+    digit2 = 11 - remainder2 if remainder2 > 1 else 0
+    
+    # Check second digit
+    if int(cpf[10]) != digit2:
+        return False
+    
+    return True
+
+
 class BrazilianDateInput(forms.DateInput):
     """
     Custom DateInput widget for Brazilian date format (dd/mm/yyyy)
@@ -275,8 +318,8 @@ class ClienteForm(forms.ModelForm):
             cpf_numbers = ''.join(filter(str.isdigit, cpf))
             if len(cpf_numbers) != 11:
                 raise forms.ValidationError('CPF deve ter exatamente 11 dígitos.')
-            if cpf_numbers == '00000000000':
-                raise forms.ValidationError('CPF inválido.')
+            if not validate_cpf(cpf_numbers):
+                raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
             return cpf_numbers
         else:
             raise forms.ValidationError('CPF é obrigatório.')
@@ -342,8 +385,8 @@ class ClienteSimpleForm(forms.ModelForm):
             cpf_numbers = ''.join(filter(str.isdigit, cpf))
             if len(cpf_numbers) != 11:
                 raise forms.ValidationError('CPF deve ter exatamente 11 dígitos.')
-            if cpf_numbers == '00000000000':
-                raise forms.ValidationError('CPF inválido.')
+            if not validate_cpf(cpf_numbers):
+                raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
             # Check if client already exists
             if Cliente.objects.filter(cpf=cpf_numbers).exists():
                 raise forms.ValidationError('Já existe um cliente com este CPF.')
@@ -413,8 +456,8 @@ class ClienteSearchForm(forms.Form):
             cpf_numbers = ''.join(filter(str.isdigit, cpf))
             if len(cpf_numbers) != 11:
                 raise forms.ValidationError('CPF deve ter exatamente 11 dígitos.')
-            if cpf_numbers == '00000000000':
-                raise forms.ValidationError('CPF inválido.')
+            if not validate_cpf(cpf_numbers):
+                raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
             return cpf_numbers
         else:
             raise forms.ValidationError('CPF é obrigatório.')
@@ -476,6 +519,8 @@ class RequerimentoForm(forms.ModelForm):
             cpf_numbers = ''.join(filter(str.isdigit, cpf))
             if len(cpf_numbers) != 11:
                 raise forms.ValidationError('CPF deve ter exatamente 11 dígitos.')
+            if not validate_cpf(cpf_numbers):
+                raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
             try:
                 from .models import Cliente
                 cliente = Cliente.objects.get(cpf=cpf_numbers)
@@ -604,6 +649,8 @@ class AlvaraSimpleForm(forms.ModelForm):
             cpf_numbers = ''.join(filter(str.isdigit, cpf))
             if len(cpf_numbers) != 11:
                 raise forms.ValidationError('CPF deve ter exatamente 11 dígitos.')
+            if not validate_cpf(cpf_numbers):
+                raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
             try:
                 from .models import Cliente
                 cliente = Cliente.objects.get(cpf=cpf_numbers)

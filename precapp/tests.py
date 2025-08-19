@@ -629,7 +629,7 @@ class PrecatorioDetailViewWithHonorariosTest(TestCase):
         )
         
         self.cliente = Cliente.objects.create(
-            cpf='12345678901',
+            cpf='12345678909',
             nome='João Silva',
             nascimento=date(1980, 5, 15),
             prioridade=False
@@ -779,7 +779,7 @@ class IntegrationTestWithHonorarios(TestCase):
         
         # Create cliente
         self.cliente = Cliente.objects.create(
-            cpf='12345678901',
+            cpf='12345678909',
             nome='João Silva',
             nascimento=date(1980, 5, 15),
             prioridade=False
@@ -1027,7 +1027,7 @@ class ClienteModelTest(TestCase):
     def setUp(self):
         """Set up test data"""
         self.cliente_data = {
-            'cpf': '12345678901',
+            'cpf': '12345678909',
             'nome': 'João Silva',
             'nascimento': date(1980, 5, 15),
             'prioridade': False
@@ -1038,7 +1038,7 @@ class ClienteModelTest(TestCase):
         cliente = Cliente(**self.cliente_data)
         cliente.full_clean()  # This should not raise ValidationError
         cliente.save()
-        self.assertEqual(cliente.cpf, '12345678901')
+        self.assertEqual(cliente.cpf, '12345678909')
         self.assertEqual(cliente.nome, 'João Silva')
     
     def test_cliente_str_method(self):
@@ -1142,7 +1142,7 @@ class RequerimentoModelTest(TestCase):
             acordo_deferido=False
         )
         self.cliente = Cliente.objects.create(
-            cpf='12345678901',
+            cpf='12345678909',
             nome='João Silva',
             nascimento=date(1980, 5, 15),
             prioridade=False
@@ -1245,7 +1245,7 @@ class AlvaraFormTest(TestCase):
             acordo_deferido=False
         )
         self.cliente = Cliente.objects.create(
-            cpf='12345678901',
+            cpf='12345678909',
             nome='João Silva',
             nascimento=date(1980, 5, 15),
             prioridade=False
@@ -1333,7 +1333,7 @@ class RequerimentoFormTest(TestCase):
             acordo_deferido=False
         )
         self.cliente = Cliente.objects.create(
-            cpf='12345678901',
+            cpf='12345678909',
             nome='João Silva',
             nascimento=date(1980, 5, 15),
             prioridade=False
@@ -1359,7 +1359,7 @@ class RequerimentoFormTest(TestCase):
         )
         
         self.valid_form_data = {
-            'cliente_cpf': '123.456.789-01',
+            'cliente_cpf': '123.456.789-09',
             'pedido': 'prioridade doença',
             'valor': '25000.00',
             'desagio': '15.5',
@@ -1437,7 +1437,7 @@ class ClienteFormTest(TestCase):
         )
         
         self.valid_form_data = {
-            'cpf': '123.456.789-01',
+            'cpf': '111.444.777-35',  # Valid CPF with correct check digits
             'nome': 'João Silva',
             'nascimento': '1980-05-15',
             'prioridade': False
@@ -1459,11 +1459,11 @@ class ClienteFormTest(TestCase):
         """Test that CPF accepts both formatted and unformatted input"""
         # Test formatted CPF (with dots and dash)
         formatted_data = self.valid_form_data.copy()
-        formatted_data['cpf'] = '123.456.789-01'
+        formatted_data['cpf'] = '123.456.789-09'
         form = ClienteForm(data=formatted_data)
         self.assertTrue(form.is_valid())
         cliente = form.save()
-        self.assertEqual(cliente.cpf, '12345678901')  # Should be stored without formatting
+        self.assertEqual(cliente.cpf, '12345678909')  # Should be stored without formatting
         
         # Test unformatted CPF (numbers only)
         Cliente.objects.all().delete()  # Clear the previous client
@@ -1484,11 +1484,19 @@ class ClienteFormTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('cpf', form.errors)
         
-        # Test invalid CPF (all zeros)
-        invalid_data['cpf'] = '00000000000'
+        # Test mathematically invalid CPF
+        invalid_data['cpf'] = '23902928334'  # Invalid check digits
         form = ClienteForm(data=invalid_data)
         self.assertFalse(form.is_valid())
         self.assertIn('cpf', form.errors)
+        self.assertIn('CPF inválido', form.errors['cpf'][0])
+        
+        # Test CPF with all same digits (should be invalid)
+        invalid_data['cpf'] = '11111111111'
+        form = ClienteForm(data=invalid_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cpf', form.errors)
+        self.assertIn('CPF inválido', form.errors['cpf'][0])
 
 
 class ValidatorTest(TestCase):
@@ -1570,7 +1578,7 @@ class IntegrationTest(TestCase):
         
         # Create cliente
         self.cliente = Cliente.objects.create(
-            cpf='12345678901',
+            cpf='12345678909',
             nome='João Silva',
             nascimento=date(1980, 5, 15),
             prioridade=False
@@ -1736,7 +1744,7 @@ class ManyToManyRelationshipTest(TestCase):
         )
         
         self.cliente = Cliente.objects.create(
-            cpf='12345678901',
+            cpf='12345678909',
             nome='João Silva',
             nascimento=date(1980, 5, 15),
             prioridade=False
@@ -2853,7 +2861,7 @@ class BrazilianFormattingTest(TestCase):
         )
         
         self.cliente = Cliente.objects.create(
-            cpf='12345678901',
+            cpf='12345678909',
             nome='João Silva',
             nascimento=date(1980, 5, 15),
             prioridade=False
@@ -2961,7 +2969,7 @@ class BrazilianFormattingTest(TestCase):
         """Test that ClienteForm accepts both formatted and unformatted CPF"""
         # Test with valid unformatted CPF (11 digits) 
         unformatted_data = {
-            'cpf': '12345678909',  # Valid CPF format
+            'cpf': '11144477735',  # Different valid CPF to avoid conflicts
             'nome': 'João Silva Unformatted',
             'nascimento': '1980-05-15',
             'prioridade': False
@@ -2972,7 +2980,7 @@ class BrazilianFormattingTest(TestCase):
             print(f"Form errors: {form.errors}")
         self.assertTrue(form.is_valid())
         cliente = form.save()
-        self.assertEqual(cliente.cpf, '12345678909')  # Stored without formatting
+        self.assertEqual(cliente.cpf, '11144477735')  # Stored without formatting
         
         # Test with different unformatted CPF  
         Cliente.objects.all().delete()  # Clear previous
@@ -3084,7 +3092,7 @@ class DatabaseCompatibilityTest(TestCase):
         )
         
         self.cliente = Cliente.objects.create(
-            cpf='12345678901',
+            cpf='12345678909',
             nome='João Silva',
             nascimento=date(1980, 5, 15),
             prioridade=False
@@ -4317,7 +4325,7 @@ class RequerimentoDisplayTest(TestCase):
         
         # Create test cliente
         self.cliente = Cliente.objects.create(
-            cpf='12345678901',
+            cpf='12345678909',
             nome='João Silva',
             nascimento=date(1980, 5, 15),
             prioridade=False
@@ -4546,7 +4554,7 @@ class RequerimentoFilterViewTest(TestCase):
         
         # Create cliente
         self.cliente = Cliente.objects.create(
-            cpf='12345678901',
+            cpf='12345678909',
             nome='João Silva',
             nascimento=date(1980, 5, 15),
             prioridade=False
@@ -4757,7 +4765,7 @@ class ModelMethodsTest(TestCase):
         )
         
         self.cliente = Cliente.objects.create(
-            cpf='12345678901',
+            cpf='12345678909',
             nome='João Silva',
             nascimento=date(1980, 5, 15),
             prioridade=False
@@ -4949,8 +4957,311 @@ class PerformanceTest(TestCase):
             self.assertLess(query_count, 15)
 
 
+class CPFValidationTest(TestCase):
+    """Test cases for the CPF validation algorithm"""
+    
+    def test_validate_cpf_function_valid_cpfs(self):
+        """Test the validate_cpf function with valid CPFs"""
+        from .forms import validate_cpf
+        
+        # Valid CPFs (mathematically correct)
+        valid_cpfs = [
+            '11144477735',  # Valid CPF
+            '123.456.789-09',  # Valid CPF with formatting
+            '000.000.001-91',  # Valid edge case CPF
+            '111.444.777-35',  # Same as first but with formatting
+        ]
+        
+        for cpf in valid_cpfs:
+            with self.subTest(cpf=cpf):
+                self.assertTrue(validate_cpf(cpf), f"CPF {cpf} should be valid")
+    
+    def test_validate_cpf_function_invalid_cpfs(self):
+        """Test the validate_cpf function with invalid CPFs"""
+        from .forms import validate_cpf
+        
+        # Invalid CPFs
+        invalid_cpfs = [
+            '23902928334',  # Invalid CPF (wrong check digits)
+            '12345678901',  # Invalid CPF
+            '11111111111',  # All same digits
+            '00000000000',  # All zeros
+            '12345678900',  # Invalid check digits
+            '123456789',    # Too short
+            '12345678909234',  # Too long
+            '',             # Empty string
+            'abcd1234567',  # Contains letters
+            '123.456.789-00',  # Invalid with formatting
+        ]
+        
+        for cpf in invalid_cpfs:
+            with self.subTest(cpf=cpf):
+                self.assertFalse(validate_cpf(cpf), f"CPF {cpf} should be invalid")
+    
+    def test_validate_cpf_function_edge_cases(self):
+        """Test the validate_cpf function with edge cases"""
+        from .forms import validate_cpf
+        
+        # Test with different formatting
+        self.assertTrue(validate_cpf('11144477735'))
+        self.assertTrue(validate_cpf('111.444.777-35'))
+        self.assertTrue(validate_cpf('111 444 777 35'))  # With spaces
+        
+        # Test identical digits (all should be invalid)
+        for digit in '0123456789':
+            cpf = digit * 11
+            with self.subTest(cpf=cpf):
+                self.assertFalse(validate_cpf(cpf), f"CPF with all {digit}s should be invalid")
+
+
+class CPFFormValidationTest(TestCase):
+    """Test cases for CPF validation in forms"""
+    
+    def setUp(self):
+        """Set up test data"""
+        # Create a precatorio for forms that need it
+        self.precatorio = Precatorio.objects.create(
+            cnj='0006630-68.2013.8.10.0000',
+            origem='Tribunal de Justiça',
+            orcamento='2023',
+            valor_de_face=100000.00,
+            ultima_atualizacao=100000.00,
+            data_ultima_atualizacao=date(2023, 1, 1),
+            percentual_contratuais_assinado=10.0,
+            percentual_contratuais_apartado=5.0,
+            percentual_sucumbenciais=20.0,
+            quitado=False,
+            acordo_deferido=False
+        )
+    
+    def test_cliente_form_valid_cpf(self):
+        """Test ClienteForm accepts valid CPFs"""
+        from .forms import ClienteForm
+        
+        valid_data = {
+            'cpf': '111.444.777-35',  # Valid CPF
+            'nome': 'João Silva',
+            'nascimento': '1980-05-15',
+            'prioridade': False
+        }
+        
+        form = ClienteForm(data=valid_data)
+        self.assertTrue(form.is_valid(), f"Form should be valid. Errors: {form.errors}")
+        
+        # Test unformatted valid CPF
+        valid_data['cpf'] = '11144477735'
+        form = ClienteForm(data=valid_data)
+        self.assertTrue(form.is_valid(), f"Form should be valid. Errors: {form.errors}")
+    
+    def test_cliente_form_invalid_cpf(self):
+        """Test ClienteForm rejects invalid CPFs"""
+        from .forms import ClienteForm
+        
+        invalid_data = {
+            'cpf': '23902928334',  # Invalid CPF
+            'nome': 'João Silva',
+            'nascimento': '1980-05-15',
+            'prioridade': False
+        }
+        
+        form = ClienteForm(data=invalid_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cpf', form.errors)
+        self.assertIn('CPF inválido', form.errors['cpf'][0])
+    
+    def test_cliente_simple_form_valid_cpf(self):
+        """Test ClienteSimpleForm accepts valid CPFs"""
+        from .forms import ClienteSimpleForm
+        
+        valid_data = {
+            'cpf': '111.444.777-35',  # Valid CPF
+            'nome': 'João Silva',
+            'nascimento': '1980-05-15',
+            'prioridade': False
+        }
+        
+        form = ClienteSimpleForm(data=valid_data)
+        self.assertTrue(form.is_valid(), f"Form should be valid. Errors: {form.errors}")
+    
+    def test_cliente_simple_form_invalid_cpf(self):
+        """Test ClienteSimpleForm rejects invalid CPFs"""
+        from .forms import ClienteSimpleForm
+        
+        invalid_data = {
+            'cpf': '23902928334',  # Invalid CPF
+            'nome': 'João Silva',
+            'nascimento': '1980-05-15',
+            'prioridade': False
+        }
+        
+        form = ClienteSimpleForm(data=invalid_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cpf', form.errors)
+        self.assertIn('CPF inválido', form.errors['cpf'][0])
+    
+    def test_cliente_search_form_valid_cpf(self):
+        """Test ClienteSearchForm accepts valid CPFs"""
+        from .forms import ClienteSearchForm
+        
+        # First create a cliente to search for
+        Cliente.objects.create(
+            cpf='11144477735',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        form = ClienteSearchForm(data={'cpf': '111.444.777-35'})
+        self.assertTrue(form.is_valid(), f"Form should be valid. Errors: {form.errors}")
+    
+    def test_cliente_search_form_invalid_cpf(self):
+        """Test ClienteSearchForm rejects invalid CPFs"""
+        from .forms import ClienteSearchForm
+        
+        form = ClienteSearchForm(data={'cpf': '23902928334'})
+        self.assertFalse(form.is_valid())
+        self.assertIn('cpf', form.errors)
+        self.assertIn('CPF inválido', form.errors['cpf'][0])
+    
+    def test_requerimento_form_valid_cpf(self):
+        """Test RequerimentoForm accepts valid CPFs for existing clientes"""
+        from .forms import RequerimentoForm
+        
+        # Create a cliente first
+        Cliente.objects.create(
+            cpf='11144477735',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        valid_data = {
+            'cliente_cpf': '111.444.777-35',
+            'pedido': 'prioridade idade',
+            'valor': '50000.00',
+            'desagio': '10.00',
+        }
+        
+        form = RequerimentoForm(data=valid_data)
+        self.assertTrue(form.is_valid(), f"Form should be valid. Errors: {form.errors}")
+    
+    def test_requerimento_form_invalid_cpf(self):
+        """Test RequerimentoForm rejects invalid CPFs"""
+        from .forms import RequerimentoForm
+        
+        invalid_data = {
+            'cliente_cpf': '23902928334',  # Invalid CPF
+            'pedido': 'prioridade idade',
+            'valor': '50000.00',
+            'desagio': '10.00',
+        }
+        
+        form = RequerimentoForm(data=invalid_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cliente_cpf', form.errors)
+        self.assertIn('CPF inválido', form.errors['cliente_cpf'][0])
+    
+    def test_alvara_form_valid_cpf(self):
+        """Test AlvaraSimpleForm accepts valid CPFs for existing clientes"""
+        from .forms import AlvaraSimpleForm
+        
+        # Create a cliente first
+        Cliente.objects.create(
+            cpf='11144477735',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        valid_data = {
+            'cliente_cpf': '111.444.777-35',
+            'tipo': 'ordem cronológica',
+            'valor_principal': '50000.00',
+            'honorarios_contratuais': '5000.00',
+            'honorarios_sucumbenciais': '2000.00',
+        }
+        
+        form = AlvaraSimpleForm(data=valid_data)
+        self.assertTrue(form.is_valid(), f"Form should be valid. Errors: {form.errors}")
+    
+    def test_alvara_form_invalid_cpf(self):
+        """Test AlvaraSimpleForm rejects invalid CPFs"""
+        from .forms import AlvaraSimpleForm
+        
+        invalid_data = {
+            'cliente_cpf': '23902928334',  # Invalid CPF
+            'tipo': 'ordem cronológica',
+            'valor_principal': '50000.00',
+            'honorarios_contratuais': '5000.00',
+            'honorarios_sucumbenciais': '2000.00',
+        }
+        
+        form = AlvaraSimpleForm(data=invalid_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cliente_cpf', form.errors)
+        self.assertIn('CPF inválido', form.errors['cliente_cpf'][0])
+    
+    def test_cpf_formatting_preserved_in_validation_messages(self):
+        """Test that CPF formatting is preserved in error messages"""
+        from .forms import ClienteForm
+        
+        invalid_data = {
+            'cpf': '239.029.283-34',  # Invalid CPF with formatting
+            'nome': 'João Silva',
+            'nascimento': '1980-05-15',
+            'prioridade': False
+        }
+        
+        form = ClienteForm(data=invalid_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cpf', form.errors)
+        self.assertIn('CPF inválido', form.errors['cpf'][0])
+    
+    def test_known_invalid_cpfs(self):
+        """Test specific known invalid CPFs that should be rejected"""
+        from .forms import validate_cpf
+        
+        # These are known invalid CPFs that were previously accepted
+        known_invalid_cpfs = [
+            '23902928334',
+            '12345678901',
+            '12345678999',  # Invalid check digits
+            '11122233344',
+            '55566677788',
+        ]
+        
+        for cpf in known_invalid_cpfs:
+            with self.subTest(cpf=cpf):
+                self.assertFalse(validate_cpf(cpf), f"Known invalid CPF {cpf} should be rejected")
+    
+    def test_cpf_algorithm_correctness(self):
+        """Test that the CPF algorithm correctly calculates check digits"""
+        from .forms import validate_cpf
+        
+        # Test cases where we know the correct check digits
+        test_cases = [
+            # (first 9 digits, expected check digits, should be valid)
+            ('111444777', '35', True),
+            ('123456789', '09', True),
+            ('000000001', '91', True),
+            ('111444777', '34', False),  # Wrong check digits
+            ('123456789', '01', False),  # Wrong check digits
+        ]
+        
+        for first_nine, check_digits, should_be_valid in test_cases:
+            cpf = first_nine + check_digits
+            with self.subTest(cpf=cpf):
+                result = validate_cpf(cpf)
+                if should_be_valid:
+                    self.assertTrue(result, f"CPF {cpf} should be valid")
+                else:
+                    self.assertFalse(result, f"CPF {cpf} should be invalid")
+
+
 # Run tests with: python manage.py test precapp.tests.PriorityUpdateByAgeTest
 # Run all priority tests with: python manage.py test precapp.tests -k Priority
 # Run advanced filter tests with: python manage.py test precapp.tests.PrecatorioAdvancedFilterTest
 # Run requerimento display tests with: python manage.py test precapp.tests.RequerimentoDisplayTest  
+# Run CPF validation tests with: python manage.py test precapp.tests.CPFValidationTest
+# Run CPF form validation tests with: python manage.py test precapp.tests.CPFFormValidationTest
 # Run tests with: python manage.py test precapp
