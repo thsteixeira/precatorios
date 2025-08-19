@@ -190,6 +190,17 @@ class Requerimento(models.Model):
     def __str__(self):
         return f"Requerimento - {self.pedido} - {self.cliente.nome}"
     
+    def get_pedido_abreviado(self):
+        """Return abbreviated version of pedido"""
+        abbreviations = {
+            'prioridade doença': 'Prioridade Doença',
+            'prioridade idade': 'Prioridade Idade',
+            'acordo principal': 'Acordo Principal',
+            'acordo honorários contratuais': 'Acordo Hon. Contratuais',
+            'acordo honorários sucumbenciais': 'Acordo Hon. Sucumbenciais',
+        }
+        return abbreviations.get(self.pedido.lower(), self.pedido.title())
+    
     # Removed list/set logic since only one choice is allowed
     
     class Meta:

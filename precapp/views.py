@@ -114,12 +114,14 @@ def novoPrec_view(request):
 @login_required
 def precatorio_view(request):
     """View to display all precatorios with filtering support"""
-    precatorios = Precatorio.objects.all()
+    precatorios = Precatorio.objects.all().prefetch_related('requerimento_set', 'requerimento_set__fase')
     
     # Apply filters based on GET parameters
     cnj_filter = request.GET.get('cnj', '').strip()
     origem_filter = request.GET.get('origem', '').strip()
     quitado_filter = request.GET.get('quitado', '')
+    tipo_requerimento_filter = request.GET.get('tipo_requerimento', '')
+    requerimento_deferido_filter = request.GET.get('requerimento_deferido', '')
     
     if cnj_filter:
         precatorios = precatorios.filter(cnj__icontains=cnj_filter)
@@ -131,20 +133,119 @@ def precatorio_view(request):
         quitado_bool = quitado_filter == 'true'
         precatorios = precatorios.filter(quitado=quitado_bool)
     
+    # Filter by tipo de requerimento and deferimento status
+    # These filters should work together - if both are selected, we need requerimentos that match BOTH conditions
+    if tipo_requerimento_filter and requerimento_deferido_filter:
+        # For "sem_acordo" and "sem_prioridade", we need special handling in combined filters
+        if tipo_requerimento_filter in ['sem_acordo', 'sem_prioridade']:
+            # Handle these cases by applying individual filters sequentially
+            # Apply the "sem" filter first
+            if tipo_requerimento_filter == 'sem_acordo':
+                precatorios_com_acordo = Requerimento.objects.filter(
+                    pedido__in=['acordo principal', 'acordo honorários contratuais', 'acordo honorários sucumbenciais']
+                ).values_list('precatorio__cnj', flat=True).distinct()
+                precatorios = precatorios.exclude(cnj__in=precatorios_com_acordo)
+            elif tipo_requerimento_filter == 'sem_prioridade':
+                precatorios_com_prioridade = Requerimento.objects.filter(
+                    pedido__in=['prioridade idade', 'prioridade doença']
+                ).values_list('precatorio__cnj', flat=True).distinct()
+                precatorios = precatorios.exclude(cnj__in=precatorios_com_prioridade)
+            
+            # Then apply the deferimento filter to the remaining precatorios
+            if requerimento_deferido_filter == 'deferido':
+                precatorios_deferidos = Requerimento.objects.filter(
+                    fase__nome='Deferido'
+                ).values_list('precatorio__cnj', flat=True).distinct()
+                precatorios = precatorios.filter(cnj__in=precatorios_deferidos)
+            elif requerimento_deferido_filter == 'nao_deferido':
+                precatorios_nao_deferidos = Requerimento.objects.exclude(
+                    fase__nome='Deferido'
+                ).values_list('precatorio__cnj', flat=True).distinct()
+                precatorios = precatorios.filter(cnj__in=precatorios_nao_deferidos)
+        else:
+            # Combined filter: find requerimentos that match both tipo AND deferimento status
+            requerimento_query = Requerimento.objects.all()
+            
+            # Apply tipo filter
+            if tipo_requerimento_filter == 'prioridade':
+                requerimento_query = requerimento_query.filter(pedido__in=['prioridade idade', 'prioridade doença'])
+            elif tipo_requerimento_filter == 'acordo':
+                requerimento_query = requerimento_query.filter(pedido__in=['acordo principal', 'acordo honorários contratuais', 'acordo honorários sucumbenciais'])
+            
+            # Apply deferimento filter
+            if requerimento_deferido_filter == 'deferido':
+                requerimento_query = requerimento_query.filter(fase__nome='Deferido')
+            elif requerimento_deferido_filter == 'nao_deferido':
+                requerimento_query = requerimento_query.exclude(fase__nome='Deferido')
+            
+            # Get precatorios that have requerimentos matching BOTH conditions
+            precatorios_combined = requerimento_query.values_list('precatorio__cnj', flat=True).distinct()
+            precatorios = precatorios.filter(cnj__in=precatorios_combined)
+        
+    else:
+        # Apply filters individually when only one is selected
+        if tipo_requerimento_filter == 'prioridade':
+            # Show only precatorios that have requerimentos with prioridade pedidos
+            precatorios_com_prioridade = Requerimento.objects.filter(
+                pedido__in=['prioridade idade', 'prioridade doença']
+            ).values_list('precatorio__cnj', flat=True).distinct()
+            precatorios = precatorios.filter(cnj__in=precatorios_com_prioridade)
+        elif tipo_requerimento_filter == 'acordo':
+            # Show only precatorios that have requerimentos with acordo pedidos
+            precatorios_com_acordo = Requerimento.objects.filter(
+                pedido__in=['acordo principal', 'acordo honorários contratuais', 'acordo honorários sucumbenciais']
+            ).values_list('precatorio__cnj', flat=True).distinct()
+            precatorios = precatorios.filter(cnj__in=precatorios_com_acordo)
+        elif tipo_requerimento_filter == 'sem_acordo':
+            # Show precatorios that have NO acordo requerimentos (may have other types or none at all)
+            precatorios_com_acordo = Requerimento.objects.filter(
+                pedido__in=['acordo principal', 'acordo honorários contratuais', 'acordo honorários sucumbenciais']
+            ).values_list('precatorio__cnj', flat=True).distinct()
+            precatorios = precatorios.exclude(cnj__in=precatorios_com_acordo)
+        elif tipo_requerimento_filter == 'sem_prioridade':
+            # Show precatorios that have NO prioridade requerimentos (may have other types or none at all)
+            precatorios_com_prioridade = Requerimento.objects.filter(
+                pedido__in=['prioridade idade', 'prioridade doença']
+            ).values_list('precatorio__cnj', flat=True).distinct()
+            precatorios = precatorios.exclude(cnj__in=precatorios_com_prioridade)
+        
+        if requerimento_deferido_filter == 'deferido':
+            # Show only precatorios that have at least one requerimento with 'Deferido' phase
+            precatorios_deferidos = Requerimento.objects.filter(
+                fase__nome='Deferido'
+            ).values_list('precatorio__cnj', flat=True).distinct()
+            precatorios = precatorios.filter(cnj__in=precatorios_deferidos)
+        elif requerimento_deferido_filter == 'nao_deferido':
+            # Show only precatorios that have requerimentos that are NOT 'Deferido'
+            # This includes requerimentos with any other fase or no fase at all
+            precatorios_nao_deferidos = Requerimento.objects.exclude(
+                fase__nome='Deferido'
+            ).values_list('precatorio__cnj', flat=True).distinct()
+            precatorios = precatorios.filter(cnj__in=precatorios_nao_deferidos)
+    
     # Calculate summary statistics
     total_precatorios = precatorios.count()
     quitados = precatorios.filter(quitado=True).count()
     pendentes = precatorios.filter(quitado=False).count()
+    
+    # Calculate prioritarios count (precatorios with prioridade requerimentos)
+    prioritarios_cnjs = Requerimento.objects.filter(
+        pedido__in=['prioridade idade', 'prioridade doença']
+    ).values_list('precatorio__cnj', flat=True).distinct()
+    prioritarios = precatorios.filter(cnj__in=prioritarios_cnjs).count()
     
     context = {
         'precatorios': precatorios,
         'total_precatorios': total_precatorios,
         'quitados': quitados,
         'pendentes': pendentes,
+        'prioritarios': prioritarios,
         # Include current filter values to maintain state in form
         'current_cnj': cnj_filter,
         'current_origem': origem_filter,
         'current_quitado': quitado_filter,
+        'current_tipo_requerimento': tipo_requerimento_filter,
+        'current_requerimento_deferido': requerimento_deferido_filter,
     }
     
     return render(request, 'precapp/precatorio_list.html', context)

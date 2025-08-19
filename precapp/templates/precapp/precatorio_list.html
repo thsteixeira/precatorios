@@ -28,7 +28,7 @@
             </div>
             <div class="card-body">
                 <form method="get" class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label for="cnj" class="form-label">CNJ</label>
                         <input type="text" class="form-control" id="cnj" name="cnj" 
                                placeholder="Digite o CNJ" value="{{ current_cnj }}">
@@ -46,7 +46,25 @@
                             <option value="false" {% if current_quitado == 'false' %}selected{% endif %}>Não Quitado</option>
                         </select>
                     </div>
-                    <div class="col-md-3 d-flex align-items-end">
+                    <div class="col-md-2">
+                        <label for="tipo_requerimento" class="form-label">Tipo Requerimento</label>
+                        <select class="form-control" id="tipo_requerimento" name="tipo_requerimento">
+                            <option value="">Todos</option>
+                            <option value="prioridade" {% if current_tipo_requerimento == 'prioridade' %}selected{% endif %}>Requerimento Prioridade</option>
+                            <option value="acordo" {% if current_tipo_requerimento == 'acordo' %}selected{% endif %}>Requerimento Acordo</option>
+                            <option value="sem_prioridade" {% if current_tipo_requerimento == 'sem_prioridade' %}selected{% endif %}>Sem Requerimento de Prioridade</option>
+                            <option value="sem_acordo" {% if current_tipo_requerimento == 'sem_acordo' %}selected{% endif %}>Sem Requerimento de Acordo</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="requerimento_deferido" class="form-label">Status Deferimento</label>
+                        <select class="form-control" id="requerimento_deferido" name="requerimento_deferido">
+                            <option value="">Todos</option>
+                            <option value="deferido" {% if current_requerimento_deferido == 'deferido' %}selected{% endif %}>Deferido</option>
+                            <option value="nao_deferido" {% if current_requerimento_deferido == 'nao_deferido' %}selected{% endif %}>Não Deferido</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2">
                             <i class="fas fa-search me-1"></i>Buscar
                         </button>
@@ -116,6 +134,20 @@
                                             {% endif %}
                                         </td>
                                     </tr>
+                                    {% if precatorio.requerimento_set.all %}
+                                        <tr class="table-light">
+                                            <td colspan="4" class="py-2">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-file-alt me-1"></i><strong>Requerimentos:</strong>
+                                                    {% for requerimento in precatorio.requerimento_set.all %}
+                                                        <span class="badge bg-info text-dark me-1">
+                                                            {{ requerimento.get_pedido_abreviado }}{% if requerimento.fase %} - {{ requerimento.fase.nome }}{% endif %}
+                                                        </span>{% if not forloop.last %} {% endif %}
+                                                    {% endfor %}
+                                                </small>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -200,6 +232,18 @@
     
     .fa-3x {
         font-size: 2.5em;
+    }
+    
+    /* Styling for requerimento rows */
+    .table-light td {
+        background-color: #f8f9fa !important;
+        border-top: none !important;
+    }
+    
+    .badge.bg-info {
+        background-color: #d1ecf1 !important;
+        color: #0c5460 !important;
+        border: 1px solid #bee5eb;
     }
 </style>
 {% endblock %}
