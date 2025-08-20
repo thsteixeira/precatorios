@@ -279,8 +279,7 @@ class AlvaraModelWithHonorariosTest(TestCase):
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         self.cliente = Cliente.objects.create(
             cpf='98765432100',
@@ -374,8 +373,7 @@ class AlvaraSimpleFormWithHonorariosTest(TestCase):
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         
         # Create different types of fases
@@ -631,8 +629,7 @@ class PrecatorioDetailViewWithHonorariosTest(TestCase):
 
             honorarios_contratuais='pendente',
 
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         
         self.cliente = Cliente.objects.create(
@@ -783,8 +780,7 @@ class IntegrationTestWithHonorarios(TestCase):
 
             honorarios_contratuais='pendente',
 
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         
         # Create cliente
@@ -1005,8 +1001,7 @@ class PrecatorioModelTest(TestCase):
             'percentual_sucumbenciais': Decimal('20.0'),
             'credito_principal': 'pendente',
             'honorarios_contratuais': 'pendente',
-            'honorarios_sucumbenciais': 'pendente',
-            'acordo_deferido': False
+            'honorarios_sucumbenciais': 'pendente'
         }
 
     def test_precatorio_creation(self):
@@ -1084,11 +1079,8 @@ class AlvaraModelTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
-
             honorarios_contratuais='pendente',
-
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         self.cliente = Cliente.objects.create(
             cpf='98765432100',
@@ -1152,11 +1144,8 @@ class RequerimentoModelTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
-
             honorarios_contratuais='pendente',
-
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         self.cliente = Cliente.objects.create(
             cpf='12345678909',
@@ -1258,11 +1247,8 @@ class AlvaraFormTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
-
             honorarios_contratuais='pendente',
-
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         self.cliente = Cliente.objects.create(
             cpf='12345678909',
@@ -1349,11 +1335,8 @@ class RequerimentoFormTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
-
             honorarios_contratuais='pendente',
-
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         self.cliente = Cliente.objects.create(
             cpf='12345678909',
@@ -1423,8 +1406,7 @@ class PrecatorioFormTest(TestCase):
             'percentual_sucumbenciais': '20.0',
             'credito_principal': 'pendente',
             'honorarios_contratuais': 'pendente',
-            'honorarios_sucumbenciais': 'pendente',
-            'acordo_deferido': False
+            'honorarios_sucumbenciais': 'pendente'
         }
     
     def test_valid_form(self):
@@ -1456,11 +1438,8 @@ class ClienteFormTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
-
             honorarios_contratuais='pendente',
-
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         
         self.valid_form_data = {
@@ -1599,11 +1578,8 @@ class IntegrationTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
-
             honorarios_contratuais='pendente',
-
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         
         # Create cliente
@@ -1696,11 +1672,8 @@ class ViewTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
-
             honorarios_contratuais='pendente',
-
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         
         self.client_app = Client()
@@ -1757,11 +1730,8 @@ class ManyToManyRelationshipTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
-
             honorarios_contratuais='pendente',
-
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         
         self.precatorio2 = Precatorio.objects.create(
@@ -1775,11 +1745,8 @@ class ManyToManyRelationshipTest(TestCase):
             percentual_contratuais_apartado=6.0,
             percentual_sucumbenciais=18.0,
             credito_principal='pendente',
-
             honorarios_contratuais='pendente',
-
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         
         self.cliente = Cliente.objects.create(
@@ -1859,8 +1826,7 @@ class PrecatorioViewFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.precatorio2 = Precatorio.objects.create(
@@ -1875,8 +1841,7 @@ class PrecatorioViewFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.precatorio3 = Precatorio.objects.create(
@@ -1891,8 +1856,7 @@ class PrecatorioViewFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 3, 25),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
     
     def test_precatorio_list_no_filters(self):
@@ -1991,8 +1955,7 @@ class ClienteViewFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.precatorio2 = Precatorio.objects.create(
@@ -2007,8 +1970,7 @@ class ClienteViewFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         # Create test clientes with different attributes
@@ -2275,8 +2237,7 @@ class ClienteRequerimentoPrioridadeFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.precatorio2 = Precatorio.objects.create(
@@ -2291,8 +2252,7 @@ class ClienteRequerimentoPrioridadeFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         # Create test clientes
@@ -2471,8 +2431,7 @@ class AlvaraViewFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.precatorio2 = Precatorio.objects.create(
@@ -2487,8 +2446,7 @@ class AlvaraViewFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         # Create test clientes
@@ -2696,8 +2654,7 @@ class AlvaraViewWithHonorariosFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.precatorio2 = Precatorio.objects.create(
@@ -2712,8 +2669,7 @@ class AlvaraViewWithHonorariosFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         # Create test clientes
@@ -2906,11 +2862,8 @@ class BrazilianFormattingTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
-
             honorarios_contratuais='pendente',
-
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         
         self.cliente = Cliente.objects.create(
@@ -2973,8 +2926,7 @@ class BrazilianFormattingTest(TestCase):
             'percentual_sucumbenciais': '20,0',  # Brazilian percentage
             'credito_principal': 'pendente',
             'honorarios_contratuais': 'pendente',
-            'honorarios_sucumbenciais': 'pendente',
-            'acordo_deferido': False
+            'honorarios_sucumbenciais': 'pendente'
         }
         
         # Note: The actual conversion happens in JavaScript on the frontend
@@ -3141,11 +3093,8 @@ class DatabaseCompatibilityTest(TestCase):
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
-
             honorarios_contratuais='pendente',
-
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
         
         self.cliente = Cliente.objects.create(
@@ -3613,8 +3562,7 @@ class PriorityUpdateIntegrationTest(TestCase):
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.precatorio2 = Precatorio.objects.create(
@@ -3629,8 +3577,7 @@ class PriorityUpdateIntegrationTest(TestCase):
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=25.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=15.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=15.0
         )
         
         # Create clients with different ages and priority statuses
@@ -3997,8 +3944,7 @@ class PrecatorioAdvancedFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.precatorio_prioridade_nao_deferido = Precatorio.objects.create(
@@ -4013,8 +3959,7 @@ class PrecatorioAdvancedFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.precatorio_acordo_deferido = Precatorio.objects.create(
@@ -4029,8 +3974,7 @@ class PrecatorioAdvancedFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 3, 25),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.precatorio_acordo_nao_deferido = Precatorio.objects.create(
@@ -4045,8 +3989,7 @@ class PrecatorioAdvancedFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 4, 30),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.precatorio_sem_requerimento = Precatorio.objects.create(
@@ -4061,8 +4004,7 @@ class PrecatorioAdvancedFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 5, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.precatorio_misto = Precatorio.objects.create(
@@ -4077,8 +4019,7 @@ class PrecatorioAdvancedFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 6, 20),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         # Create test clientes
@@ -4392,8 +4333,7 @@ class RequerimentoDisplayTest(TestCase):
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         # Create test cliente
@@ -4506,8 +4446,7 @@ class RequerimentoDisplayTest(TestCase):
             data_ultima_atualizacao=date(2023, 7, 10),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.client_app.login(username='testuser', password='testpass123')
@@ -4625,8 +4564,7 @@ class RequerimentoFilterViewTest(TestCase):
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         # Create cliente
@@ -4716,8 +4654,7 @@ class PriorityRequerimentoClienteFilterTest(TestCase):
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         # Create clientes
@@ -4841,8 +4778,7 @@ class ModelMethodsTest(TestCase):
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0,
-            acordo_deferido=False
+            percentual_sucumbenciais=10.0
         )
         
         self.cliente = Cliente.objects.create(
@@ -4955,8 +4891,7 @@ class PerformanceTest(TestCase):
                 data_ultima_atualizacao=date(2023, 1, 15),
                 percentual_contratuais_assinado=30.0,
                 percentual_contratuais_apartado=0.0,
-                percentual_sucumbenciais=10.0,
-                acordo_deferido=i % 3 == 0
+                percentual_sucumbenciais=10.0
             )
             self.precatorios.append(precatorio)
             
@@ -5118,8 +5053,7 @@ class CPFFormValidationTest(TestCase):
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente',
-            acordo_deferido=False
+            honorarios_sucumbenciais='pendente'
         )
     
     def test_cliente_form_valid_cpf(self):

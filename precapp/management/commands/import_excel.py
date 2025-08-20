@@ -360,8 +360,7 @@ class Command(BaseCommand):
             'percentual_sucumbenciais': 0.0,
             'credito_principal': 'pendente',
             'honorarios_contratuais': 'pendente',
-            'honorarios_sucumbenciais': 'pendente',
-            'acordo_deferido': False
+            'honorarios_sucumbenciais': 'pendente'
         }
         
         # Only set data_ultima_atualizacao if there's a date column in the sheet
@@ -665,8 +664,7 @@ class Command(BaseCommand):
             'percentual_sucumbenciais': 0.0,
             'credito_principal': 'pendente',
             'honorarios_contratuais': 'pendente',
-            'honorarios_sucumbenciais': 'pendente',
-            'acordo_deferido': False
+            'honorarios_sucumbenciais': 'pendente'
         })
         
         precatorio, created = Precatorio.objects.get_or_create(

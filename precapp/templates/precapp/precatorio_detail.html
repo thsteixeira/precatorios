@@ -191,15 +191,6 @@
                                         </label>
                                         {{ form.honorarios_sucumbenciais }}
                                     </div>
-                                    
-                                    <div class="col-md-6 mb-2">
-                                        <div class="form-check">
-                                            {{ form.acordo_deferido }}
-                                            <label class="form-check-label" for="{{ form.acordo_deferido.id_for_label }}">
-                                                <i class="fas fa-handshake me-1"></i>{{ form.acordo_deferido.label }}
-                                            </label>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -271,11 +262,6 @@
                                     <i class="fas fa-balance-scale me-1"></i>Sucumbenciais: {{ precatorio.get_honorarios_sucumbenciais_display }}
                                 </span>
                                 
-                                {% if precatorio.acordo_deferido %}
-                                    <span class="badge bg-primary fs-6">
-                                        <i class="fas fa-handshake me-1"></i>Acordo Deferido
-                                    </span>
-                                {% endif %}
                             </div>
                         </div>
                     </div>

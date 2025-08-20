@@ -259,7 +259,6 @@ class PrecatorioForm(forms.ModelForm):
             "percentual_contratuais_assinado",
             "percentual_contratuais_apartado",
             "percentual_sucumbenciais",
-            "acordo_deferido",
         ]
         
         widgets = {
@@ -275,7 +274,6 @@ class PrecatorioForm(forms.ModelForm):
             'credito_principal': forms.Select(attrs={'class': 'form-select'}),
             'honorarios_contratuais': forms.Select(attrs={'class': 'form-select'}),
             'honorarios_sucumbenciais': forms.Select(attrs={'class': 'form-select'}),
-            'acordo_deferido': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         
         labels = {
@@ -284,7 +282,6 @@ class PrecatorioForm(forms.ModelForm):
             'honorarios_contratuais': 'Status dos Honorários Contratuais',
             'honorarios_sucumbenciais': 'Status dos Honorários Sucumbenciais',
             'data_ultima_atualizacao': 'Data da Última Atualização (Opcional)',
-            'acordo_deferido': 'Acordo Deferido',
         }
 
     def clean_percentual_contratuais_assinado(self):
