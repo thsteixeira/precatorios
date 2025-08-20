@@ -39,11 +39,33 @@
                                placeholder="Digite a origem" value="{{ current_origem }}">
                     </div>
                     <div class="col-md-2">
-                        <label for="quitado" class="form-label">Status</label>
-                        <select class="form-control" id="quitado" name="quitado">
+                        <label for="credito_principal" class="form-label">Crédito Principal</label>
+                        <select class="form-control" id="credito_principal" name="credito_principal">
                             <option value="">Todos</option>
-                            <option value="true" {% if current_quitado == 'true' %}selected{% endif %}>Quitado</option>
-                            <option value="false" {% if current_quitado == 'false' %}selected{% endif %}>Não Quitado</option>
+                            <option value="pendente" {% if current_credito_principal == 'pendente' %}selected{% endif %}>Pendente</option>
+                            <option value="parcial" {% if current_credito_principal == 'parcial' %}selected{% endif %}>Parcialmente Quitado</option>
+                            <option value="quitado" {% if current_credito_principal == 'quitado' %}selected{% endif %}>Quitado Integralmente</option>
+                            <option value="vendido" {% if current_credito_principal == 'vendido' %}selected{% endif %}>Vendido</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="honorarios_contratuais" class="form-label">Hon. Contratuais</label>
+                        <select class="form-control" id="honorarios_contratuais" name="honorarios_contratuais">
+                            <option value="">Todos</option>
+                            <option value="pendente" {% if current_honorarios_contratuais == 'pendente' %}selected{% endif %}>Pendente</option>
+                            <option value="parcial" {% if current_honorarios_contratuais == 'parcial' %}selected{% endif %}>Parcialmente Quitado</option>
+                            <option value="quitado" {% if current_honorarios_contratuais == 'quitado' %}selected{% endif %}>Quitado Integralmente</option>
+                            <option value="vendido" {% if current_honorarios_contratuais == 'vendido' %}selected{% endif %}>Vendido</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="honorarios_sucumbenciais" class="form-label">Hon. Sucumbenciais</label>
+                        <select class="form-control" id="honorarios_sucumbenciais" name="honorarios_sucumbenciais">
+                            <option value="">Todos</option>
+                            <option value="pendente" {% if current_honorarios_sucumbenciais == 'pendente' %}selected{% endif %}>Pendente</option>
+                            <option value="parcial" {% if current_honorarios_sucumbenciais == 'parcial' %}selected{% endif %}>Parcialmente Quitado</option>
+                            <option value="quitado" {% if current_honorarios_sucumbenciais == 'quitado' %}selected{% endif %}>Quitado Integralmente</option>
+                            <option value="vendido" {% if current_honorarios_sucumbenciais == 'vendido' %}selected{% endif %}>Vendido</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -101,7 +123,7 @@
                                     <th scope="col">CNJ</th>
                                     <th scope="col">Origem</th>
                                     <th scope="col">Valor</th>
-                                    <th scope="col">Status</th>
+                                    <th scope="col">Status de Pagamento</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -121,15 +143,17 @@
                                             </span>
                                         </td>
                                         <td>
-                                            {% if precatorio.quitado %}
-                                                <span class="badge bg-success">
-                                                    <i class="fas fa-check me-1"></i>Quitado
-                                                </span>
-                                            {% else %}
-                                                <span class="badge bg-warning text-dark">
-                                                    <i class="fas fa-clock me-1"></i>Pendente
-                                                </span>
-                                            {% endif %}
+                                            <div class="d-flex flex-wrap gap-1">
+                                                <small class="badge bg-info">
+                                                    Principal: {{ precatorio.get_credito_principal_display }}
+                                                </small>
+                                                <small class="badge bg-success">
+                                                    Contratuais: {{ precatorio.get_honorarios_contratuais_display }}
+                                                </small>
+                                                <small class="badge bg-warning text-dark">
+                                                    Sucumbenciais: {{ precatorio.get_honorarios_sucumbenciais_display }}
+                                                </small>
+                                            </div>
                                         </td>
                                     </tr>
                                     {% if precatorio.requerimento_set.all %}
@@ -179,16 +203,24 @@
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <h5 class="text-success">{{ quitados }}</h5>
-                <small class="text-muted">Quitados</small>
+                <h5 class="text-success">{{ quitados_principal }}</h5>
+                <small class="text-muted">Principal Quitado</small>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <h5 class="text-warning">{{ pendentes }}</h5>
-                <small class="text-muted">Pendentes</small>
+                <h5 class="text-warning">{{ pendentes_principal }}</h5>
+                <small class="text-muted">Principal Pendente</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="text-secondary">{{ parciais_principal }}</h5>
+                <small class="text-muted">Principal Parcial</small>
             </div>
         </div>
     </div>

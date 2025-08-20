@@ -277,8 +277,9 @@ class AlvaraModelWithHonorariosTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
-
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         self.cliente = Cliente.objects.create(
@@ -371,8 +372,9 @@ class AlvaraSimpleFormWithHonorariosTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
-
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         
@@ -625,8 +627,11 @@ class PrecatorioDetailViewWithHonorariosTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
+            credito_principal='pendente',
 
+            honorarios_contratuais='pendente',
+
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         
@@ -774,8 +779,11 @@ class IntegrationTestWithHonorarios(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
+            credito_principal='pendente',
 
+            honorarios_contratuais='pendente',
+
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         
@@ -995,8 +1003,9 @@ class PrecatorioModelTest(TestCase):
             'percentual_contratuais_assinado': Decimal('10.0'),
             'percentual_contratuais_apartado': Decimal('5.0'),
             'percentual_sucumbenciais': Decimal('20.0'),
-            'quitado': False,
-
+            'credito_principal': 'pendente',
+            'honorarios_contratuais': 'pendente',
+            'honorarios_sucumbenciais': 'pendente',
             'acordo_deferido': False
         }
 
@@ -1074,8 +1083,11 @@ class AlvaraModelTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
+            credito_principal='pendente',
 
+            honorarios_contratuais='pendente',
+
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         self.cliente = Cliente.objects.create(
@@ -1139,8 +1151,11 @@ class RequerimentoModelTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
+            credito_principal='pendente',
 
+            honorarios_contratuais='pendente',
+
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         self.cliente = Cliente.objects.create(
@@ -1242,8 +1257,11 @@ class AlvaraFormTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
+            credito_principal='pendente',
 
+            honorarios_contratuais='pendente',
+
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         self.cliente = Cliente.objects.create(
@@ -1330,8 +1348,11 @@ class RequerimentoFormTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
+            credito_principal='pendente',
 
+            honorarios_contratuais='pendente',
+
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         self.cliente = Cliente.objects.create(
@@ -1400,8 +1421,9 @@ class PrecatorioFormTest(TestCase):
             'percentual_contratuais_assinado': '10.0',
             'percentual_contratuais_apartado': '5.0',
             'percentual_sucumbenciais': '20.0',
-            'quitado': False,
-
+            'credito_principal': 'pendente',
+            'honorarios_contratuais': 'pendente',
+            'honorarios_sucumbenciais': 'pendente',
             'acordo_deferido': False
         }
     
@@ -1433,8 +1455,11 @@ class ClienteFormTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
+            credito_principal='pendente',
 
+            honorarios_contratuais='pendente',
+
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         
@@ -1573,8 +1598,11 @@ class IntegrationTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
+            credito_principal='pendente',
 
+            honorarios_contratuais='pendente',
+
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         
@@ -1667,8 +1695,11 @@ class ViewTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
+            credito_principal='pendente',
 
+            honorarios_contratuais='pendente',
+
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         
@@ -1725,8 +1756,11 @@ class ManyToManyRelationshipTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
+            credito_principal='pendente',
 
+            honorarios_contratuais='pendente',
+
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         
@@ -1740,8 +1774,11 @@ class ManyToManyRelationshipTest(TestCase):
             percentual_contratuais_assinado=12.0,
             percentual_contratuais_apartado=6.0,
             percentual_sucumbenciais=18.0,
-            quitado=False,
+            credito_principal='pendente',
 
+            honorarios_contratuais='pendente',
+
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         
@@ -1814,14 +1851,15 @@ class PrecatorioViewFilterTest(TestCase):
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
             origem='Tribunal de São Paulo',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=10000.00,
             ultima_atualizacao=10000.00,
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-
             acordo_deferido=False
         )
         
@@ -1829,14 +1867,15 @@ class PrecatorioViewFilterTest(TestCase):
             cnj='2345678-90.2023.8.26.0200',
             orcamento=2023,
             origem='Tribunal de Campinas',
-            quitado=True,
+            credito_principal='quitado',
+            honorarios_contratuais='quitado',
+            honorarios_sucumbenciais='quitado',
             valor_de_face=20000.00,
             ultima_atualizacao=20000.00,
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-
             acordo_deferido=False
         )
         
@@ -1844,14 +1883,15 @@ class PrecatorioViewFilterTest(TestCase):
             cnj='3456789-01.2023.8.26.0300',
             orcamento=2023,
             origem='Tribunal de Santos',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=15000.00,
             ultima_atualizacao=15000.00,
             data_ultima_atualizacao=date(2023, 3, 25),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-
             acordo_deferido=False
         )
     
@@ -1884,47 +1924,47 @@ class PrecatorioViewFilterTest(TestCase):
         self.assertEqual(len(precatorios), 1)
         self.assertEqual(precatorios[0].origem, 'Tribunal de São Paulo')
     
-    def test_filter_by_quitado_true(self):
-        """Test filtering by quitado status (true)"""
+    def test_filter_by_credito_principal_quitado(self):
+        """Test filtering by credito_principal status (quitado)"""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get('/precatorios/?quitado=true')
+        response = self.client.get('/precatorios/?credito_principal=quitado')
         
         self.assertEqual(response.status_code, 200)
         precatorios = response.context['precatorios']
         self.assertEqual(len(precatorios), 1)
-        self.assertTrue(precatorios[0].quitado)
+        self.assertEqual(precatorios[0].credito_principal, 'quitado')
     
-    def test_filter_by_quitado_false(self):
-        """Test filtering by quitado status (false)"""
+    def test_filter_by_credito_principal_pendente(self):
+        """Test filtering by credito_principal status (pendente)"""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get('/precatorios/?quitado=false')
+        response = self.client.get('/precatorios/?credito_principal=pendente')
         
         self.assertEqual(response.status_code, 200)
         precatorios = response.context['precatorios']
         self.assertEqual(len(precatorios), 2)
         for precatorio in precatorios:
-            self.assertFalse(precatorio.quitado)
+            self.assertEqual(precatorio.credito_principal, 'pendente')
     
     def test_multiple_filters(self):
         """Test combining multiple filters"""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get('/precatorios/?cnj=test&quitado=false')
+        response = self.client.get('/precatorios/?cnj=test&credito_principal=pendente')
         
         self.assertEqual(response.status_code, 200)
         precatorios = response.context['precatorios']
-        # Should return no results since no precatorio has both cnj='test' and quitado=False
+        # Should return no results since no precatorio has both cnj='test' and credito_principal='pendente'
         self.assertEqual(len(precatorios), 0)
 
     
     def test_filter_context_values(self):
         """Test that current filter values are passed to template context"""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get('/precatorios/?cnj=test&origem=tribunal&quitado=true')
+        response = self.client.get('/precatorios/?cnj=test&origem=tribunal&credito_principal=quitado')
         
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['current_cnj'], 'test')
         self.assertEqual(response.context['current_origem'], 'tribunal')
-        self.assertEqual(response.context['current_quitado'], 'true')
+        self.assertEqual(response.context['current_credito_principal'], 'quitado')
 
 
 class ClienteViewFilterTest(TestCase):
@@ -1943,14 +1983,15 @@ class ClienteViewFilterTest(TestCase):
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
             origem='Tribunal de São Paulo',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=10000.00,
             ultima_atualizacao=10000.00,
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-
             acordo_deferido=False
         )
         
@@ -1958,14 +1999,15 @@ class ClienteViewFilterTest(TestCase):
             cnj='2345678-90.2023.8.26.0200',
             orcamento=2023,
             origem='Tribunal de Campinas',
-            quitado=True,
+            credito_principal='quitado',
+            honorarios_contratuais='quitado',
+            honorarios_sucumbenciais='quitado',
             valor_de_face=20000.00,
             ultima_atualizacao=20000.00,
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-
             acordo_deferido=False
         )
         
@@ -2225,14 +2267,15 @@ class ClienteRequerimentoPrioridadeFilterTest(TestCase):
             cnj='1111111-11.2023.8.26.0100',
             orcamento=2023,
             origem='Tribunal de São Paulo',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=10000.00,
             ultima_atualizacao=10000.00,
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-
             acordo_deferido=False
         )
         
@@ -2240,14 +2283,15 @@ class ClienteRequerimentoPrioridadeFilterTest(TestCase):
             cnj='2222222-22.2023.8.26.0200',
             orcamento=2023,
             origem='Tribunal de Campinas',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=20000.00,
             ultima_atualizacao=20000.00,
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-
             acordo_deferido=False
         )
         
@@ -2419,14 +2463,15 @@ class AlvaraViewFilterTest(TestCase):
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
             origem='Tribunal de São Paulo',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=10000.00,
             ultima_atualizacao=10000.00,
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-
             acordo_deferido=False
         )
         
@@ -2434,14 +2479,15 @@ class AlvaraViewFilterTest(TestCase):
             cnj='2345678-90.2023.8.26.0200',
             orcamento=2023,
             origem='Tribunal de Campinas',
-            quitado=True,
+            credito_principal='quitado',
+            honorarios_contratuais='quitado',
+            honorarios_sucumbenciais='quitado',
             valor_de_face=20000.00,
             ultima_atualizacao=20000.00,
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-
             acordo_deferido=False
         )
         
@@ -2642,14 +2688,15 @@ class AlvaraViewWithHonorariosFilterTest(TestCase):
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
             origem='Tribunal de São Paulo',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=10000.00,
             ultima_atualizacao=10000.00,
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-
             acordo_deferido=False
         )
         
@@ -2657,14 +2704,15 @@ class AlvaraViewWithHonorariosFilterTest(TestCase):
             cnj='2345678-90.2023.8.26.0200',
             orcamento=2023,
             origem='Tribunal de Campinas',
-            quitado=True,
+            credito_principal='quitado',
+            honorarios_contratuais='quitado',
+            honorarios_sucumbenciais='quitado',
             valor_de_face=20000.00,
             ultima_atualizacao=20000.00,
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-
             acordo_deferido=False
         )
         
@@ -2857,8 +2905,11 @@ class BrazilianFormattingTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
+            credito_principal='pendente',
 
+            honorarios_contratuais='pendente',
+
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         
@@ -2920,8 +2971,9 @@ class BrazilianFormattingTest(TestCase):
             'percentual_contratuais_assinado': '12,5',  # Brazilian percentage
             'percentual_contratuais_apartado': '6,25',  # Brazilian percentage
             'percentual_sucumbenciais': '20,0',  # Brazilian percentage
-            'quitado': False,
-
+            'credito_principal': 'pendente',
+            'honorarios_contratuais': 'pendente',
+            'honorarios_sucumbenciais': 'pendente',
             'acordo_deferido': False
         }
         
@@ -3088,8 +3140,11 @@ class DatabaseCompatibilityTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
+            credito_principal='pendente',
 
+            honorarios_contratuais='pendente',
+
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
         
@@ -3550,14 +3605,15 @@ class PriorityUpdateIntegrationTest(TestCase):
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
             origem='Tribunal de São Paulo',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=100000.00,
             ultima_atualizacao=100000.00,
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=10.0,
-
             acordo_deferido=False
         )
         
@@ -3565,14 +3621,15 @@ class PriorityUpdateIntegrationTest(TestCase):
             cnj='2345678-90.2023.8.26.0200',
             orcamento=2023,
             origem='Tribunal de Campinas',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=75000.00,
             ultima_atualizacao=75000.00,
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=25.0,
             percentual_contratuais_apartado=0.0,
             percentual_sucumbenciais=15.0,
-
             acordo_deferido=False
         )
         
@@ -3932,7 +3989,9 @@ class PrecatorioAdvancedFilterTest(TestCase):
             cnj='1111111-11.2023.8.26.0100',
             orcamento=2023,
             origem='Tribunal de São Paulo',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=10000.00,
             ultima_atualizacao=10000.00,
             data_ultima_atualizacao=date(2023, 1, 15),
@@ -3946,7 +4005,9 @@ class PrecatorioAdvancedFilterTest(TestCase):
             cnj='2222222-22.2023.8.26.0200',
             orcamento=2023,
             origem='Tribunal de Campinas',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=20000.00,
             ultima_atualizacao=20000.00,
             data_ultima_atualizacao=date(2023, 2, 20),
@@ -3960,7 +4021,9 @@ class PrecatorioAdvancedFilterTest(TestCase):
             cnj='3333333-33.2023.8.26.0300',
             orcamento=2023,
             origem='Tribunal de Santos',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=15000.00,
             ultima_atualizacao=15000.00,
             data_ultima_atualizacao=date(2023, 3, 25),
@@ -3974,7 +4037,9 @@ class PrecatorioAdvancedFilterTest(TestCase):
             cnj='4444444-44.2023.8.26.0400',
             orcamento=2023,
             origem='Tribunal de Osasco',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=25000.00,
             ultima_atualizacao=25000.00,
             data_ultima_atualizacao=date(2023, 4, 30),
@@ -3988,7 +4053,9 @@ class PrecatorioAdvancedFilterTest(TestCase):
             cnj='5555555-55.2023.8.26.0500',
             orcamento=2023,
             origem='Tribunal de Bauru',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=30000.00,
             ultima_atualizacao=30000.00,
             data_ultima_atualizacao=date(2023, 5, 15),
@@ -4002,7 +4069,9 @@ class PrecatorioAdvancedFilterTest(TestCase):
             cnj='6666666-66.2023.8.26.0600',
             orcamento=2023,
             origem='Tribunal de Sorocaba',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=35000.00,
             ultima_atualizacao=35000.00,
             data_ultima_atualizacao=date(2023, 6, 20),
@@ -4267,7 +4336,7 @@ class PrecatorioAdvancedFilterTest(TestCase):
         """Test combining all available filters"""
         self.client_app.login(username='testuser', password='testpass123')
         
-        response = self.client_app.get('/precatorios/?cnj=1111&origem=São Paulo&quitado=false&tipo_requerimento=prioridade&requerimento_deferido=deferido')
+        response = self.client_app.get('/precatorios/?cnj=1111&origem=São Paulo&credito_principal=pendente&tipo_requerimento=prioridade&requerimento_deferido=deferido')
         
         self.assertEqual(response.status_code, 200)
         precatorios = response.context['precatorios']
@@ -4279,7 +4348,7 @@ class PrecatorioAdvancedFilterTest(TestCase):
         # Context should include all filter values
         self.assertEqual(response.context['current_cnj'], '1111')
         self.assertEqual(response.context['current_origem'], 'São Paulo')
-        self.assertEqual(response.context['current_quitado'], 'false')
+        self.assertEqual(response.context['current_credito_principal'], 'pendente')
         self.assertEqual(response.context['current_tipo_requerimento'], 'prioridade')
         self.assertEqual(response.context['current_requerimento_deferido'], 'deferido')
 
@@ -4315,7 +4384,9 @@ class RequerimentoDisplayTest(TestCase):
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
             origem='Tribunal de São Paulo',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=100000.00,
             ultima_atualizacao=100000.00,
             data_ultima_atualizacao=date(2023, 1, 15),
@@ -4427,7 +4498,9 @@ class RequerimentoDisplayTest(TestCase):
             cnj='7777777-77.2023.8.26.0700',
             orcamento=2023,
             origem='Tribunal de Ribeirão Preto',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=50000.00,
             ultima_atualizacao=50000.00,
             data_ultima_atualizacao=date(2023, 7, 10),
@@ -4544,7 +4617,9 @@ class RequerimentoFilterViewTest(TestCase):
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
             origem='Tribunal de São Paulo',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=100000.00,
             ultima_atualizacao=100000.00,
             data_ultima_atualizacao=date(2023, 1, 15),
@@ -4633,7 +4708,9 @@ class PriorityRequerimentoClienteFilterTest(TestCase):
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
             origem='Tribunal de São Paulo',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=100000.00,
             ultima_atualizacao=100000.00,
             data_ultima_atualizacao=date(2023, 1, 15),
@@ -4756,7 +4833,9 @@ class ModelMethodsTest(TestCase):
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
             origem='Tribunal de São Paulo',
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             valor_de_face=100000.00,
             ultima_atualizacao=100000.00,
             data_ultima_atualizacao=date(2023, 1, 15),
@@ -4861,11 +4940,16 @@ class PerformanceTest(TestCase):
         
         # Create multiple precatorios and requerimentos for performance testing
         for i in range(20):
+            # Set different payment statuses for variety
+            payment_status = 'quitado' if i % 2 == 0 else 'pendente'
+            
             precatorio = Precatorio.objects.create(
                 cnj=f'{i:07d}-89.2023.8.26.0{i:03d}',
                 orcamento=2023,
                 origem=f'Tribunal {i}',
-                quitado=i % 2 == 0,
+                credito_principal=payment_status,
+                honorarios_contratuais=payment_status,
+                honorarios_sucumbenciais=payment_status,
                 valor_de_face=10000.00 * (i + 1),
                 ultima_atualizacao=10000.00 * (i + 1),
                 data_ultima_atualizacao=date(2023, 1, 15),
@@ -4915,7 +4999,7 @@ class PerformanceTest(TestCase):
             # Test basic filters
             self.client_app.get('/precatorios/?cnj=000')
             self.client_app.get('/precatorios/?origem=Tribunal')
-            self.client_app.get('/precatorios/?quitado=true')
+            self.client_app.get('/precatorios/?credito_principal=quitado')
             
             # Test complex filters
             self.client_app.get('/precatorios/?tipo_requerimento=prioridade')
@@ -5032,7 +5116,9 @@ class CPFFormValidationTest(TestCase):
             percentual_contratuais_assinado=10.0,
             percentual_contratuais_apartado=5.0,
             percentual_sucumbenciais=20.0,
-            quitado=False,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
             acordo_deferido=False
         )
     

@@ -203,12 +203,24 @@
                         </div>
                         
                         <div class="col-md-4 mb-3">
-                            <div class="form-check form-switch">
-                                {{ form.quitado }}
-                                <label class="form-check-label" for="{{ form.quitado.id_for_label }}">
-                                    <i class="fas fa-check-circle me-1"></i>{{ form.quitado.label }}
-                                </label>
-                            </div>
+                            <label for="{{ form.credito_principal.id_for_label }}" class="form-label">
+                                <i class="fas fa-coins me-1"></i>{{ form.credito_principal.label }}
+                            </label>
+                            {{ form.credito_principal }}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.honorarios_contratuais.id_for_label }}" class="form-label">
+                                <i class="fas fa-file-contract me-1"></i>{{ form.honorarios_contratuais.label }}
+                            </label>
+                            {{ form.honorarios_contratuais }}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.honorarios_sucumbenciais.id_for_label }}" class="form-label">
+                                <i class="fas fa-balance-scale me-1"></i>{{ form.honorarios_sucumbenciais.label }}
+                            </label>
+                            {{ form.honorarios_sucumbenciais }}
                         </div>
                         
                         <div class="col-md-6 mb-3">

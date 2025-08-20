@@ -278,17 +278,17 @@
                             <!-- Status Badges -->
                             <div class="row mt-3">
                                 <div class="col-12">
-                                    <h6><strong><i class="fas fa-tags me-1"></i>Status:</strong></h6>
+                                    <h6><strong><i class="fas fa-tags me-1"></i>Status dos Pagamentos:</strong></h6>
                                     <div class="d-flex flex-wrap gap-2">
-                                        {% if precatorio.quitado %}
-                                            <span class="badge bg-success fs-6">
-                                                <i class="fas fa-check-circle me-1"></i>Quitado
-                                            </span>
-                                        {% else %}
-                                            <span class="badge bg-warning text-dark fs-6">
-                                                <i class="fas fa-clock me-1"></i>Pendente
-                                            </span>
-                                        {% endif %}
+                                        <span class="badge bg-info fs-6">
+                                            <i class="fas fa-coins me-1"></i>Principal: {{ precatorio.get_credito_principal_display }}
+                                        </span>
+                                        <span class="badge bg-success fs-6">
+                                            <i class="fas fa-file-contract me-1"></i>Contratuais: {{ precatorio.get_honorarios_contratuais_display }}
+                                        </span>
+                                        <span class="badge bg-warning text-dark fs-6">
+                                            <i class="fas fa-balance-scale me-1"></i>Sucumbenciais: {{ precatorio.get_honorarios_sucumbenciais_display }}
+                                        </span>
                                         
                                         {% if precatorio.acordo_deferido %}
                                             <span class="badge bg-primary fs-6">

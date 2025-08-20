@@ -144,7 +144,9 @@ def precatorio_view(request):
     # Apply filters based on GET parameters
     cnj_filter = request.GET.get('cnj', '').strip()
     origem_filter = request.GET.get('origem', '').strip()
-    quitado_filter = request.GET.get('quitado', '')
+    credito_principal_filter = request.GET.get('credito_principal', '')
+    honorarios_contratuais_filter = request.GET.get('honorarios_contratuais', '')
+    honorarios_sucumbenciais_filter = request.GET.get('honorarios_sucumbenciais', '')
     tipo_requerimento_filter = request.GET.get('tipo_requerimento', '')
     requerimento_deferido_filter = request.GET.get('requerimento_deferido', '')
     
@@ -154,9 +156,14 @@ def precatorio_view(request):
     if origem_filter:
         precatorios = precatorios.filter(origem__icontains=origem_filter)
     
-    if quitado_filter in ['true', 'false']:
-        quitado_bool = quitado_filter == 'true'
-        precatorios = precatorios.filter(quitado=quitado_bool)
+    if credito_principal_filter:
+        precatorios = precatorios.filter(credito_principal=credito_principal_filter)
+    
+    if honorarios_contratuais_filter:
+        precatorios = precatorios.filter(honorarios_contratuais=honorarios_contratuais_filter)
+    
+    if honorarios_sucumbenciais_filter:
+        precatorios = precatorios.filter(honorarios_sucumbenciais=honorarios_sucumbenciais_filter)
     
     # Filter by tipo de requerimento and deferimento status
     # These filters should work together - if both are selected, we need requerimentos that match BOTH conditions
@@ -230,8 +237,12 @@ def precatorio_view(request):
     
     # Calculate summary statistics
     total_precatorios = precatorios.count()
-    quitados = precatorios.filter(quitado=True).count()
-    pendentes = precatorios.filter(quitado=False).count()
+    
+    # Calculate counts for different payment statuses
+    pendentes_principal = precatorios.filter(credito_principal='pendente').count()
+    quitados_principal = precatorios.filter(credito_principal='quitado').count()
+    parciais_principal = precatorios.filter(credito_principal='parcial').count()
+    vendidos_principal = precatorios.filter(credito_principal='vendido').count()
     
     # Calculate prioritarios count (precatorios with prioridade requerimentos)
     prioritarios_cnjs = Requerimento.objects.filter(
@@ -242,13 +253,17 @@ def precatorio_view(request):
     context = {
         'precatorios': precatorios,
         'total_precatorios': total_precatorios,
-        'quitados': quitados,
-        'pendentes': pendentes,
+        'pendentes_principal': pendentes_principal,
+        'quitados_principal': quitados_principal,
+        'parciais_principal': parciais_principal,
+        'vendidos_principal': vendidos_principal,
         'prioritarios': prioritarios,
         # Include current filter values to maintain state in form
         'current_cnj': cnj_filter,
         'current_origem': origem_filter,
-        'current_quitado': quitado_filter,
+        'current_credito_principal': credito_principal_filter,
+        'current_honorarios_contratuais': honorarios_contratuais_filter,
+        'current_honorarios_sucumbenciais': honorarios_sucumbenciais_filter,
         'current_tipo_requerimento': tipo_requerimento_filter,
         'current_requerimento_deferido': requerimento_deferido_filter,
     }

@@ -250,7 +250,9 @@ class PrecatorioForm(forms.ModelForm):
             "cnj",
             "orcamento",
             "origem",
-            "quitado",
+            "credito_principal",
+            "honorarios_contratuais",
+            "honorarios_sucumbenciais",
             "valor_de_face",
             "ultima_atualizacao",
             "data_ultima_atualizacao",
@@ -270,13 +272,17 @@ class PrecatorioForm(forms.ModelForm):
                 'title': 'Digite apenas o ano (formato: YYYY)'
             }),
             'data_ultima_atualizacao': BrazilianDateInput(attrs={'required': False}),
-            'quitado': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'credito_principal': forms.Select(attrs={'class': 'form-select'}),
+            'honorarios_contratuais': forms.Select(attrs={'class': 'form-select'}),
+            'honorarios_sucumbenciais': forms.Select(attrs={'class': 'form-select'}),
             'acordo_deferido': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         
         labels = {
             'orcamento': 'Ano do Orçamento',
-            'quitado': 'Quitado',
+            'credito_principal': 'Status do Crédito Principal',
+            'honorarios_contratuais': 'Status dos Honorários Contratuais',
+            'honorarios_sucumbenciais': 'Status dos Honorários Sucumbenciais',
             'data_ultima_atualizacao': 'Data da Última Atualização (Opcional)',
             'acordo_deferido': 'Acordo Deferido',
         }

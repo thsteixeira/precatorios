@@ -85,6 +85,13 @@ class FaseHonorariosContratuais(models.Model):
         ordering = ['nome']
 
 class Precatorio(models.Model):
+    STATUS_PAGAMENTO_CHOICES = [
+        ('pendente', 'Pendente de pagamento'),
+        ('parcial', 'Quitado parcialmente'),
+        ('quitado', 'Quitado integralmente'),
+        ('vendido', 'Vendido'),
+    ]
+    
     cnj = models.CharField(max_length=200, primary_key=True)
     orcamento = models.IntegerField(
         validators=[
@@ -94,7 +101,24 @@ class Precatorio(models.Model):
         help_text="Ano do orçamento (formato: YYYY)"
     )
     origem = models.CharField(max_length=200)
-    quitado = models.BooleanField()
+    credito_principal = models.CharField(
+        max_length=20,
+        choices=STATUS_PAGAMENTO_CHOICES,
+        default='pendente',
+        help_text="Status de pagamento do crédito principal"
+    )
+    honorarios_contratuais = models.CharField(
+        max_length=20,
+        choices=STATUS_PAGAMENTO_CHOICES,
+        default='pendente',
+        help_text="Status de pagamento dos honorários contratuais"
+    )
+    honorarios_sucumbenciais = models.CharField(
+        max_length=20,
+        choices=STATUS_PAGAMENTO_CHOICES,
+        default='pendente',
+        help_text="Status de pagamento dos honorários sucumbenciais"
+    )
     valor_de_face = models.FloatField()
     ultima_atualizacao = models.FloatField(null=True, blank=True)
     data_ultima_atualizacao = models.DateField(null=True, blank=True)

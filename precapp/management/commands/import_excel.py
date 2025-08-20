@@ -7,7 +7,7 @@ from decimal import Decimal, InvalidOperation
 from datetime import datetime
 import pandas as pd
 import os
-from precapp.models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais
+from precapp.models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, TipoDiligencia
 
 
 class Command(BaseCommand):
@@ -46,6 +46,7 @@ class Command(BaseCommand):
         # Create main phases before importing data
         if not dry_run:
             self.create_main_phases()
+            self.create_tipos_diligencia()
         
         try:
             self.import_excel_data(file_path, sheet_name, dry_run)
@@ -196,6 +197,58 @@ class Command(BaseCommand):
         
         self.stdout.write('')
     
+    def create_tipos_diligencia(self):
+        """Create default diligencia types"""
+        
+        diligencia_types = [
+            {
+                'nome': 'Propor repactuação',
+                'descricao': 'Propor uma nova pactuação ou renegociação dos termos',
+                'cor': '#007bff'  # Azul - padrão
+            },
+            {
+                'nome': 'Solicitar RG',
+                'descricao': 'Solicitar documento de identidade (RG) do cliente',
+                'cor': '#28a745'  # Verde
+            },
+            {
+                'nome': 'Solicitar contrato',
+                'descricao': 'Solicitar contrato ou documentação contratual',
+                'cor': '#ffc107'  # Amarelo
+            },
+            {
+                'nome': 'Cobrar honorários',
+                'descricao': 'Realizar cobrança de honorários devidos',
+                'cor': '#fd7e14'  # Laranja
+            },
+            {
+                'nome': 'Executar honorários',
+                'descricao': 'Executar judicialmente os honorários em aberto',
+                'cor': '#dc3545'  # Vermelho
+            }
+        ]
+        
+        created_count = 0
+        for tipo_data in diligencia_types:
+            tipo, created = TipoDiligencia.objects.get_or_create(
+                nome=tipo_data['nome'],
+                defaults={
+                    'descricao': tipo_data['descricao'],
+                    'cor': tipo_data['cor']
+                }
+            )
+            if created:
+                created_count += 1
+                self.stdout.write(f'✓ Created TipoDiligencia: {tipo.nome}')
+        
+        if created_count > 0:
+            self.stdout.write(f'\n=== TIPOS DE DILIGÊNCIA CREATED ===')
+            self.stdout.write(f'Created {created_count} new diligencia types')
+        else:
+            self.stdout.write('All diligencia types already exist')
+        
+        self.stdout.write('')
+    
     def import_excel_data(self, file_path, sheet_name, dry_run):
         """Main import logic"""
         # Read Excel file
@@ -305,7 +358,9 @@ class Command(BaseCommand):
             'percentual_contratuais_assinado': 0.0,
             'percentual_contratuais_apartado': 0.0,
             'percentual_sucumbenciais': 0.0,
-            'quitado': False,
+            'credito_principal': 'pendente',
+            'honorarios_contratuais': 'pendente',
+            'honorarios_sucumbenciais': 'pendente',
             'acordo_deferido': False
         }
         
@@ -380,6 +435,12 @@ class Command(BaseCommand):
             'valor_face': ['valor_face', 'valor_de_face', 'valor_principal', 'valor'],
             'ultima_atualizacao': ['ultima_atualizacao', 'valor_atual', 'valor_atualizado'],
             'data_atualizacao': ['data_atualizacao', 'data_ultima_atualizacao', 'data'],
+            
+            # Payment status fields
+            'credito_principal': ['credito_principal', 'status_principal', 'principal_status'],
+            'honorarios_contratuais_status': ['honorarios_contratuais_status', 'status_contratuais', 'contratuais_status'],
+            'honorarios_sucumbenciais_status': ['honorarios_sucumbenciais_status', 'status_sucumbenciais', 'sucumbenciais_status'],
+            'quitado': ['quitado', 'pago', 'status_pagamento'],  # For backward compatibility
             
             # Cliente fields  
             'nome': ['nome', 'cliente', 'beneficiario'],
@@ -534,6 +595,57 @@ class Command(BaseCommand):
             except (ValueError, TypeError):
                 pass
         
+        # Handle payment status fields (new approach)
+        # Check for specific payment status columns
+        if credito_principal_status := self.get_column_value(row, columns, mappings, 'credito_principal'):
+            status_value = str(credito_principal_status).lower().strip()
+            if status_value in ['pendente', 'parcial', 'quitado', 'vendido']:
+                defaults['credito_principal'] = status_value
+            elif status_value in ['pendente de pagamento']:
+                defaults['credito_principal'] = 'pendente'
+            elif status_value in ['quitado parcialmente']:
+                defaults['credito_principal'] = 'parcial'
+            elif status_value in ['quitado integralmente']:
+                defaults['credito_principal'] = 'quitado'
+        
+        if honorarios_contratuais_status := self.get_column_value(row, columns, mappings, 'honorarios_contratuais_status'):
+            status_value = str(honorarios_contratuais_status).lower().strip()
+            if status_value in ['pendente', 'parcial', 'quitado', 'vendido']:
+                defaults['honorarios_contratuais'] = status_value
+            elif status_value in ['pendente de pagamento']:
+                defaults['honorarios_contratuais'] = 'pendente'
+            elif status_value in ['quitado parcialmente']:
+                defaults['honorarios_contratuais'] = 'parcial'
+            elif status_value in ['quitado integralmente']:
+                defaults['honorarios_contratuais'] = 'quitado'
+        
+        if honorarios_sucumbenciais_status := self.get_column_value(row, columns, mappings, 'honorarios_sucumbenciais_status'):
+            status_value = str(honorarios_sucumbenciais_status).lower().strip()
+            if status_value in ['pendente', 'parcial', 'quitado', 'vendido']:
+                defaults['honorarios_sucumbenciais'] = status_value
+            elif status_value in ['pendente de pagamento']:
+                defaults['honorarios_sucumbenciais'] = 'pendente'
+            elif status_value in ['quitado parcialmente']:
+                defaults['honorarios_sucumbenciais'] = 'parcial'
+            elif status_value in ['quitado integralmente']:
+                defaults['honorarios_sucumbenciais'] = 'quitado'
+        
+        # Backward compatibility: if old 'quitado' field exists, map it to all three status fields
+        if quitado_status := self.get_column_value(row, columns, mappings, 'quitado'):
+            if isinstance(quitado_status, bool):
+                status = 'quitado' if quitado_status else 'pendente'
+            else:
+                quitado_str = str(quitado_status).lower().strip()
+                status = 'quitado' if quitado_str in ['true', '1', 'sim', 'quitado', 'pago'] else 'pendente'
+            
+            # Only set if not already set by specific status columns
+            if 'credito_principal' not in defaults:
+                defaults['credito_principal'] = status
+            if 'honorarios_contratuais' not in defaults:
+                defaults['honorarios_contratuais'] = status  
+            if 'honorarios_sucumbenciais' not in defaults:
+                defaults['honorarios_sucumbenciais'] = status
+        
         # Set default values for required fields
         if 'orcamento' not in defaults:
             defaults['orcamento'] = 2024
@@ -546,12 +658,14 @@ class Command(BaseCommand):
         if 'data_ultima_atualizacao' not in defaults:
             defaults['data_ultima_atualizacao'] = datetime.now().date()
         
-        # Set default percentages
+        # Set default percentages and payment statuses
         defaults.update({
             'percentual_contratuais_assinado': 0.0,
             'percentual_contratuais_apartado': 0.0,
             'percentual_sucumbenciais': 0.0,
-            'quitado': False,
+            'credito_principal': 'pendente',
+            'honorarios_contratuais': 'pendente',
+            'honorarios_sucumbenciais': 'pendente',
             'acordo_deferido': False
         })
         
