@@ -537,6 +537,13 @@ class RequerimentoForm(forms.ModelForm):
         })
     )
     
+    def __init__(self, *args, **kwargs):
+        self.precatorio = kwargs.pop('precatorio', None)
+        super().__init__(*args, **kwargs)
+        # Set queryset to only show phases for Requerimento
+        from .models import Fase
+        self.fields['fase'].queryset = Fase.get_fases_for_requerimento()
+    
     def clean_cliente_cpf(self):
         """Validate that the CPF corresponds to an existing cliente"""
         cpf = self.cleaned_data.get('cliente_cpf')
@@ -550,16 +557,18 @@ class RequerimentoForm(forms.ModelForm):
             try:
                 from .models import Cliente
                 cliente = Cliente.objects.get(cpf=cpf_numbers)
+                
+                # Additional validation: check if cliente is linked to the precatorio
+                if self.precatorio and not self.precatorio.clientes.filter(cpf=cpf_numbers).exists():
+                    raise forms.ValidationError(
+                        f'O cliente {cliente.nome} (CPF: {cpf}) não está vinculado ao precatório {self.precatorio.cnj}. '
+                        'Vincule o cliente ao precatório antes de criar o requerimento.'
+                    )
+                
                 return cpf
             except Cliente.DoesNotExist:
                 raise forms.ValidationError(f'Não foi encontrado um cliente com o CPF "{cpf}". Verifique se o número está correto ou cadastre o cliente primeiro.')
         return cpf
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Set queryset to only show phases for Requerimento
-        from .models import Fase
-        self.fields['fase'].queryset = Fase.get_fases_for_requerimento()
 
     class Meta:
         model = Requerimento
@@ -667,6 +676,14 @@ class AlvaraSimpleForm(forms.ModelForm):
         })
     )
     
+    def __init__(self, *args, **kwargs):
+        self.precatorio = kwargs.pop('precatorio', None)
+        super().__init__(*args, **kwargs)
+        # Set queryset to only show phases for Alvará
+        from .models import Fase, FaseHonorariosContratuais
+        self.fields['fase'].queryset = Fase.get_fases_for_alvara()
+        self.fields['fase_honorarios_contratuais'].queryset = FaseHonorariosContratuais.get_fases_ativas()
+    
     def clean_cliente_cpf(self):
         """Validate that the CPF corresponds to an existing cliente"""
         cpf = self.cleaned_data.get('cliente_cpf')
@@ -680,6 +697,14 @@ class AlvaraSimpleForm(forms.ModelForm):
             try:
                 from .models import Cliente
                 cliente = Cliente.objects.get(cpf=cpf_numbers)
+                
+                # Additional validation: check if cliente is linked to the precatorio
+                if self.precatorio and not self.precatorio.clientes.filter(cpf=cpf_numbers).exists():
+                    raise forms.ValidationError(
+                        f'O cliente {cliente.nome} (CPF: {cpf}) não está vinculado ao precatório {self.precatorio.cnj}. '
+                        'Vincule o cliente ao precatório antes de criar o alvará.'
+                    )
+                
                 return cpf
             except Cliente.DoesNotExist:
                 raise forms.ValidationError(f'Não foi encontrado um cliente com o CPF "{cpf}". Verifique se o número está correto ou cadastre o cliente primeiro.')
@@ -694,13 +719,6 @@ class AlvaraSimpleForm(forms.ModelForm):
         """Clean honorarios_sucumbenciais field to provide default value"""
         honorarios = self.cleaned_data.get('honorarios_sucumbenciais')
         return honorarios if honorarios is not None else 0.0
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Set queryset to only show phases for Alvará
-        from .models import Fase, FaseHonorariosContratuais
-        self.fields['fase'].queryset = Fase.get_fases_for_alvara()
-        self.fields['fase_honorarios_contratuais'].queryset = FaseHonorariosContratuais.get_fases_ativas()
 
     class Meta:
         model = Alvara

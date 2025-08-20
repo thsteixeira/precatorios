@@ -288,6 +288,9 @@ class AlvaraModelWithHonorariosTest(TestCase):
             prioridade=True
         )
         
+        # Link the cliente to the precatorio (required by new validation)
+        self.precatorio.clientes.add(self.cliente)
+        
         self.fase_alvara = Fase.objects.create(
             nome='Aguardando Depósito',
             tipo='alvara',
@@ -639,6 +642,9 @@ class PrecatorioDetailViewWithHonorariosTest(TestCase):
             prioridade=False
         )
         
+        # Link the cliente to the precatorio (required by new validation)
+        self.precatorio.clientes.add(self.cliente)
+        
         self.fase_alvara = Fase.objects.create(
             nome='Aguardando Depósito',
             tipo='alvara',
@@ -790,6 +796,9 @@ class IntegrationTestWithHonorarios(TestCase):
             nascimento=date(1980, 5, 15),
             prioridade=False
         )
+        
+        # Link the cliente to the precatorio (required by new validation)
+        self.precatorio.clientes.add(self.cliente)
         
         self.client_app = Client()
     
@@ -1089,6 +1098,9 @@ class AlvaraModelTest(TestCase):
             prioridade=True
         )
         
+        # Link the cliente to the precatorio (required by new validation)
+        self.precatorio.clientes.add(self.cliente)
+        
         self.fase_alvara = Fase.objects.create(
             nome='Aguardando Depósito',
             tipo='alvara',
@@ -1153,6 +1165,9 @@ class RequerimentoModelTest(TestCase):
             nascimento=date(1980, 5, 15),
             prioridade=False
         )
+        
+        # Link the cliente to the precatorio (required by new validation)
+        self.precatorio.clientes.add(self.cliente)
         
         self.fase_requerimento = Fase.objects.create(
             nome='Em Andamento',
@@ -1256,6 +1271,10 @@ class AlvaraFormTest(TestCase):
             nascimento=date(1980, 5, 15),
             prioridade=False
         )
+        
+        # Link the cliente to the precatorio (required by new validation)
+        self.precatorio.clientes.add(self.cliente)
+        
         self.fase_alvara = Fase.objects.create(
             nome='Aguardando Depósito',
             tipo='alvara',
@@ -1290,7 +1309,7 @@ class AlvaraFormTest(TestCase):
     
     def test_alvara_simple_form_fase_filtering(self):
         """Test that AlvaraSimpleForm only shows alvara and ambos phases"""
-        form = AlvaraSimpleForm()
+        form = AlvaraSimpleForm(precatorio=self.precatorio)
         fase_queryset = form.fields['fase'].queryset
         
         # Should include alvara and ambos phases
@@ -1301,7 +1320,7 @@ class AlvaraFormTest(TestCase):
     
     def test_alvara_simple_form_includes_honorarios_field(self):
         """Test that AlvaraSimpleForm includes fase_honorarios_contratuais field"""
-        form = AlvaraSimpleForm()
+        form = AlvaraSimpleForm(precatorio=self.precatorio)
         self.assertIn('fase_honorarios_contratuais', form.fields)
         
         # Test field properties
@@ -1310,7 +1329,7 @@ class AlvaraFormTest(TestCase):
     
     def test_alvara_simple_form_honorarios_filtering(self):
         """Test that AlvaraSimpleForm only shows active honorários phases"""
-        form = AlvaraSimpleForm()
+        form = AlvaraSimpleForm(precatorio=self.precatorio)
         honorarios_queryset = form.fields['fase_honorarios_contratuais'].queryset
         
         # Should include only active phases
@@ -1344,6 +1363,10 @@ class RequerimentoFormTest(TestCase):
             nascimento=date(1980, 5, 15),
             prioridade=False
         )
+        
+        # Link the cliente to the precatorio (required by new validation)
+        self.precatorio.clientes.add(self.cliente)
+        
         self.fase_requerimento = Fase.objects.create(
             nome='Em Andamento',
             tipo='requerimento',
@@ -1374,7 +1397,7 @@ class RequerimentoFormTest(TestCase):
     
     def test_requerimento_form_fase_filtering(self):
         """Test that RequerimentoForm only shows requerimento and ambos phases"""
-        form = RequerimentoForm()
+        form = RequerimentoForm(precatorio=self.precatorio)
         fase_queryset = form.fields['fase'].queryset
         
         # Should include requerimento and ambos phases
@@ -1385,7 +1408,7 @@ class RequerimentoFormTest(TestCase):
     
     def test_valid_requerimento_form(self):
         """Test form with valid data"""
-        form = RequerimentoForm(data=self.valid_form_data)
+        form = RequerimentoForm(data=self.valid_form_data, precatorio=self.precatorio)
         self.assertTrue(form.is_valid())
 
 
@@ -1589,6 +1612,9 @@ class IntegrationTest(TestCase):
             nascimento=date(1980, 5, 15),
             prioridade=False
         )
+        
+        # Link cliente to precatorio
+        self.precatorio.clientes.add(self.cliente)
         
         self.client_app = Client()
     
@@ -2464,6 +2490,10 @@ class AlvaraViewFilterTest(TestCase):
             prioridade=False
         )
         
+        # Link clientes to precatorios
+        self.precatorio1.clientes.add(self.cliente1, self.cliente2)
+        self.precatorio2.clientes.add(self.cliente2)
+        
         # Create test alvaras
         self.alvara1 = Alvara.objects.create(
             precatorio=self.precatorio1,
@@ -2687,6 +2717,10 @@ class AlvaraViewWithHonorariosFilterTest(TestCase):
             prioridade=False
         )
         
+        # Link clientes to precatorios
+        self.precatorio1.clientes.add(self.cliente1, self.cliente2)
+        self.precatorio2.clientes.add(self.cliente1, self.cliente2)
+        
         # Create test alvaras with honorários phases
         self.alvara1 = Alvara.objects.create(
             precatorio=self.precatorio1,
@@ -2892,6 +2926,9 @@ class BrazilianFormattingTest(TestCase):
             cor='#007BFF',
             ativa=True
         )
+        
+        # Link cliente to precatorio
+        self.precatorio.clientes.add(self.cliente)
         
         self.client_app = Client()
     
@@ -3110,6 +3147,9 @@ class DatabaseCompatibilityTest(TestCase):
             cor='#FF6B35',
             ativa=True
         )
+        
+        # Link cliente to precatorio
+        self.precatorio.clientes.add(self.cliente)
     
     def test_decimal_values_stored_correctly(self):
         """Test that decimal values are stored in standard format regardless of input"""
@@ -4044,6 +4084,13 @@ class PrecatorioAdvancedFilterTest(TestCase):
             prioridade=False
         )
         
+        # Link clientes to precatorios (required by new validation)
+        self.precatorio_prioridade_deferido.clientes.add(self.cliente1)
+        self.precatorio_prioridade_nao_deferido.clientes.add(self.cliente1)
+        self.precatorio_acordo_deferido.clientes.add(self.cliente2)
+        self.precatorio_acordo_nao_deferido.clientes.add(self.cliente2)
+        self.precatorio_misto.clientes.add(self.cliente3)
+        
         # Create requerimentos for testing
         # Precatorio 1: Priority request DEFERIDO
         Requerimento.objects.create(
@@ -4344,6 +4391,9 @@ class RequerimentoDisplayTest(TestCase):
             prioridade=False
         )
         
+        # Link cliente to precatorio
+        self.precatorio.clientes.add(self.cliente)
+        
         # Create test requerimentos
         self.req_prioridade_idade = Requerimento.objects.create(
             precatorio=self.precatorio,
@@ -4575,6 +4625,9 @@ class RequerimentoFilterViewTest(TestCase):
             prioridade=False
         )
         
+        # Link cliente to precatorio
+        self.precatorio.clientes.add(self.cliente)
+        
         # Create requerimento
         self.requerimento = Requerimento.objects.create(
             precatorio=self.precatorio,
@@ -4678,6 +4731,9 @@ class PriorityRequerimentoClienteFilterTest(TestCase):
             nascimento=date(1970, 12, 10),
             prioridade=False
         )
+        
+        # Link clientes to precatorio
+        self.precatorio.clientes.add(self.cliente_with_deferido, self.cliente_with_indeferido, self.cliente_without_priority)
         
         # Create requerimentos
         Requerimento.objects.create(
@@ -4794,6 +4850,9 @@ class ModelMethodsTest(TestCase):
             cor='#28a745',
             ativa=True
         )
+        
+        # Link cliente to precatorio
+        self.precatorio.clientes.add(self.cliente)
     
     def test_requerimento_get_pedido_abreviado_comprehensive(self):
         """Test get_pedido_abreviado method with all possible pedido types"""
@@ -4902,6 +4961,9 @@ class PerformanceTest(TestCase):
                 prioridade=i % 4 == 0
             )
             self.clientes.append(cliente)
+            
+            # Link cliente to precatorio
+            precatorio.clientes.add(cliente)
             
             # Create requerimentos for some precatorios
             if i % 2 == 0:

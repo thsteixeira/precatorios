@@ -287,9 +287,9 @@ def precatorio_detalhe_view(request, precatorio_cnj):
     # Initialize forms
     precatorio_form = None
     client_search_form = ClienteSearchForm()
-    requerimento_form = RequerimentoForm()
+    requerimento_form = RequerimentoForm(precatorio=precatorio)
     cliente_form = ClienteSimpleForm()
-    alvara_form = AlvaraSimpleForm()
+    alvara_form = AlvaraSimpleForm(precatorio=precatorio)
     
     if request.method == 'POST':
         if 'edit_precatorio' in request.POST:
@@ -338,7 +338,7 @@ def precatorio_detalhe_view(request, precatorio_cnj):
                     
         elif 'create_requerimento' in request.POST:
             # Handle requerimento creation
-            requerimento_form = RequerimentoForm(request.POST)
+            requerimento_form = RequerimentoForm(request.POST, precatorio=precatorio)
             if requerimento_form.is_valid():
                 cpf = requerimento_form.cleaned_data['cliente_cpf']
                 # Remove dots and dashes, keep only numbers
@@ -371,7 +371,7 @@ def precatorio_detalhe_view(request, precatorio_cnj):
                 
         elif 'create_alvara' in request.POST:
             # Handle alvara creation
-            alvara_form = AlvaraSimpleForm(request.POST)
+            alvara_form = AlvaraSimpleForm(request.POST, precatorio=precatorio)
             if alvara_form.is_valid():
                 cpf = alvara_form.cleaned_data['cliente_cpf']
                 # Remove dots and dashes, keep only numbers

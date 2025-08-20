@@ -323,6 +323,30 @@ class Alvara(models.Model):
         verbose_name="Fase Honorários Contratuais"
     )
 
+    def clean(self):
+        """Validate that the cliente is linked to the precatorio"""
+        super().clean()
+        # Only validate the linkage if both precatorio and cliente are set
+        # Use hasattr and getattr to safely check for the precatorio without triggering RelatedObjectDoesNotExist
+        try:
+            precatorio = getattr(self, 'precatorio', None)
+            cliente = getattr(self, 'cliente', None)
+            
+            if precatorio and cliente:
+                if not precatorio.clientes.filter(cpf=cliente.cpf).exists():
+                    raise ValidationError({
+                        'cliente': f'O cliente {cliente.nome} (CPF: {cliente.cpf}) não está vinculado ao precatório {precatorio.cnj}. Vincule o cliente ao precatório antes de criar o alvará.'
+                    })
+        except (AttributeError, Precatorio.DoesNotExist):
+            # If precatorio is not set or doesn't exist, skip validation
+            # This can happen during form validation when the instance is not fully populated
+            pass
+    
+    def save(self, *args, **kwargs):
+        """Override save to call clean validation"""
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.tipo} - {self.cliente.nome}"
     
@@ -352,6 +376,30 @@ class Requerimento(models.Model):
         blank=True,
         help_text="Fase principal atual do requerimento"
     )
+
+    def clean(self):
+        """Validate that the cliente is linked to the precatorio"""
+        super().clean()
+        # Only validate the linkage if both precatorio and cliente are set
+        # Use hasattr and getattr to safely check for the precatorio without triggering RelatedObjectDoesNotExist
+        try:
+            precatorio = getattr(self, 'precatorio', None)
+            cliente = getattr(self, 'cliente', None)
+            
+            if precatorio and cliente:
+                if not precatorio.clientes.filter(cpf=cliente.cpf).exists():
+                    raise ValidationError({
+                        'cliente': f'O cliente {cliente.nome} (CPF: {cliente.cpf}) não está vinculado ao precatório {precatorio.cnj}. Vincule o cliente ao precatório antes de criar o requerimento.'
+                    })
+        except (AttributeError, Precatorio.DoesNotExist):
+            # If precatorio is not set or doesn't exist, skip validation
+            # This can happen during form validation when the instance is not fully populated
+            pass
+    
+    def save(self, *args, **kwargs):
+        """Override save to call clean validation"""
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Requerimento - {self.pedido} - {self.cliente.nome}"
