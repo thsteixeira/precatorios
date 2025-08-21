@@ -133,6 +133,7 @@
                                         <th style="width: 30px;"></th>
                                         <th>Nome</th>
                                         <th>Descrição</th>
+                                        <th class="text-center">Ordem</th>
                                         <th class="text-center">Status</th>
                                         <th class="text-center">Diligências</th>
                                         <th class="text-center">Criado em</th>
@@ -150,6 +151,9 @@
                                             </td>
                                             <td>
                                                 <span class="text-muted">{{ tipo.descricao|default:"Sem descrição" }}</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-primary">{{ tipo.ordem }}</span>
                                             </td>
                                             <td class="text-center">
                                                 {% if tipo.ativo %}
@@ -183,7 +187,7 @@
                                         
                                         <!-- Dropdown Edit Form for this Tipo -->
                                         <tr>
-                                            <td colspan="7" class="p-0">
+                                            <td colspan="8" class="p-0">
                                                 <div class="collapse" id="editTipoDiligenciaForm-{{ tipo.id }}">
                                                     <div class="card card-body m-2 bg-light">
                                                         <form method="post" action="{% url 'editar_tipo_diligencia' tipo.id %}">
@@ -199,7 +203,7 @@
                                                             
                                                             <div class="row">
                                                                 <!-- Nome Field -->
-                                                                <div class="col-md-4 mb-3">
+                                                                <div class="col-md-3 mb-3">
                                                                     <label class="form-label">Nome do Tipo <span class="text-danger">*</span></label>
                                                                     <input type="text" class="form-control" name="nome" value="{{ tipo.nome }}" required>
                                                                 </div>
@@ -210,8 +214,14 @@
                                                                     <input type="color" class="form-control form-control-color" name="cor" value="{{ tipo.cor }}">
                                                                 </div>
                                                                 
+                                                                <!-- Ordem Field -->
+                                                                <div class="col-md-2 mb-3">
+                                                                    <label class="form-label">Ordem</label>
+                                                                    <input type="number" class="form-control" name="ordem" value="{{ tipo.ordem }}" min="0" placeholder="0">
+                                                                </div>
+                                                                
                                                                 <!-- Ativo Field -->
-                                                                <div class="col-md-3 mb-3">
+                                                                <div class="col-md-4 mb-3">
                                                                     <label class="form-label d-block">Status</label>
                                                                     <div class="form-check">
                                                                         <input type="checkbox" class="form-check-input" name="ativo" id="ativo-{{ tipo.id }}" {% if tipo.ativo %}checked{% endif %}>

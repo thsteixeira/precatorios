@@ -95,6 +95,7 @@
                                         <th>Nome</th>
                                         <th>Descrição</th>
                                         <th>Cor</th>
+                                        <th>Ordem</th>
                                         <th>Status</th>
                                         <th>Criado em</th>
                                         <th width="200px">Ações</th>
@@ -122,6 +123,9 @@
                                                 <span class="badge" style="background-color: {{ fase.cor }}; color: white;">
                                                     {{ fase.cor }}
                                                 </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ fase.ordem }}</span>
                                             </td>
                                             <td>
                                                 {% if fase.ativa %}
@@ -168,7 +172,7 @@
                                                             
                                                             <div class="row">
                                                                 <!-- Nome Field -->
-                                                                <div class="col-md-4 mb-3">
+                                                                <div class="col-md-3 mb-3">
                                                                     <label class="form-label">Nome da Fase <span class="text-danger">*</span></label>
                                                                     <input type="text" class="form-control" name="nome" value="{{ fase.nome }}" required>
                                                                 </div>
@@ -179,8 +183,14 @@
                                                                     <input type="color" class="form-control form-control-color" name="cor" value="{{ fase.cor }}">
                                                                 </div>
                                                                 
+                                                                <!-- Ordem Field -->
+                                                                <div class="col-md-2 mb-3">
+                                                                    <label class="form-label">Ordem</label>
+                                                                    <input type="number" class="form-control" name="ordem" value="{{ fase.ordem }}" min="0" placeholder="0">
+                                                                </div>
+                                                                
                                                                 <!-- Ativa Field -->
-                                                                <div class="col-md-3 mb-3">
+                                                                <div class="col-md-4 mb-3">
                                                                     <label class="form-label d-block">Status</label>
                                                                     <div class="form-check">
                                                                         <input type="checkbox" class="form-check-input" name="ativa" id="ativa-{{ fase.id }}" {% if fase.ativa %}checked{% endif %}>
