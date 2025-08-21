@@ -268,16 +268,17 @@ class RequerimentoAdmin(admin.ModelAdmin):
 class FaseAdmin(admin.ModelAdmin):
     """Admin configuration for Fase model"""
     
-    list_display = ('nome', 'tipo_colored', 'cor_preview', 'ativa', 'usage_count', 'criado_em')
+    list_display = ('nome', 'tipo_colored', 'cor_preview', 'ordem', 'ativa', 'usage_count', 'criado_em')
     list_filter = ('tipo', 'ativa')
     search_fields = ('nome', 'descricao')
+    ordering = ('tipo', 'ordem', 'nome')
     
     fieldsets = (
         ('Informações Básicas', {
             'fields': ('nome', 'descricao', 'tipo')
         }),
-        ('Aparência', {
-            'fields': ('cor',)
+        ('Aparência e Ordenação', {
+            'fields': ('cor', 'ordem')
         }),
         ('Status', {
             'fields': ('ativa',)
@@ -312,16 +313,17 @@ class FaseAdmin(admin.ModelAdmin):
 class FaseHonorariosContratuaisAdmin(admin.ModelAdmin):
     """Admin configuration for FaseHonorariosContratuais model"""
     
-    list_display = ('nome', 'cor_preview', 'ativa', 'usage_count', 'criado_em')
+    list_display = ('nome', 'cor_preview', 'ordem', 'ativa', 'usage_count', 'criado_em')
     list_filter = ('ativa',)
     search_fields = ('nome', 'descricao')
+    ordering = ('ordem', 'nome')
     
     fieldsets = (
         ('Informações Básicas', {
             'fields': ('nome', 'descricao')
         }),
-        ('Aparência', {
-            'fields': ('cor',)
+        ('Aparência e Ordenação', {
+            'fields': ('cor', 'ordem')
         }),
         ('Status', {
             'fields': ('ativa',)
@@ -345,16 +347,17 @@ class FaseHonorariosContratuaisAdmin(admin.ModelAdmin):
 class TipoDiligenciaAdmin(admin.ModelAdmin):
     """Admin configuration for TipoDiligencia model"""
     
-    list_display = ('nome', 'cor_preview', 'ativo', 'usage_count', 'criado_em')
+    list_display = ('nome', 'cor_preview', 'ordem', 'ativo', 'usage_count', 'criado_em')
     list_filter = ('ativo',)
     search_fields = ('nome', 'descricao')
+    ordering = ('ordem', 'nome')
     
     fieldsets = (
         ('Informações Básicas', {
             'fields': ('nome', 'descricao')
         }),
-        ('Aparência', {
-            'fields': ('cor',)
+        ('Aparência e Ordenação', {
+            'fields': ('cor', 'ordem')
         }),
         ('Status', {
             'fields': ('ativo',)
