@@ -272,8 +272,9 @@ class Diligencias(models.Model):
         from django.utils import timezone
         if self.concluida:
             return None
-        delta = self.data_final - timezone.now().date()
-        return delta.days
+        today = timezone.now().date()
+        delta = (self.data_final - today).days
+        return delta
     
     def get_urgencia_color(self):
         """Get Bootstrap color class based on urgency level"""

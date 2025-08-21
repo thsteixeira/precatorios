@@ -5729,8 +5729,9 @@ class DiligenciasModelTest(TestCase):
     
     def test_days_until_deadline_method(self):
         """Test days_until_deadline method"""
+    today = timezone.now().date()
         # Test future deadline
-        future_date = date.today() + timedelta(days=5)
+        future_date = today + timedelta(days=5)
         diligencia = Diligencias.objects.create(
             cliente=self.cliente,
             tipo=self.tipo_diligencia,
@@ -5738,9 +5739,8 @@ class DiligenciasModelTest(TestCase):
             criado_por='Test User'
         )
         self.assertEqual(diligencia.days_until_deadline(), 5)
-        
         # Test past deadline
-        past_date = date.today() - timedelta(days=3)
+        past_date = today - timedelta(days=3)
         diligencia_past = Diligencias.objects.create(
             cliente=self.cliente,
             tipo=self.tipo_diligencia,
@@ -5900,11 +5900,9 @@ class DiligenciasFormTest(TestCase):
     
     def test_form_clean_data_final_future(self):
         """Test that data_final must be in the future"""
-        # Test with past date
-        past_data = self.valid_form_data.copy()
-        past_date = (date.today() - timedelta(days=1)).strftime('%d/%m/%Y')
+    past_data = self.valid_form_data.copy()
+    past_date = (timezone.now().date() - timedelta(days=1)).strftime('%d/%m/%Y')
         past_data['data_final'] = past_date
-        
         form = DiligenciasForm(data=past_data)
         self.assertFalse(form.is_valid())
         self.assertIn('data_final', form.errors)
@@ -5912,9 +5910,8 @@ class DiligenciasFormTest(TestCase):
     
     def test_form_clean_data_final_today(self):
         """Test that data_final can be today"""
-        today_data = self.valid_form_data.copy()
-        today_data['data_final'] = date.today().strftime('%d/%m/%Y')
-        
+    today_data = self.valid_form_data.copy()
+    today_data['data_final'] = timezone.now().date().strftime('%d/%m/%Y')
         form = DiligenciasForm(data=today_data)
         self.assertTrue(form.is_valid())
     
@@ -6444,18 +6441,17 @@ class DiligenciasIntegrationTest(TestCase):
     def test_overdue_diligencia_handling(self):
         """Test handling of overdue diligencias"""
         # Create overdue diligencia
+    today = timezone.now().date()
         overdue_diligencia = Diligencias.objects.create(
             cliente=self.cliente,
             tipo=self.tipo_urgente,
-            data_final=date.today() - timedelta(days=1),  # Yesterday
+            data_final=today - timedelta(days=1),  # Yesterday
             criado_por='Test User',
             urgencia='alta'
         )
-        
         # Test overdue detection
         self.assertTrue(overdue_diligencia.is_overdue())
         self.assertEqual(overdue_diligencia.days_until_deadline(), -1)
-        
         # Test list view shows overdue
         self.client_app.login(username='testuser', password='testpass123')
         response = self.client_app.get(reverse('diligencias_list'))

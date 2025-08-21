@@ -936,7 +936,8 @@ class DiligenciasForm(forms.ModelForm):
         data_final = self.cleaned_data.get('data_final')
         if data_final:
             from django.utils import timezone
-            if data_final < timezone.now().date():
+            today = timezone.now().date()
+            if data_final < today:
                 raise forms.ValidationError('A data final não pode ser no passado.')
         return data_final
 
