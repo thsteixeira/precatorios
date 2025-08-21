@@ -62,25 +62,29 @@ class Command(BaseCommand):
                 'nome': 'Organizar Documentos',
                 'descricao': 'Fase inicial para organização dos documentos necessários',
                 'cor': '#FFC107',  # Amarelo - indicando preparação
-                'ativa': True
+                'ativa': True,
+                'ordem': 1
             },
             {
                 'nome': 'Protocolado',
                 'descricao': 'Requerimento protocolado e em análise',
                 'cor': '#17A2B8',  # Azul - indicando em andamento
-                'ativa': True
+                'ativa': True,
+                'ordem': 2
             },
             {
                 'nome': 'Deferido',
                 'descricao': 'Requerimento deferido e aprovado',
                 'cor': '#28A745',  # Verde - indicando sucesso
-                'ativa': True
+                'ativa': True,
+                'ordem': 3
             },
             {
                 'nome': 'Indeferido',
                 'descricao': 'Requerimento indeferido e negado',
                 'cor': '#DC3545',  # Vermelho - indicando negativa
-                'ativa': True
+                'ativa': True,
+                'ordem': 4
             }
         ]
         
@@ -90,25 +94,29 @@ class Command(BaseCommand):
                 'nome': 'Aguardando Depósito Judicial',
                 'descricao': 'Aguardando o depósito dos valores pelo tribunal',
                 'cor': '#FFC107',  # Amarelo - aguardando
-                'ativa': True
+                'ativa': True,
+                'ordem': 1
             },
             {
                 'nome': 'Crédito Depositado Judicialmente',
                 'descricao': 'Valores depositados pelo tribunal',
                 'cor': '#17A2B8',  # Azul - em processamento
-                'ativa': True
+                'ativa': True,
+                'ordem': 2
             },
             {
                 'nome': 'Aguardando Atualização pela Contadoria',
                 'descricao': 'Aguardando atualização dos valores pela contadoria',
                 'cor': '#6F42C1',  # Roxo - processamento interno
-                'ativa': True
+                'ativa': True,
+                'ordem': 3
             },
             {
                 'nome': 'Recebido Pelo Cliente',
                 'descricao': 'Valores recebidos pelo cliente final',
                 'cor': '#28A745',  # Verde - concluído
-                'ativa': True
+                'ativa': True,
+                'ordem': 4
             }
         ]
         
@@ -118,25 +126,29 @@ class Command(BaseCommand):
                 'nome': 'Aguardando Depósito Judicial',
                 'descricao': 'Aguardando o depósito dos honorários pelo tribunal',
                 'cor': '#FFC107',  # Amarelo - aguardando
-                'ativa': True
+                'ativa': True,
+                'ordem': 1
             },
             {
                 'nome': 'Cobrar Cliente',
                 'descricao': 'Iniciar cobrança dos honorários do cliente',
                 'cor': '#FF6B35',  # Laranja - ação necessária
-                'ativa': True
+                'ativa': True,
+                'ordem': 2
             },
             {
                 'nome': 'Quitado parcialmente',
                 'descricao': 'Honorários quitados parcialmente pelo cliente',
                 'cor': '#17A2B8',  # Azul - parcialmente concluído
-                'ativa': True
+                'ativa': True,
+                'ordem': 3
             },
             {
                 'nome': 'Quitado integralmente',
                 'descricao': 'Honorários quitados integralmente pelo cliente',
                 'cor': '#28A745',  # Verde - totalmente concluído
-                'ativa': True
+                'ativa': True,
+                'ordem': 4
             }
         ]
         
@@ -149,12 +161,13 @@ class Command(BaseCommand):
                 defaults={
                     'descricao': phase_data['descricao'],
                     'cor': phase_data['cor'],
-                    'ativa': phase_data['ativa']
+                    'ativa': phase_data['ativa'],
+                    'ordem': phase_data['ordem']
                 }
             )
             if created:
                 created_req += 1
-                self.stdout.write(f'✓ Created Requerimento phase: {fase.nome}')
+                self.stdout.write(f'✓ Created Requerimento phase: {fase.nome} (ordem: {fase.ordem})')
         
         # Create Alvará phases
         created_alv = 0
@@ -165,12 +178,13 @@ class Command(BaseCommand):
                 defaults={
                     'descricao': phase_data['descricao'],
                     'cor': phase_data['cor'],
-                    'ativa': phase_data['ativa']
+                    'ativa': phase_data['ativa'],
+                    'ordem': phase_data['ordem']
                 }
             )
             if created:
                 created_alv += 1
-                self.stdout.write(f'✓ Created Alvará phase: {fase.nome}')
+                self.stdout.write(f'✓ Created Alvará phase: {fase.nome} (ordem: {fase.ordem})')
         
         # Create Honorários phases
         created_hon = 0
@@ -180,12 +194,13 @@ class Command(BaseCommand):
                 defaults={
                     'descricao': phase_data['descricao'],
                     'cor': phase_data['cor'],
-                    'ativa': phase_data['ativa']
+                    'ativa': phase_data['ativa'],
+                    'ordem': phase_data['ordem']
                 }
             )
             if created:
                 created_hon += 1
-                self.stdout.write(f'✓ Created Honorários phase: {fase.nome}')
+                self.stdout.write(f'✓ Created Honorários phase: {fase.nome} (ordem: {fase.ordem})')
         
         if created_req > 0 or created_alv > 0 or created_hon > 0:
             self.stdout.write(f'\n=== PHASES CREATED ===')
@@ -204,27 +219,32 @@ class Command(BaseCommand):
             {
                 'nome': 'Propor repactuação',
                 'descricao': 'Propor uma nova pactuação ou renegociação dos termos',
-                'cor': '#007bff'  # Azul - padrão
+                'cor': '#007bff',  # Azul - padrão
+                'ordem': 1
             },
             {
                 'nome': 'Solicitar RG',
                 'descricao': 'Solicitar documento de identidade (RG) do cliente',
-                'cor': '#28a745'  # Verde
+                'cor': '#28a745',  # Verde
+                'ordem': 2
             },
             {
                 'nome': 'Solicitar contrato',
                 'descricao': 'Solicitar contrato ou documentação contratual',
-                'cor': '#ffc107'  # Amarelo
+                'cor': '#ffc107',  # Amarelo
+                'ordem': 3
             },
             {
                 'nome': 'Cobrar honorários',
                 'descricao': 'Realizar cobrança de honorários devidos',
-                'cor': '#fd7e14'  # Laranja
+                'cor': '#fd7e14',  # Laranja
+                'ordem': 4
             },
             {
                 'nome': 'Executar honorários',
                 'descricao': 'Executar judicialmente os honorários em aberto',
-                'cor': '#dc3545'  # Vermelho
+                'cor': '#dc3545',  # Vermelho
+                'ordem': 5
             }
         ]
         
@@ -234,12 +254,13 @@ class Command(BaseCommand):
                 nome=tipo_data['nome'],
                 defaults={
                     'descricao': tipo_data['descricao'],
-                    'cor': tipo_data['cor']
+                    'cor': tipo_data['cor'],
+                    'ordem': tipo_data['ordem']
                 }
             )
             if created:
                 created_count += 1
-                self.stdout.write(f'✓ Created TipoDiligencia: {tipo.nome}')
+                self.stdout.write(f'✓ Created TipoDiligencia: {tipo.nome} (ordem: {tipo.ordem})')
         
         if created_count > 0:
             self.stdout.write(f'\n=== TIPOS DE DILIGÊNCIA CREATED ===')

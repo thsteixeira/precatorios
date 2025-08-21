@@ -9,12 +9,50 @@ def validate_cpf(cpf):
     Validate Brazilian CPF using the official algorithm
     Returns True if valid, False otherwise
     """
-    # Remove any non-digit characters
     cpf = ''.join(filter(str.isdigit, cpf))
-    
-    # Check if it has 11 digits
     if len(cpf) != 11:
         return False
+    if cpf == cpf[0] * 11:
+        return False
+    sum1 = 0
+    for i in range(9):
+        sum1 += int(cpf[i]) * (10 - i)
+    remainder1 = sum1 % 11
+    digit1 = 11 - remainder1 if remainder1 > 1 else 0
+    if int(cpf[9]) != digit1:
+        return False
+    sum2 = 0
+    for i in range(10):
+        sum2 += int(cpf[i]) * (11 - i)
+    remainder2 = sum2 % 11
+    digit2 = 11 - remainder2 if remainder2 > 1 else 0
+    if int(cpf[10]) != digit2:
+        return False
+    return True
+
+def validate_cnpj(cnpj):
+    """
+    Validate Brazilian CNPJ using the official algorithm
+    Returns True if valid, False otherwise
+    """
+    cnpj = ''.join(filter(str.isdigit, cnpj))
+    if len(cnpj) != 14:
+        return False
+    if cnpj == cnpj[0] * 14:
+        return False
+    weight1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    weight2 = [6] + weight1
+    sum1 = sum(int(cnpj[i]) * weight1[i] for i in range(12))
+    digit1 = 11 - (sum1 % 11)
+    digit1 = digit1 if digit1 < 10 else 0
+    if int(cnpj[12]) != digit1:
+        return False
+    sum2 = sum(int(cnpj[i]) * weight2[i] for i in range(13))
+    digit2 = 11 - (sum2 % 11)
+    digit2 = digit2 if digit2 < 10 else 0
+    if int(cnpj[13]) != digit2:
+        return False
+    return True
     
     # Check if all digits are the same (invalid CPFs)
     if cpf == cpf[0] * 11:
@@ -308,15 +346,15 @@ class PrecatorioForm(forms.ModelForm):
 
 class ClienteForm(forms.ModelForm):
     cpf = forms.CharField(
-        max_length=14,
-        label='CPF',
-        help_text='Formato: 000.000.000-00 ou 00000000000 (obrigatório)',
+        max_length=18,
+        label='CPF ou CNPJ',
+        help_text='Digite o CPF (000.000.000-00) ou CNPJ (00.000.000/0000-00)',
         required=True,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '000.000.000-00 ou 00000000000',
-            'pattern': r'(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})',
-            'title': 'CPF no formato: 000.000.000-00 ou 00000000000'
+            'placeholder': 'CPF ou CNPJ',
+            'pattern': r'(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11}|\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}|\d{14})',
+            'title': 'CPF: 000.000.000-00 ou 00000000000 | CNPJ: 00.000.000/0000-00 ou 00000000000000'
         })
     )
     
@@ -336,19 +374,23 @@ class ClienteForm(forms.ModelForm):
     
     def clean_cpf(self):
         """
-        Clean CPF field by removing formatting (dots and dashes) and validate it's not empty
+        Clean CPF/CNPJ field by removing formatting and validate it's not empty or invalid
         """
         cpf = self.cleaned_data.get('cpf')
         if cpf:
-            # Remove dots and dashes, keep only numbers
-            cpf_numbers = ''.join(filter(str.isdigit, cpf))
-            if len(cpf_numbers) != 11:
-                raise forms.ValidationError('CPF deve ter exatamente 11 dígitos.')
-            if not validate_cpf(cpf_numbers):
-                raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
-            return cpf_numbers
+            doc = ''.join(filter(str.isdigit, cpf))
+            if len(doc) == 11:
+                if not validate_cpf(doc):
+                    raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
+                return doc
+            elif len(doc) == 14:
+                if not validate_cnpj(doc):
+                    raise forms.ValidationError('CNPJ inválido. Verifique se o número está correto.')
+                return doc
+            else:
+                raise forms.ValidationError('Documento deve ser um CPF (11 dígitos) ou CNPJ (14 dígitos).')
         else:
-            raise forms.ValidationError('CPF é obrigatório.')
+            raise forms.ValidationError('CPF ou CNPJ é obrigatório.')
     
     def clean_precatorio_cnj(self):
         """
@@ -389,7 +431,7 @@ class ClienteForm(forms.ModelForm):
 class ClienteSimpleForm(forms.ModelForm):
     """Simplified ClienteForm for use within precatorio details (no precatorio_cnj field)"""
     cpf = forms.CharField(
-        max_length=14,
+            max_length=18,
         label='CPF',
         help_text='Formato: 000.000.000-00 ou 00000000000 (obrigatório)',
         required=True,
@@ -409,7 +451,7 @@ class ClienteSimpleForm(forms.ModelForm):
         if cpf:
             # Remove dots and dashes, keep only numbers
             cpf_numbers = ''.join(filter(str.isdigit, cpf))
-            if len(cpf_numbers) != 11:
+            if len(cpf_numbers) != 11 and len(cpf_numbers) != 14:
                 raise forms.ValidationError('CPF deve ter exatamente 11 dígitos.')
             if not validate_cpf(cpf_numbers):
                 raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
@@ -461,37 +503,40 @@ class PrecatorioSearchForm(forms.Form):
 class ClienteSearchForm(forms.Form):
     """Form for searching clients by CPF to link to a precatorio"""
     cpf = forms.CharField(
-        max_length=14,
-        label='CPF do Cliente',
-        help_text='Digite o CPF do cliente para vincular ao precatório. Formato: 000.000.000-00 ou 00000000000',
+        max_length=18,
+        label='CPF ou CNPJ do Cliente',
+        help_text='Digite o CPF ou CNPJ do cliente para vincular ao precatório. Aceita formatos com ou sem pontuação.',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '000.000.000-00 ou 00000000000',
-            'pattern': r'(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})',
-            'title': 'CPF no formato: 000.000.000-00 ou 00000000000'
+            'placeholder': 'CPF ou CNPJ',
+            'pattern': r'(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}|\d{11}|\d{14})',
+            'title': 'Digite o CPF (000.000.000-00 ou 00000000000) ou CNPJ (00.000.000/0000-00 ou 00000000000000)'
         })
     )
     
     def clean_cpf(self):
         """
-        Clean CPF field by removing formatting (dots and dashes) and validate it's not empty
+        Clean CPF/CNPJ field by removing formatting and validate it's not empty and is valid
         """
-        cpf = self.cleaned_data.get('cpf')
-        if cpf:
-            # Remove dots and dashes, keep only numbers
-            cpf_numbers = ''.join(filter(str.isdigit, cpf))
-            if len(cpf_numbers) != 11:
-                raise forms.ValidationError('CPF deve ter exatamente 11 dígitos.')
-            if not validate_cpf(cpf_numbers):
-                raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
-            return cpf_numbers
+        doc = self.cleaned_data.get('cpf')
+        if doc:
+            doc_numbers = ''.join(filter(str.isdigit, doc))
+            if len(doc_numbers) == 11:
+                if not validate_cpf(doc_numbers):
+                    raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
+            elif len(doc_numbers) == 14:
+                if not validate_cnpj(doc_numbers):
+                    raise forms.ValidationError('CNPJ inválido. Verifique se o número está correto.')
+            else:
+                raise forms.ValidationError('Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.')
+            return doc_numbers
         else:
-            raise forms.ValidationError('CPF é obrigatório.')
+            raise forms.ValidationError('CPF ou CNPJ é obrigatório.')
 
 
 class RequerimentoForm(forms.ModelForm):
     cliente_cpf = forms.CharField(
-        max_length=14,
+            max_length=18,
         label='CPF do Cliente',
         help_text='Digite o CPF do cliente. Formato: 000.000.000-00 ou 00000000000',
         widget=forms.TextInput(attrs={
@@ -545,29 +590,29 @@ class RequerimentoForm(forms.ModelForm):
         self.fields['fase'].queryset = Fase.get_fases_for_requerimento()
     
     def clean_cliente_cpf(self):
-        """Validate that the CPF corresponds to an existing cliente"""
+        """Validate that the CPF or CNPJ corresponds to an existing cliente"""
         cpf = self.cleaned_data.get('cliente_cpf')
         if cpf:
-            # Remove dots and dashes, keep only numbers
             cpf_numbers = ''.join(filter(str.isdigit, cpf))
-            if len(cpf_numbers) != 11:
-                raise forms.ValidationError('CPF deve ter exatamente 11 dígitos.')
-            if not validate_cpf(cpf_numbers):
-                raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
+            if len(cpf_numbers) == 11:
+                if not validate_cpf(cpf_numbers):
+                    raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
+            elif len(cpf_numbers) == 14:
+                if not validate_cnpj(cpf_numbers):
+                    raise forms.ValidationError('CNPJ inválido. Verifique se o número está correto.')
+            else:
+                raise forms.ValidationError('Documento deve ser um CPF (11 dígitos) ou CNPJ (14 dígitos).')
             try:
                 from .models import Cliente
                 cliente = Cliente.objects.get(cpf=cpf_numbers)
-                
-                # Additional validation: check if cliente is linked to the precatorio
                 if self.precatorio and not self.precatorio.clientes.filter(cpf=cpf_numbers).exists():
                     raise forms.ValidationError(
-                        f'O cliente {cliente.nome} (CPF: {cpf}) não está vinculado ao precatório {self.precatorio.cnj}. '
+                        f'O cliente {cliente.nome} (CPF/CNPJ: {cpf}) não está vinculado ao precatório {self.precatorio.cnj}. '
                         'Vincule o cliente ao precatório antes de criar o requerimento.'
                     )
-                
                 return cpf
             except Cliente.DoesNotExist:
-                raise forms.ValidationError(f'Não foi encontrado um cliente com o CPF "{cpf}". Verifique se o número está correto ou cadastre o cliente primeiro.')
+                raise forms.ValidationError(f'Não foi encontrado um cliente com o documento "{cpf}". Verifique se o número está correto ou cadastre o cliente primeiro.')
         return cpf
 
     class Meta:
@@ -592,7 +637,7 @@ class AlvaraSimpleForm(forms.ModelForm):
     """Simplified AlvaraForm for use within precatorio details (no precatorio_cnj field)"""
     
     cliente_cpf = forms.CharField(
-        max_length=14,
+            max_length=18,
         label='CPF do Cliente',
         help_text='Digite o CPF do cliente. Formato: 000.000.000-00 ou 00000000000',
         widget=forms.TextInput(attrs={
@@ -690,7 +735,7 @@ class AlvaraSimpleForm(forms.ModelForm):
         if cpf:
             # Remove dots and dashes, keep only numbers
             cpf_numbers = ''.join(filter(str.isdigit, cpf))
-            if len(cpf_numbers) != 11:
+            if len(cpf_numbers) != 11 and len(cpf_numbers) != 14:
                 raise forms.ValidationError('CPF deve ter exatamente 11 dígitos.')
             if not validate_cpf(cpf_numbers):
                 raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
@@ -784,6 +829,18 @@ class FaseForm(forms.ModelForm):
         })
     )
     
+    ordem = forms.IntegerField(
+        min_value=0,
+        initial=0,
+        label='Ordem de Exibição',
+        help_text='Número para definir a ordem de exibição (menores aparecem primeiro)',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': '0',
+            'placeholder': '0'
+        })
+    )
+    
     ativa = forms.BooleanField(
         required=False,
         initial=True,
@@ -820,7 +877,7 @@ class FaseForm(forms.ModelForm):
 
     class Meta:
         model = Fase
-        fields = ['nome', 'descricao', 'tipo', 'cor', 'ativa']
+        fields = ['nome', 'descricao', 'tipo', 'cor', 'ordem', 'ativa']
 
 
 class FaseHonorariosContratuaisForm(forms.ModelForm):
@@ -860,6 +917,18 @@ class FaseHonorariosContratuaisForm(forms.ModelForm):
         })
     )
     
+    ordem = forms.IntegerField(
+        min_value=0,
+        initial=0,
+        label='Ordem de Exibição',
+        help_text='Número para definir a ordem de exibição (menores aparecem primeiro)',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': '0',
+            'placeholder': '0'
+        })
+    )
+    
     ativa = forms.BooleanField(
         required=False,
         initial=True,
@@ -896,7 +965,7 @@ class FaseHonorariosContratuaisForm(forms.ModelForm):
 
     class Meta:
         model = FaseHonorariosContratuais
-        fields = ['nome', 'descricao', 'cor', 'ativa']
+        fields = ['nome', 'descricao', 'cor', 'ordem', 'ativa']
 
 
 class DiligenciasForm(forms.ModelForm):
@@ -986,11 +1055,12 @@ class TipoDiligenciaForm(forms.ModelForm):
     
     class Meta:
         model = TipoDiligencia
-        fields = ['nome', 'descricao', 'cor', 'ativo']
+        fields = ['nome', 'descricao', 'cor', 'ordem', 'ativo']
         widgets = {
             'nome': forms.TextInput(attrs={'class': 'form-control'}),
             'descricao': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'cor': forms.TextInput(attrs={'type': 'color', 'class': 'form-control form-control-color'}),
+            'ordem': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': '0'}),
             'ativo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
     
@@ -1001,12 +1071,14 @@ class TipoDiligenciaForm(forms.ModelForm):
         self.fields['nome'].label = 'Nome do Tipo'
         self.fields['descricao'].label = 'Descrição'
         self.fields['cor'].label = 'Cor'
+        self.fields['ordem'].label = 'Ordem de Exibição'
         self.fields['ativo'].label = 'Ativo'
         
         # Add help texts
         self.fields['nome'].help_text = 'Nome único para o tipo de diligência'
         self.fields['descricao'].help_text = 'Descrição opcional do tipo (opcional)'
         self.fields['cor'].help_text = 'Cor para identificação visual'
+        self.fields['ordem'].help_text = 'Número para definir a ordem de exibição (menores aparecem primeiro)'
         self.fields['ativo'].help_text = 'Se este tipo está disponível para uso'
         
         # Make description optional
@@ -1019,4 +1091,3 @@ class TipoDiligenciaForm(forms.ModelForm):
             raise forms.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
         return cor
 
-        

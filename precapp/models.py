@@ -27,6 +27,10 @@ class Fase(models.Model):
         default='ambos',
         help_text="Define se a fase é específica para Alvarás, Requerimentos ou ambos"
     )
+    ordem = models.PositiveIntegerField(
+        default=0,
+        help_text="Ordem de exibição (números menores aparecem primeiro)"
+    )
     ativa = models.BooleanField(default=True, help_text="Se esta fase está ativa para uso")
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
@@ -48,7 +52,7 @@ class Fase(models.Model):
     class Meta:
         verbose_name = "Fase Principal"
         verbose_name_plural = "Fases Principais"
-        ordering = ['tipo', 'nome']
+        ordering = ['ordem', 'tipo', 'nome']
         # Remove unique constraint on nome to allow same names for different types
         constraints = [
             models.UniqueConstraint(
@@ -67,6 +71,10 @@ class FaseHonorariosContratuais(models.Model):
         default='#28a745', 
         help_text="Cor da fase em hexadecimal (ex: #28a745)"
     )
+    ordem = models.PositiveIntegerField(
+        default=0,
+        help_text="Ordem de exibição (números menores aparecem primeiro)"
+    )
     ativa = models.BooleanField(default=True, help_text="Se esta fase está ativa para uso")
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
@@ -82,7 +90,7 @@ class FaseHonorariosContratuais(models.Model):
     class Meta:
         verbose_name = "Fase Honorários Contratuais"
         verbose_name_plural = "Fases Honorários Contratuais"
-        ordering = ['nome']
+        ordering = ['ordem', 'nome']
 
 class Precatorio(models.Model):
     STATUS_PAGAMENTO_CHOICES = [
@@ -137,7 +145,7 @@ class Precatorio(models.Model):
 
 
 class Cliente(models.Model):
-    cpf = models.CharField(max_length=11, primary_key=True)
+    cpf = models.CharField(max_length=18, primary_key=True, help_text="CPF ou CNPJ do cliente")
     nome = models.CharField(max_length=400)
     nascimento = models.DateField()
     prioridade = models.BooleanField()
@@ -175,6 +183,10 @@ class TipoDiligencia(models.Model):
         default='#007bff',
         help_text="Cor em hexadecimal para identificação visual (ex: #007bff)"
     )
+    ordem = models.PositiveIntegerField(
+        default=0,
+        help_text="Ordem de exibição (números menores aparecem primeiro)"
+    )
     ativo = models.BooleanField(
         default=True,
         help_text="Se este tipo está ativo para uso"
@@ -193,7 +205,7 @@ class TipoDiligencia(models.Model):
     class Meta:
         verbose_name = "Tipo de Diligência"
         verbose_name_plural = "Tipos de Diligência"
-        ordering = ['nome']
+        ordering = ['ordem', 'nome']
 
 
 class Diligencias(models.Model):

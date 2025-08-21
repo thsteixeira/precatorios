@@ -367,10 +367,10 @@
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            {{ cliente_form.cpf.label_tag }}
+                                            <label for="{{ cliente_form.cpf.id_for_label }}">CPF ou CNPJ</label>
                                             {{ cliente_form.cpf }}
                                             {% if cliente_form.cpf.help_text %}
-                                                <small class="form-text text-muted">{{ cliente_form.cpf.help_text }}</small>
+                                                <small class="form-text text-muted">Informe o CPF ou CNPJ do cliente. Aceita formatos com ou sem pontuação.</small>
                                             {% endif %}
                                             {% if cliente_form.cpf.errors %}
                                                 <div class="text-danger small">
@@ -489,7 +489,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th><i class="fas fa-user me-1"></i>Nome</th>
-                                    <th><i class="fas fa-id-card me-1"></i>CPF</th>
+                                    <th><i class="fas fa-id-card me-1"></i>CPF ou CNPJ</th>
                                     <th><i class="fas fa-calendar me-1"></i>Nascimento</th>
                                     <th><i class="fas fa-star me-1"></i>Prioridade</th>
                                 </tr>
@@ -682,7 +682,7 @@
                                             <div>
                                                 <strong>{{ requerimento.cliente.nome }}</strong>
                                                 <br>
-                                                <small class="text-muted">CPF: {{ requerimento.cliente.cpf }}</small>
+                                                <small class="text-muted">CPF ou CNPJ: {{ requerimento.cliente.cpf }}</small>
                                             </div>
                                         </div>
                                     </td>
@@ -739,7 +739,7 @@
                                                     
                                                     <div class="row g-3">
                                                         <div class="col-md-6">
-                                                            <label for="cliente_cpf_{{ requerimento.id }}" class="form-label">CPF do Cliente</label>
+                                                            <label for="cliente_cpf_{{ requerimento.id }}" class="form-label">CPF ou CNPJ do Cliente</label>
                                                             <input type="text" class="form-control form-control-sm" 
                                                                    id="cliente_cpf_{{ requerimento.id }}" 
                                                                    name="cliente_cpf" 

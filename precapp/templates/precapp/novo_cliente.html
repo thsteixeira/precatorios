@@ -79,7 +79,11 @@
                                 <label for="{{ form.nome.id_for_label }}" class="form-label">
                                     <strong><i class="fas fa-user me-1"></i>{{ form.nome.label }}</strong>
                                 </label>
-                                {{ form.nome }}
+                                    {{ form.cpf }}
+                                    <small class="form-text text-muted">Informe o CPF ou CNPJ do cliente. Aceita formatos com ou sem pontuação.</small>
+                                    {% if form.cpf.help_text %}
+                                        <small class="form-text text-muted">{{ form.cpf.help_text }}</small>
+                                    {% endif %}
                                 {% if form.nome.help_text %}
                                     <div class="form-text">{{ form.nome.help_text }}</div>
                                 {% endif %}

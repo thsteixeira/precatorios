@@ -509,7 +509,7 @@ def precatorio_detalhe_view(request, precatorio_cnj):
         'requerimentos': requerimentos,
         'alvara_fases': Fase.get_fases_for_alvara(),
         'requerimento_fases': Fase.get_fases_for_requerimento(),
-        'fases_honorarios_contratuais': FaseHonorariosContratuais.objects.filter(ativa=True).order_by('nome'),
+        'fases_honorarios_contratuais': FaseHonorariosContratuais.objects.filter(ativa=True),  # Uses model's default ordering: ['ordem', 'nome']
     }
     
     return render(request, 'precapp/precatorio_detail.html', context)
@@ -703,7 +703,7 @@ def alvaras_view(request):
     # Get available fases for alvara
     available_fases = Fase.get_fases_for_alvara()
     # Get available fases for honorários contratuais
-    available_fases_honorarios = FaseHonorariosContratuais.objects.all().order_by('nome')
+    available_fases_honorarios = FaseHonorariosContratuais.objects.all()  # Uses model's default ordering: ['ordem', 'nome']
     
     # Apply filters based on GET parameters
     nome_filter = request.GET.get('nome', '').strip()
@@ -924,7 +924,7 @@ def delete_precatorio_view(request, precatorio_cnj):
 @login_required
 def fases_view(request):
     """View to list all phases"""
-    fases = Fase.objects.all().order_by('nome')
+    fases = Fase.objects.all()  # Uses model's default ordering: ['ordem', 'tipo', 'nome']
     
     # Statistics
     total_fases = fases.count()
@@ -1045,7 +1045,7 @@ def ativar_fase_view(request, fase_id):
 @login_required
 def fases_honorarios_view(request):
     """View to list all honorários contratuais phases"""
-    fases = FaseHonorariosContratuais.objects.all().order_by('nome')
+    fases = FaseHonorariosContratuais.objects.all()  # Uses model's default ordering: ['ordem', 'nome']
     
     # Statistics
     total_fases = fases.count()
@@ -1156,7 +1156,7 @@ def ativar_fase_honorarios_view(request, fase_id):
 @login_required
 def tipos_diligencia_view(request):
     """View to list all diligence types"""
-    tipos = TipoDiligencia.objects.all().order_by('nome')
+    tipos = TipoDiligencia.objects.all()  # Uses model's default ordering: ['ordem', 'nome']
     
     # Add diligencias count for each tipo
     for tipo in tipos:

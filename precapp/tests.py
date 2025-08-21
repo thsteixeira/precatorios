@@ -212,6 +212,7 @@ class FaseHonorariosContratuaisFormTest(TestCase):
             'nome': 'Em Negociação',
             'descricao': 'Honorários em processo de negociação',
             'cor': '#007BFF',
+            'ordem': 0,
             'ativa': True
         }
     
@@ -496,6 +497,7 @@ class FaseHonorariosContratuaisViewTest(TestCase):
             'nome': 'Nova Fase Test',
             'descricao': 'Test description',
             'cor': '#00FF00',
+            'ordem': 0,
             'ativa': True
         }
         response = self.client_app.post(reverse('nova_fase_honorarios'), data=form_data)
@@ -511,6 +513,7 @@ class FaseHonorariosContratuaisViewTest(TestCase):
             'nome': 'Updated Fase Name',
             'descricao': 'Updated description',
             'cor': '#FF0000',
+            'ordem': 1,
             'ativa': False
         }
         response = self.client_app.post(
@@ -1040,34 +1043,52 @@ class ClienteModelTest(TestCase):
     """Test cases for Cliente model"""
     
     def setUp(self):
-        """Set up test data"""
-        self.cliente_data = {
+        self.cliente_data_cpf = {
             'cpf': '12345678909',
             'nome': 'João Silva',
             'nascimento': date(1980, 5, 15),
             'prioridade': False
         }
+        self.cliente_data_cnpj = {
+            'cpf': '12345678000195',
+            'nome': 'Empresa Ltda',
+            'nascimento': date(2000, 1, 1),
+            'prioridade': False
+        }
     
-    def test_cliente_creation(self):
-        """Test creating a cliente with valid data"""
-        cliente = Cliente(**self.cliente_data)
-        cliente.full_clean()  # This should not raise ValidationError
+    def test_cliente_creation_cpf(self):
+        cliente = Cliente(**self.cliente_data_cpf)
+        cliente.full_clean()
         cliente.save()
         self.assertEqual(cliente.cpf, '12345678909')
         self.assertEqual(cliente.nome, 'João Silva')
+
+    def test_cliente_creation_cnpj(self):
+        cliente = Cliente(**self.cliente_data_cnpj)
+        cliente.full_clean()
+        cliente.save()
+        self.assertEqual(cliente.cpf, '12345678000195')
+        self.assertEqual(cliente.nome, 'Empresa Ltda')
     
-    def test_cliente_str_method(self):
-        """Test the __str__ method of Cliente"""
-        cliente = Cliente(**self.cliente_data)
+    def test_cliente_str_method_cpf(self):
+        cliente = Cliente(**self.cliente_data_cpf)
         expected_str = f'{cliente.nome} - {cliente.cpf}'
         self.assertEqual(str(cliente), expected_str)
 
-    def test_cliente_unique_cpf(self):
-        """Test that CPF must be unique"""
-        Cliente.objects.create(**self.cliente_data)
-        # Try to create another cliente with the same CPF
+    def test_cliente_str_method_cnpj(self):
+        cliente = Cliente(**self.cliente_data_cnpj)
+        expected_str = f'{cliente.nome} - {cliente.cpf}'
+        self.assertEqual(str(cliente), expected_str)
+
+    def test_cliente_unique_document(self):
+        Cliente.objects.create(**self.cliente_data_cpf)
         with self.assertRaises(Exception):
-            duplicate_cliente = Cliente(**self.cliente_data)
+            duplicate_cliente = Cliente(**self.cliente_data_cpf)
+            duplicate_cliente.full_clean()
+            duplicate_cliente.save()
+        Cliente.objects.create(**self.cliente_data_cnpj)
+        with self.assertRaises(Exception):
+            duplicate_cliente = Cliente(**self.cliente_data_cnpj)
             duplicate_cliente.full_clean()
             duplicate_cliente.save()
 
@@ -1222,6 +1243,7 @@ class FaseFormTest(TestCase):
             'descricao': 'Descrição da nova fase',
             'tipo': 'alvara',
             'cor': '#FF6B35',
+            'ordem': 0,
             'ativa': True
         }
     
@@ -1364,8 +1386,16 @@ class RequerimentoFormTest(TestCase):
             prioridade=False
         )
         
-        # Link the cliente to the precatorio (required by new validation)
+        self.cliente_cnpj = Cliente.objects.create(
+            cpf='12345678000195',
+            nome='Empresa Ltda',
+            nascimento=date(2000, 1, 1),
+            prioridade=False
+        )
+        
+        # Link the clientes to the precatorio (required by new validation)
         self.precatorio.clientes.add(self.cliente)
+        self.precatorio.clientes.add(self.cliente_cnpj)
         
         self.fase_requerimento = Fase.objects.create(
             nome='Em Andamento',
@@ -1387,11 +1417,18 @@ class RequerimentoFormTest(TestCase):
             ativa=True
         )
         
-        self.valid_form_data = {
+        self.valid_form_data_cpf = {
             'cliente_cpf': '123.456.789-09',
             'pedido': 'prioridade doença',
             'valor': '25000.00',
             'desagio': '15.5',
+            'fase': self.fase_requerimento.id
+        }
+        self.valid_form_data_cnpj = {
+            'cliente_cpf': '12.345.678/0001-95',
+            'pedido': 'prioridade idade',
+            'valor': '40000.00',
+            'desagio': '10.0',
             'fase': self.fase_requerimento.id
         }
     
@@ -1406,10 +1443,27 @@ class RequerimentoFormTest(TestCase):
         # Should NOT include alvara phases
         self.assertNotIn(self.fase_alvara, fase_queryset)
     
-    def test_valid_requerimento_form(self):
-        """Test form with valid data"""
-        form = RequerimentoForm(data=self.valid_form_data, precatorio=self.precatorio)
+    def test_valid_requerimento_form_cpf(self):
+        form = RequerimentoForm(data=self.valid_form_data_cpf, precatorio=self.precatorio)
         self.assertTrue(form.is_valid())
+
+    def test_valid_requerimento_form_cnpj(self):
+        form = RequerimentoForm(data=self.valid_form_data_cnpj, precatorio=self.precatorio)
+        self.assertTrue(form.is_valid())
+
+    def test_invalid_requerimento_form_document(self):
+        # Invalid CPF
+        invalid_data = self.valid_form_data_cpf.copy()
+        invalid_data['cliente_cpf'] = '11111111111'
+        form = RequerimentoForm(data=invalid_data, precatorio=self.precatorio)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cliente_cpf', form.errors)
+        # Invalid CNPJ
+        invalid_data_cnpj = self.valid_form_data_cnpj.copy()
+        invalid_data_cnpj['cliente_cpf'] = '12345678000100'
+        form = RequerimentoForm(data=invalid_data_cnpj, precatorio=self.precatorio)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cliente_cpf', form.errors)
 
 
 class PrecatorioFormTest(TestCase):
@@ -1471,6 +1525,18 @@ class ClienteFormTest(TestCase):
             'nascimento': '1980-05-15',
             'prioridade': False
         }
+        self.valid_form_data_cpf = {
+            'cpf': '111.444.777-35',
+            'nome': 'João Silva',
+            'nascimento': '1980-05-15',
+            'prioridade': False
+        }
+        self.valid_form_data_cnpj = {
+            'cpf': '12.345.678/0001-95',
+            'nome': 'Empresa Ltda',
+            'nascimento': '2000-01-01',
+            'prioridade': False
+        }
     
     def test_valid_form(self):
         """Test form with all valid data"""
@@ -1504,28 +1570,38 @@ class ClienteFormTest(TestCase):
         cliente = form.save()
         self.assertEqual(cliente.cpf, '98765432100')  # Should be stored as-is
         
-    def test_cpf_validation_errors(self):
-        """Test CPF validation error cases"""
-        # Test invalid CPF length
-        invalid_data = self.valid_form_data.copy()
-        invalid_data['cpf'] = '123456789'  # Only 9 digits
+    def test_document_validation_errors(self):
+        # Invalid CPF length
+        invalid_data = self.valid_form_data_cpf.copy()
+        invalid_data['cpf'] = '123456789'
         form = ClienteForm(data=invalid_data)
         self.assertFalse(form.is_valid())
         self.assertIn('cpf', form.errors)
-        
-        # Test mathematically invalid CPF
-        invalid_data['cpf'] = '23902928334'  # Invalid check digits
+        # Invalid CPF check digits
+        invalid_data['cpf'] = '23902928334'
         form = ClienteForm(data=invalid_data)
         self.assertFalse(form.is_valid())
         self.assertIn('cpf', form.errors)
         self.assertIn('CPF inválido', form.errors['cpf'][0])
-        
-        # Test CPF with all same digits (should be invalid)
+        # CPF all same digits
         invalid_data['cpf'] = '11111111111'
         form = ClienteForm(data=invalid_data)
         self.assertFalse(form.is_valid())
         self.assertIn('cpf', form.errors)
         self.assertIn('CPF inválido', form.errors['cpf'][0])
+        # Invalid CNPJ length
+        invalid_cnpj = self.valid_form_data_cnpj.copy()
+        invalid_cnpj['cpf'] = '12345678'
+        form = ClienteForm(data=invalid_cnpj)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cpf', form.errors)
+        # Invalid CNPJ check digits
+        invalid_cnpj['cpf'] = '12345678000100'
+        form = ClienteForm(data=invalid_cnpj)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cpf', form.errors)
+        self.assertIn('CNPJ inválido', form.errors['cpf'][0])
+    # ...existing code...
 
 
 class ValidatorTest(TestCase):
@@ -5576,6 +5652,7 @@ class TipoDiligenciaFormTest(TestCase):
             'nome': 'Contato Cliente',
             'descricao': 'Entrar em contato com o cliente',
             'cor': '#28a745',
+            'ordem': 0,
             'ativo': True
         }
     
@@ -5729,7 +5806,7 @@ class DiligenciasModelTest(TestCase):
     
     def test_days_until_deadline_method(self):
         """Test days_until_deadline method"""
-    today = timezone.now().date()
+        today = timezone.now().date()
         # Test future deadline
         future_date = today + timedelta(days=5)
         diligencia = Diligencias.objects.create(
@@ -5748,7 +5825,6 @@ class DiligenciasModelTest(TestCase):
             criado_por='Test User'
         )
         self.assertEqual(diligencia_past.days_until_deadline(), -3)
-        
         # Test concluded diligencia
         diligencia_concluded = Diligencias.objects.create(
             cliente=self.cliente,
@@ -5900,8 +5976,8 @@ class DiligenciasFormTest(TestCase):
     
     def test_form_clean_data_final_future(self):
         """Test that data_final must be in the future"""
-    past_data = self.valid_form_data.copy()
-    past_date = (timezone.now().date() - timedelta(days=1)).strftime('%d/%m/%Y')
+        past_data = self.valid_form_data.copy()
+        past_date = (timezone.now().date() - timedelta(days=1)).strftime('%Y-%m-%d')
         past_data['data_final'] = past_date
         form = DiligenciasForm(data=past_data)
         self.assertFalse(form.is_valid())
@@ -5910,8 +5986,8 @@ class DiligenciasFormTest(TestCase):
     
     def test_form_clean_data_final_today(self):
         """Test that data_final can be today"""
-    today_data = self.valid_form_data.copy()
-    today_data['data_final'] = timezone.now().date().strftime('%d/%m/%Y')
+        today_data = self.valid_form_data.copy()
+        today_data['data_final'] = timezone.now().date().strftime('%Y-%m-%d')
         form = DiligenciasForm(data=today_data)
         self.assertTrue(form.is_valid())
     
@@ -6233,6 +6309,7 @@ class TipoDiligenciaViewTest(TestCase):
             'nome': 'Novo Tipo Test',
             'descricao': 'Test description',
             'cor': '#28a745',
+            'ordem': 0,
             'ativo': True
         }
         response = self.client_app.post(reverse('novo_tipo_diligencia'), data=form_data)
@@ -6255,6 +6332,7 @@ class TipoDiligenciaViewTest(TestCase):
             'nome': 'Updated Tipo Name',
             'descricao': 'Updated description',
             'cor': '#dc3545',
+            'ordem': 1,
             'ativo': False
         }
         response = self.client_app.post(
@@ -6441,7 +6519,7 @@ class DiligenciasIntegrationTest(TestCase):
     def test_overdue_diligencia_handling(self):
         """Test handling of overdue diligencias"""
         # Create overdue diligencia
-    today = timezone.now().date()
+        today = timezone.now().date()
         overdue_diligencia = Diligencias.objects.create(
             cliente=self.cliente,
             tipo=self.tipo_urgente,
