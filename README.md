@@ -60,6 +60,22 @@ O Sistema de Controle de Precatórios é uma aplicação web desenvolvida para f
 - ✅ Interface de edição avançada
 - ✅ Filtros e buscas inteligentes
 
+### ✨ **Funcionalidades Avançadas**
+- ✅ Sistema de fases customizáveis (com ordenação)
+- ✅ Tipos de diligência configuráveis
+- ✅ Honorários contratuais com fases específicas
+- ✅ Importação de dados via Excel
+- ✅ Comandos de gerenciamento customizados
+- ✅ Formatação brasileira de números e datas
+- ✅ Validação avançada de CPF/CNPJ e CNJ
+
+### 🔍 **Gestão de Diligências**
+- ✅ Sistema completo de diligências
+- ✅ Tipos customizáveis com cores
+- ✅ Controle de urgência e prazos
+- ✅ Acompanhamento de conclusão
+- ✅ Interface de atualização em tempo real
+
 ### 🔐 **Sistema de Autenticação**
 - ✅ Login/logout seguro
 - ✅ Proteção de todas as rotas com @login_required
@@ -92,6 +108,14 @@ O Sistema de Controle de Precatórios é uma aplicação web desenvolvida para f
 - **Django Admin** - Interface administrativa
 - **Django Forms** - Validação e processamento de formulários
 
+### **Dependências Python**
+- **openpyxl** - Manipulação de arquivos Excel
+- **pandas** - Análise e manipulação de dados
+- **pymongo** - Driver MongoDB (via djongo)
+- **djongo** - Django + MongoDB
+- **requests** - Cliente HTTP
+- **aiohttp** - Cliente HTTP assíncrono
+
 ## 🚀 Instalação
 
 ### **Pré-requisitos**
@@ -120,8 +144,7 @@ O Sistema de Controle de Precatórios é uma aplicação web desenvolvida para f
 
 3. **Instale as dependências**
    ```bash
-   pip install django==3.1.12
-   # Adicione outras dependências conforme necessário
+   pip install -r requirements.txt
    ```
 
 4. **Execute as migrações**
@@ -135,20 +158,37 @@ O Sistema de Controle de Precatórios é uma aplicação web desenvolvida para f
    python manage.py createsuperuser
    ```
 
-6. **Popule o banco com dados de exemplo (opcional)**
-   ```bash
-   python manage.py populate_db
-   ```
-
-7. **Execute o servidor de desenvolvimento**
+6. **Execute o servidor de desenvolvimento**
    ```bash
    python manage.py runserver
    ```
 
-8. **Acesse a aplicação**
+7. **Acesse a aplicação**
    ```
    http://127.0.0.1:8000/
    ```
+
+### **Comandos Úteis**
+
+```bash
+# Executar testes
+python manage.py test
+
+# Criar um administrador
+python manage.py create_admin
+
+# Importar dados do Excel
+python manage.py import_excel caminho/para/arquivo.xlsx
+
+# Atualizar prioridades por idade
+python manage.py update_priority_by_age
+
+# Acessar o shell Django
+python manage.py shell
+
+# Verificar problemas no projeto
+python manage.py check
+```
 
 ## 📖 Uso
 
@@ -177,6 +217,7 @@ O Sistema de Controle de Precatórios é uma aplicação web desenvolvida para f
 precatorios/
 ├── manage.py                 # Script de gerenciamento Django
 ├── db.sqlite3               # Banco de dados SQLite
+├── requirements.txt         # Dependências do projeto
 ├── .gitignore              # Arquivos ignorados pelo Git
 ├── README.md               # Este arquivo
 ├── precatorios/            # Configurações do projeto
@@ -205,10 +246,16 @@ precatorios/
     │       ├── cliente_*.html
     │       ├── alvara_*.html
     │       └── requerimento_*.html
+    ├── static/            # Arquivos estáticos
+    │   └── precapp/
+    │       └── js/
+    │           └── brazilian-number-format.js
     └── management/        # Comandos customizados
         └── commands/
             ├── populate_db.py
-            └── create_admin.py
+            ├── create_admin.py
+            ├── import_excel.py
+            └── update_priority_by_age.py
 ```
 
 ## 🗄️ Modelos de Dados
@@ -281,20 +328,45 @@ Contribuições são bem-vindas! Para contribuir:
 
 ## 📋 TODO / Roadmap
 
+- [ ] **Organização de Testes** - Estruturação modular dos testes
+- [ ] **Containerização** - Configuração Docker para deploy
 - [ ] **Relatórios PDF** - Geração de relatórios em PDF
 - [ ] **Gráficos** - Dashboard com gráficos estatísticos
 - [ ] **API REST** - Endpoints para integração externa
 - [ ] **Notificações** - Sistema de alertas e lembretes
 - [ ] **Backup automático** - Rotinas de backup do banco
-- [ ] **Deploy** - Configuração para produção (Docker/Heroku)
 - [ ] **Auditoria** - Log de alterações nos dados
 - [ ] **Filtros avançados** - Busca e filtragem melhoradas
 
 ## 🐛 Problemas Conhecidos
 
+- Alguns testes podem precisar de reorganização para melhor manutenibilidade
 - Validação de CPF pode precisar de melhorias
 - Interface responsiva pode ser otimizada para mobile
 - Paginação não implementada em listas grandes
+
+## 🧪 Testes
+
+O projeto inclui uma suíte abrangente de testes localizada em `precapp/tests.py`:
+
+```bash
+# Executar todos os testes
+python manage.py test
+
+# Executar testes com detalhes
+python manage.py test -v 2
+
+# Executar testes específicos
+python manage.py test precapp.tests.PrecatorioModelTest
+```
+
+**Cobertura de Testes:**
+- ✅ Modelos (validação, métodos, relacionamentos)
+- ✅ Formulários (validação, widgets, campos)
+- ✅ Views (autenticação, CRUD, filtros)
+- ✅ Formatação brasileira
+- ✅ Validações de CPF/CNPJ e CNJ
+- ✅ Casos extremos e edge cases
 
 ## 📄 Licença
 
@@ -302,9 +374,9 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 
 ## 📞 Contato
 
-**Desenvolvedor**: [Seu Nome]
-**Email**: [seu-email@exemplo.com]
-**Projeto**: [https://github.com/seu-usuario/precatorios](https://github.com/seu-usuario/precatorios)
+**Desenvolvedor**: Thiago Teixeira
+**Email**: [thsteixeira@gmail.com]
+**Projeto**: [https://github.com/thsteixeira/precatorios.git](https://github.com/thsteixeira/precatorios.git)
 
 ---
 
