@@ -368,6 +368,100 @@ class AlvaraModelTest(TestCase):
         self.assertEqual(alvara.fase.tipo, 'alvara')
 
 
+class AlvaraModelWithHonorariosTest(TestCase):
+    """Test cases for updated Alvara model with fase_honorarios_contratuais field"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.precatorio = Precatorio.objects.create(
+            cnj='1234567-89.2023.8.26.0100',
+            orcamento=2023,
+            origem='1234567-89.2022.8.26.0001',
+            valor_de_face=100000.00,
+            ultima_atualizacao=100000.00,
+            data_ultima_atualizacao=date(2023, 1, 1),
+            percentual_contratuais_assinado=10.0,
+            percentual_contratuais_apartado=5.0,
+            percentual_sucumbenciais=20.0,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente'
+        )
+        self.cliente = Cliente.objects.create(
+            cpf='98765432100',
+            nome='Maria Santos',
+            nascimento=date(1985, 3, 20),
+            prioridade=True
+        )
+        
+        # Link the cliente to the precatorio (required by new validation)
+        self.precatorio.clientes.add(self.cliente)
+        
+        self.fase_alvara = Fase.objects.create(
+            nome='Aguardando Depósito',
+            tipo='alvara',
+            cor='#FF6B35',
+            ativa=True
+        )
+        
+        self.fase_honorarios = FaseHonorariosContratuais.objects.create(
+            nome='Aguardando Pagamento',
+            descricao='Honorários aguardando pagamento',
+            cor='#FFA500',
+            ativa=True
+        )
+    
+    def test_alvara_with_honorarios_fase(self):
+        """Test creating alvara with honorários fase"""
+        alvara = Alvara.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            valor_principal=50000.00,
+            honorarios_contratuais=10000.00,
+            honorarios_sucumbenciais=5000.00,
+            tipo='prioridade',
+            fase=self.fase_alvara,
+            fase_honorarios_contratuais=self.fase_honorarios
+        )
+        
+        self.assertEqual(alvara.fase_honorarios_contratuais, self.fase_honorarios)
+        self.assertEqual(alvara.fase_honorarios_contratuais.nome, 'Aguardando Pagamento')
+    
+    def test_alvara_without_honorarios_fase(self):
+        """Test creating alvara without honorários fase (should be optional)"""
+        alvara = Alvara.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            valor_principal=50000.00,
+            honorarios_contratuais=10000.00,
+            honorarios_sucumbenciais=5000.00,
+            tipo='prioridade',
+            fase=self.fase_alvara
+            # fase_honorarios_contratuais is optional
+        )
+        
+        self.assertIsNone(alvara.fase_honorarios_contratuais)
+        self.assertEqual(alvara.fase, self.fase_alvara)
+    
+    def test_honorarios_fase_protection(self):
+        """Test that honorários fase cannot be deleted if referenced by alvara"""
+        alvara = Alvara.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            valor_principal=50000.00,
+            honorarios_contratuais=10000.00,
+            honorarios_sucumbenciais=5000.00,
+            tipo='prioridade',
+            fase=self.fase_alvara,
+            fase_honorarios_contratuais=self.fase_honorarios
+        )
+        
+        # Should not be able to delete fase that's referenced
+        from django.db import IntegrityError
+        with self.assertRaises(IntegrityError):
+            self.fase_honorarios.delete()
+
+
 class RequerimentoModelTest(TestCase):
     """Test cases for Requerimento model"""
     

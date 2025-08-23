@@ -548,3 +548,194 @@ class ManyToManyRelationshipTest(TestCase):
         self.assertNotIn(self.cliente, self.precatorio.clientes.all())
         self.assertIn(self.cliente2, self.precatorio.clientes.all())
         self.assertIn(self.precatorio2, self.cliente.precatorios.all())
+
+
+class FaseHonorariosContratuaisViewTest(TestCase):
+    """Test cases for FaseHonorariosContratuais views"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        self.fase_honorarios = FaseHonorariosContratuais.objects.create(
+            nome='Test Fase Honorários',
+            descricao='Fase de teste para honorários',
+            cor='#28A745',
+            ativa=True
+        )
+        
+        self.client_app = Client()
+    
+    def test_fases_honorarios_list_view(self):
+        """Test honorários phases list view"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        response = self.client_app.get(reverse('fases_honorarios'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Test Fase Honorários')
+        self.assertContains(response, '#28A745')
+    
+    def test_nova_fase_honorarios_view(self):
+        """Test creating new honorários phase"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        form_data = {
+            'nome': 'Nova Fase Honorários',
+            'descricao': 'Nova fase para honorários contratuais',
+            'cor': '#FFC107',
+            'ordem': 1,
+            'ativa': True
+        }
+        
+        response = self.client_app.post(reverse('nova_fase_honorarios'), data=form_data)
+        self.assertEqual(response.status_code, 302)  # Should redirect after creation
+        
+        # Verify creation
+        nova_fase = FaseHonorariosContratuais.objects.get(nome='Nova Fase Honorários')
+        self.assertEqual(nova_fase.cor, '#FFC107')
+        self.assertTrue(nova_fase.ativa)
+    
+    def test_editar_fase_honorarios_view(self):
+        """Test editing honorários phase"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        form_data = {
+            'nome': 'Fase Honorários Editada',
+            'descricao': 'Descrição editada',
+            'cor': '#DC3545',
+            'ordem': 2,
+            'ativa': False
+        }
+        
+        response = self.client_app.post(
+            reverse('editar_fase_honorarios', args=[self.fase_honorarios.id]), 
+            data=form_data
+        )
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify update
+        self.fase_honorarios.refresh_from_db()
+        self.assertEqual(self.fase_honorarios.nome, 'Fase Honorários Editada')
+        self.assertEqual(self.fase_honorarios.cor, '#DC3545')
+        self.assertFalse(self.fase_honorarios.ativa)
+    
+    def test_deletar_fase_honorarios_view(self):
+        """Test deleting honorários phase"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        response = self.client_app.post(
+            reverse('deletar_fase_honorarios', args=[self.fase_honorarios.id])
+        )
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify deletion
+        with self.assertRaises(FaseHonorariosContratuais.DoesNotExist):
+            FaseHonorariosContratuais.objects.get(id=self.fase_honorarios.id)
+    
+    def test_ativar_fase_honorarios_view(self):
+        """Test activating/deactivating honorários phase"""
+        # First deactivate the phase
+        self.fase_honorarios.ativa = False
+        self.fase_honorarios.save()
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Test activation
+        response = self.client_app.post(
+            reverse('ativar_fase_honorarios', args=[self.fase_honorarios.id])
+        )
+        self.assertEqual(response.status_code, 302)
+        
+        self.fase_honorarios.refresh_from_db()
+        self.assertTrue(self.fase_honorarios.ativa)
+
+
+class PrecatorioDetailViewWithHonorariosTest(TestCase):
+    """Test cases for precatorio detail view with honorários functionality"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        self.precatorio = Precatorio.objects.create(
+            cnj='1234567-89.2023.8.26.0100',
+            orcamento=2023,
+            origem='Test Origin',
+            valor_de_face=100000.00,
+            ultima_atualizacao=100000.00,
+            data_ultima_atualizacao=date(2023, 1, 1),
+            percentual_contratuais_assinado=10.0,
+            percentual_contratuais_apartado=5.0,
+            percentual_sucumbenciais=20.0,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente'
+        )
+        
+        self.cliente = Cliente.objects.create(
+            cpf='12345678909',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        self.precatorio.clientes.add(self.cliente)
+        
+        self.fase_alvara = Fase.objects.create(
+            nome='Em Andamento',
+            tipo='alvara',
+            cor='#007bff',
+            ativa=True
+        )
+        
+        self.fase_honorarios = FaseHonorariosContratuais.objects.create(
+            nome='Aguardando Pagamento',
+            cor='#FFA500',
+            ativa=True
+        )
+        
+        self.alvara = Alvara.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            valor_principal=50000.00,
+            honorarios_contratuais=10000.00,
+            honorarios_sucumbenciais=5000.00,
+            tipo='prioridade',
+            fase=self.fase_alvara,
+            fase_honorarios_contratuais=self.fase_honorarios
+        )
+        
+        self.client_app = Client()
+    
+    def test_precatorio_detail_shows_honorarios_fase(self):
+        """Test that precatorio detail view shows honorários fase information"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        response = self.client_app.get(
+            reverse('precatorio_detalhe', args=[self.precatorio.cnj])
+        )
+        self.assertEqual(response.status_code, 200)
+        
+        # Should contain honorários fase information
+        self.assertContains(response, 'Aguardando Pagamento')
+        self.assertContains(response, self.fase_honorarios.nome)
+    
+    def test_precatorio_detail_context_includes_honorarios(self):
+        """Test that context includes honorários fase data"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        response = self.client_app.get(
+            reverse('precatorio_detalhe', args=[self.precatorio.cnj])
+        )
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that alvaras include honorários fase information
+        alvaras = response.context['alvaras']
+        alvara = alvaras.first()
+        self.assertEqual(alvara.fase_honorarios_contratuais, self.fase_honorarios)
