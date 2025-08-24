@@ -1,6 +1,34 @@
 """
-Test cases for all models in the precatorios application.
-Contains all model-related tests migrated from the monolithic tests.py file.
+Comprehensive test suite for all models in the precatorios application.
+
+This module contains all model-related tests that were migrated from the monolithic
+tests.py file. It provides comprehensive coverage for model validation, business logic,
+relationships, and edge cases for the precatorios management system.
+
+Test Organization:
+- Each model has its own dedicated test class
+- Tests are grouped by functionality (creation, validation, methods, relationships)
+- Edge cases and business rule validation are thoroughly tested
+- Both positive and negative test cases are included
+
+Models Covered:
+- Fase: Custom phases for document workflow tracking
+- FaseHonorariosContratuais: Specialized phases for contractual fees
+- Precatorio: Main legal document representing payment orders
+- Cliente: Clients with rights to precatório payments  
+- Alvara: Payment authorization documents
+- Requerimento: Legal request documents
+- TipoDiligencia: Customizable diligence/task types
+- Diligencias: Specific tasks/actions required for clients
+
+Testing Patterns:
+- setUp() methods prepare common test data
+- full_clean() validation testing for model constraints
+- String representation (__str__) testing
+- Business logic method testing
+- Foreign key relationship testing
+- Choice field validation testing
+- Default value verification
 """
 
 from django.test import TestCase
@@ -16,10 +44,35 @@ from precapp.models import (
 
 
 class FaseModelTest(TestCase):
-    """Test cases for Fase model"""
+    """
+    Comprehensive test suite for the Fase model.
+    
+    The Fase model represents customizable phases that can be used in both
+    Alvarás and Requerimentos for workflow tracking. This test class validates:
+    
+    - Model creation with valid data
+    - Field validation and constraints
+    - Choice field validation for 'tipo'
+    - Default value assignment
+    - String representation consistency
+    - Ordering behavior (ordem, tipo, nome)
+    - Class methods for filtering by document type
+    - Business rule enforcement
+    
+    Test Data Structure:
+    - Uses a standard fase_data dictionary in setUp()
+    - Creates test phases with different tipos for filtering tests
+    - Validates both individual field constraints and model-wide rules
+    """
     
     def setUp(self):
-        """Set up test data"""
+        """
+        Set up test data for Fase model tests.
+        
+        Creates a standard test data dictionary that can be used across
+        multiple test methods. The data represents a typical fase for
+        alvará documents with all required fields.
+        """
         self.fase_data = {
             'nome': 'Em Andamento',
             'tipo': 'alvara',
@@ -28,7 +81,15 @@ class FaseModelTest(TestCase):
         }
     
     def test_fase_creation(self):
-        """Test creating a fase with valid data"""
+        """
+        Test creating a fase with valid data.
+        
+        Validates that:
+        - A Fase instance can be created with valid data
+        - full_clean() passes without raising ValidationError
+        - The instance can be saved to the database
+        - All field values are correctly assigned
+        """
         fase = Fase(**self.fase_data)
         fase.full_clean()  # This should not raise ValidationError
         fase.save()
@@ -38,13 +99,25 @@ class FaseModelTest(TestCase):
         self.assertTrue(fase.ativa)
     
     def test_fase_str_method(self):
-        """Test the __str__ method of Fase"""
+        """
+        Test the __str__ method of Fase.
+        
+        Validates that the string representation returns the fase name
+        as expected, providing a human-readable identification for the phase.
+        """
         fase = Fase(**self.fase_data)
         expected_str = fase.nome
         self.assertEqual(str(fase), expected_str)
     
     def test_fase_required_fields(self):
-        """Test that required fields are enforced"""
+        """
+        Test that required fields are enforced.
+        
+        Validates field requirements:
+        - 'nome' field is required and cannot be empty
+        - 'tipo' field has a default value so should not fail validation
+        - Tests both negative (missing required field) and positive cases
+        """
         # Test without nome (nome is required)
         with self.assertRaises(ValidationError):
             fase = Fase(tipo='alvara', cor='#4ECDC4', ativa=True)
@@ -56,7 +129,14 @@ class FaseModelTest(TestCase):
         fase.full_clean()  # Should pass
     
     def test_fase_choices_validation(self):
-        """Test that tipo field accepts only valid choices"""
+        """
+        Test that tipo field accepts only valid choices.
+        
+        Validates the choice constraint on the 'tipo' field:
+        - Tests all valid choices: 'alvara', 'requerimento', 'ambos'
+        - Tests that invalid choices raise ValidationError
+        - Uses subTest for clear individual test reporting
+        """
         valid_tipos = ['alvara', 'requerimento', 'ambos']
         for tipo in valid_tipos:
             with self.subTest(tipo=tipo):
@@ -119,7 +199,25 @@ class FaseModelTest(TestCase):
 
 
 class FaseHonorariosContratuaisModelTest(TestCase):
-    """Test cases for FaseHonorariosContratuais model"""
+    """
+    Comprehensive test suite for the FaseHonorariosContratuais model.
+    
+    This model represents specialized phases for tracking contractual fees
+    (honorários contratuais) separately from main document phases. Tests validate:
+    
+    - Model creation and field assignment
+    - Required field validation (nome field)
+    - Default value behavior (cor, ativa, ordem fields)
+    - String representation consistency
+    - Ordering functionality (ordem, nome)
+    - Class method for retrieving active phases
+    - Business rule enforcement for phase management
+    
+    Key Differences from Fase:
+    - No 'tipo' field (specific to contractual fees)
+    - Different default color (#28a745 - green)
+    - Simpler structure focused on fee tracking workflow
+    """
     
     def setUp(self):
         """Set up test data"""
@@ -183,7 +281,32 @@ class FaseHonorariosContratuaisModelTest(TestCase):
 
 
 class PrecatorioModelTest(TestCase):
-    """Test cases for Precatorio model"""
+    """
+    Comprehensive test suite for the Precatorio model.
+    
+    The Precatorio model is the central entity representing legal payment orders
+    from public entities. This test class validates:
+    
+    - Model creation with complex field structure
+    - Primary key constraint (CNJ field uniqueness)
+    - Year validation for 'orcamento' field (1988-2050 range)
+    - Choice field validation for payment statuses
+    - String representation format (CNJ - origem)
+    - Financial field handling (floats, nulls, defaults)
+    - Many-to-many relationship with Cliente model
+    - Business rule compliance for Brazilian legal requirements
+    
+    Payment Status Testing:
+    - Tests all valid status choices for each payment component
+    - Validates rejection of invalid status values
+    - Ensures proper default assignment ('pendente')
+    
+    Complex Field Structure:
+    - Financial amounts (valor_de_face, ultima_atualizacao)
+    - Percentage tracking (contratuais_assinado, apartado, sucumbenciais)
+    - Date tracking (data_ultima_atualizacao)
+    - Multiple payment status fields (principal, contractual, succumbence)
+    """
     
     def setUp(self):
         """Set up test data"""
@@ -246,7 +369,35 @@ class PrecatorioModelTest(TestCase):
 
 
 class ClienteModelTest(TestCase):
-    """Test cases for Cliente model"""
+    """
+    Comprehensive test suite for the Cliente model.
+    
+    The Cliente model represents individuals or legal entities with rights
+    to precatório payments. This test class validates:
+    
+    - Model creation for both CPF (individuals) and CNPJ (companies)
+    - Primary key uniqueness constraint (CPF/CNPJ field)
+    - Required field validation (nome, nascimento, prioridade)
+    - String representation format (nome - CPF)
+    - Priority status handling (boolean field)
+    - Business logic methods (get_priority_requerimentos)
+    - Relationship integrity with related models
+    
+    CPF/CNPJ Support:
+    - Tests creation with both individual and company identifiers
+    - Validates uniqueness constraint across all client types
+    - Ensures proper handling of both document formats
+    
+    Priority System:
+    - Tests priority flag for expedited processing
+    - Validates connection to priority-based requerimentos
+    - Tests age-based and illness-based priority filtering
+    
+    Business Logic:
+    - get_priority_requerimentos() method testing
+    - Relationship validation with Precatorio, Requerimento, Alvara
+    - Integration with diligence management system
+    """
     
     def setUp(self):
         """Set up test data"""
@@ -301,7 +452,37 @@ class ClienteModelTest(TestCase):
 
 
 class AlvaraModelTest(TestCase):
-    """Test cases for Alvara model"""
+    """
+    Comprehensive test suite for the Alvara model.
+    
+    The Alvara model represents payment authorization documents that specify
+    amounts to be paid from precatórios to clients. This test class validates:
+    
+    - Model creation with financial components
+    - Foreign key relationships (Precatorio, Cliente, Fase)
+    - Business validation (cliente-precatorio linkage)
+    - Financial field handling (principal, contractual, succumbence fees)
+    - Phase tracking integration
+    - String representation format
+    - Data integrity constraints
+    
+    Key Validation Rules:
+    - Cliente must be linked to Precatorio before Alvara creation
+    - Custom clean() method validates client-precatorio relationship
+    - save() method enforces full_clean() validation
+    - PROTECT constraints prevent deletion of referenced phases
+    
+    Financial Components:
+    - valor_principal: Main payment amount
+    - honorarios_contratuais: Contractual fee amount
+    - honorarios_sucumbenciais: Succumbence fee amount
+    - All amounts can be zero but not negative
+    
+    Phase Integration:
+    - Main fase tracks overall alvara progress
+    - Optional fase_honorarios_contratuais for separate fee tracking
+    - PROTECT constraint prevents accidental phase deletion
+    """
     
     def setUp(self):
         """Set up test data"""
@@ -369,7 +550,31 @@ class AlvaraModelTest(TestCase):
 
 
 class AlvaraModelWithHonorariosTest(TestCase):
-    """Test cases for updated Alvara model with fase_honorarios_contratuais field"""
+    """
+    Extended test suite for Alvara model with contractual fees phase functionality.
+    
+    This test class specifically focuses on the enhanced Alvara model that includes
+    the fase_honorarios_contratuais field for separate tracking of contractual
+    fee phases. Tests validate:
+    
+    - Creation with both main and contractual fee phases
+    - Optional nature of contractual fee phase tracking
+    - PROTECT constraint behavior for referenced phases
+    - Independent phase tracking for different payment components
+    - Database integrity when attempting to delete referenced phases
+    
+    Enhanced Features:
+    - fase_honorarios_contratuais field for separate fee tracking
+    - Validation that contractual fee phases are optional
+    - Testing of protection constraints (preventing deletion)
+    - Integration testing with FaseHonorariosContratuais model
+    
+    Use Cases:
+    - Alvaras with only main phase tracking
+    - Alvaras with both main and contractual fee phase tracking
+    - Protection against accidental deletion of active phases
+    - Independent progression of main document vs fee processing
+    """
     
     def setUp(self):
         """Set up test data"""
@@ -463,7 +668,39 @@ class AlvaraModelWithHonorariosTest(TestCase):
 
 
 class RequerimentoModelTest(TestCase):
-    """Test cases for Requerimento model"""
+    """
+    Comprehensive test suite for the Requerimento model.
+    
+    The Requerimento model represents formal legal requests submitted in the
+    context of precatório processes. This test class validates:
+    
+    - Model creation with choice-based request types
+    - Foreign key relationships (Precatorio, Cliente, Fase)
+    - Business validation (cliente-precatorio linkage)
+    - Choice field validation for request types (pedido)
+    - Financial field handling (valor, desagio)
+    - Phase tracking integration
+    - String representation format
+    - Custom business logic methods
+    
+    Request Types Tested:
+    - prioridade doença: Priority due to illness
+    - prioridade idade: Priority due to age
+    - acordo principal: Agreement on principal amount
+    - acordo honorários contratuais: Contractual fee agreement
+    - acordo honorários sucumbenciais: Succumbence fee agreement
+    
+    Key Business Rules:
+    - Cliente must be linked to Precatorio before creation
+    - Single choice selection (not multiple selections)
+    - Phase tracking through Fase relationship
+    - Financial values must be provided and valid
+    
+    Methods Tested:
+    - get_pedido_display(): Choice field display value
+    - get_pedido_abreviado(): Abbreviated display version
+    - clean() and save() validation enforcement
+    """
     
     def setUp(self):
         """Set up test data"""
@@ -535,7 +772,40 @@ class RequerimentoModelTest(TestCase):
 
 
 class TipoDiligenciaModelTest(TestCase):
-    """Test cases for TipoDiligencia model"""
+    """
+    Comprehensive test suite for the TipoDiligencia model.
+    
+    The TipoDiligencia model defines customizable types of diligences (legal
+    actions or requirements) that can be assigned to clients. This test class validates:
+    
+    - Model creation with visual and organizational properties
+    - Unique constraint on 'nome' field
+    - Default value assignment (cor, ativo, ordem, timestamps)
+    - Color field validation for hexadecimal values
+    - Ordering behavior (ordem, nome)
+    - Active/inactive status management
+    - Class methods for filtering active types
+    - Soft delete pattern (deactivation instead of deletion)
+    
+    Business Rules:
+    - Each diligence type name must be unique
+    - Only active types are available for selection
+    - Color coding for visual categorization
+    - Ordering for organized display
+    - Timestamps for audit trail
+    
+    Validation Coverage:
+    - Unique constraint enforcement
+    - Color format validation (hexadecimal)
+    - Required field validation (nome)
+    - Default value testing
+    - Class method functionality (get_ativos)
+    
+    Soft Delete Pattern:
+    - Types are deactivated rather than deleted
+    - Preserves historical data integrity
+    - Maintains references from existing diligences
+    """
     
     def setUp(self):
         """Set up test data"""
@@ -614,7 +884,48 @@ class TipoDiligenciaModelTest(TestCase):
 
 
 class DiligenciasModelTest(TestCase):
-    """Test cases for Diligencias model"""
+    """
+    Comprehensive test suite for the Diligencias model.
+    
+    The Diligencias model represents specific tasks or actions that need to be
+    completed for clients in their precatório processes. This test class validates:
+    
+    - Model creation with deadline and urgency tracking
+    - Foreign key relationships (Cliente, TipoDiligencia)
+    - Urgency level management (baixa, media, alta)
+    - Completion status tracking and timestamps
+    - Business logic methods for deadline calculations
+    - User tracking (created by, completed by)
+    - Bootstrap integration for visual styling
+    - Property methods for template compatibility
+    
+    Urgency System:
+    - baixa: Low priority (secondary color)
+    - media: Medium priority (warning color) - default
+    - alta: High priority (danger color)
+    
+    Deadline Management:
+    - is_overdue(): Checks if past deadline and not completed
+    - days_until_deadline(): Calculates remaining/overdue days
+    - Completion status affects deadline calculations
+    
+    User Tracking:
+    - criado_por: User who created the diligence
+    - concluido_por: User who completed the diligence (optional)
+    - Timestamps for creation and completion
+    
+    Business Logic:
+    - Overdue detection based on current date
+    - Completion status prevents overdue flagging
+    - Visual styling integration with Bootstrap classes
+    - Template compatibility through property aliases
+    
+    Integration Points:
+    - Cliente relationship (CASCADE deletion)
+    - TipoDiligencia relationship (PROTECT constraint)
+    - Visual styling for urgency levels
+    - User activity tracking
+    """
     
     def setUp(self):
         """Set up test data"""

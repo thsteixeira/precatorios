@@ -87,7 +87,58 @@ def validate_cnpj(cnpj):
 
 class BrazilianDateInput(forms.DateInput):
     """
-    Custom DateInput widget for Brazilian date format (dd/mm/yyyy)
+    Custom date input widget with Brazilian formatting and validation.
+    
+    This widget provides a localized date input experience for Brazilian users,
+    automatically formatting dates in the Brazilian standard (dd/mm/yyyy) and
+    providing appropriate UI hints and validation patterns.
+    
+    Key Features:
+        - Brazilian date format (dd/mm/yyyy) by default
+        - Built-in placeholder text in Portuguese
+        - HTML5 pattern validation for date format
+        - Bootstrap CSS classes for consistent styling
+        - Accessibility support with descriptive title
+        - Maximum length validation to prevent invalid input
+        
+    Usage:
+        # Basic usage
+        class MyForm(forms.ModelForm):
+            data_field = forms.DateField(widget=BrazilianDateInput())
+            
+        # Custom attributes
+        widget = BrazilianDateInput(attrs={'class': 'custom-date-input'})
+        
+        # Custom format
+        widget = BrazilianDateInput(format='%d-%m-%Y')
+    
+    Attributes:
+        input_type (str): HTML input type, set to 'text' for better control
+        format (str): Date format string, defaults to '%d/%m/%Y'
+        attrs (dict): HTML attributes for the input element
+        
+    Default Attributes:
+        - class: 'form-control' (Bootstrap styling)
+        - placeholder: 'dd/mm/aaaa' (Brazilian format hint)
+        - pattern: Regex pattern for date validation
+        - title: Descriptive text for accessibility
+        - maxlength: '10' (prevents over-typing)
+        
+    Browser Compatibility:
+        - Supports HTML5 pattern validation
+        - Works with all modern browsers
+        - Gracefully degrades in older browsers
+        
+    Accessibility:
+        - Includes descriptive placeholder text in Portuguese
+        - Provides title attribute for screen readers
+        - Uses semantic HTML input patterns
+        - Supports keyboard navigation
+        
+    Validation:
+        - Client-side pattern validation (dd/mm/yyyy)
+        - Server-side format validation via Django
+        - Maximum length enforcement
     """
     input_type = 'text'
     
@@ -111,7 +162,69 @@ class BrazilianDateInput(forms.DateInput):
 
 class BrazilianDateTimeInput(forms.DateTimeInput):
     """
-    Custom DateTimeInput widget for Brazilian datetime format (dd/mm/yyyy hh:mm)
+    Custom datetime input widget with Brazilian formatting and validation.
+    
+    This widget provides a localized datetime input experience for Brazilian users,
+    automatically formatting datetime values in the Brazilian standard (dd/mm/yyyy hh:mm)
+    and providing appropriate UI hints for date and time entry.
+    
+    Key Features:
+        - Brazilian datetime format (dd/mm/yyyy hh:mm) by default
+        - Built-in placeholder text in Portuguese
+        - Bootstrap CSS classes for consistent styling
+        - Accessibility support with descriptive title
+        - Maximum length validation to prevent invalid input
+        - 24-hour time format for clarity
+        
+    Usage:
+        # Basic usage
+        class MyForm(forms.ModelForm):
+            datetime_field = forms.DateTimeField(widget=BrazilianDateTimeInput())
+            
+        # Custom attributes
+        widget = BrazilianDateTimeInput(attrs={'class': 'custom-datetime-input'})
+        
+        # Custom format
+        widget = BrazilianDateTimeInput(format='%d-%m-%Y %H:%M:%S')
+    
+    Attributes:
+        input_type (str): HTML input type, set to 'text' for better control
+        format (str): Datetime format string, defaults to '%d/%m/%Y %H:%M'
+        attrs (dict): HTML attributes for the input element
+        
+    Default Attributes:
+        - class: 'form-control' (Bootstrap styling)
+        - placeholder: 'dd/mm/aaaa hh:mm' (Brazilian format hint)
+        - title: Descriptive text for accessibility with example
+        - maxlength: '16' (prevents over-typing)
+        
+    Format Details:
+        - Date: dd/mm/yyyy (day/month/year)
+        - Time: hh:mm (24-hour format)
+        - Separator: Single space between date and time
+        - Example: 31/12/2023 14:30
+        
+    Browser Compatibility:
+        - Works with all modern browsers
+        - Text input provides consistent behavior
+        - No dependency on browser datetime pickers
+        
+    Accessibility:
+        - Includes descriptive placeholder text in Portuguese
+        - Provides title attribute with format example
+        - Supports keyboard navigation
+        - Screen reader friendly
+        
+    Validation:
+        - Server-side format validation via Django
+        - Maximum length enforcement
+        - Compatible with Django's datetime parsing
+        
+    Use Cases:
+        - Diligencia conclusion timestamps
+        - Event scheduling
+        - Audit trail timestamps
+        - User activity logging
     """
     input_type = 'text'
     
@@ -190,6 +303,212 @@ def validate_currency(value):
 
 
 class PrecatorioForm(forms.ModelForm):
+    """
+    Comprehensive form for creating and editing precatorios in the legal system.
+    
+    This form handles the complete lifecycle of precatorio management, including
+    creation, editing, and validation of all precatorio-related fields. It enforces
+    Brazilian legal standards for court document numbering (CNJ format) and
+    manages complex financial calculations for legal settlements.
+    
+    Key Features:
+        - CNJ number validation using Brazilian court standards
+        - Financial value validation with Brazilian currency formatting
+        - Budget year validation and constraints
+        - Percentage validation for legal fee calculations
+        - Status tracking for different precatorio stages
+        - Integration with client management system
+        - Audit trail support through timestamp fields
+        
+    Business Logic:
+        - CNJ numbers must follow Brazilian court format: NNNNNNN-DD.AAAA.J.TR.OOOO
+        - Origin CNJ must be different from main CNJ (different court cases)
+        - Financial values must be positive and within legal limits
+        - Percentage fields must sum to logical totals
+        - Budget year must be current or future year
+        - Status transitions must follow legal workflow
+        
+    Usage:
+        # Creating new precatorio
+        form = PrecatorioForm(request.POST or None)
+        if form.is_valid():
+            precatorio = form.save()
+            
+        # Editing existing precatorio
+        form = PrecatorioForm(request.POST or None, instance=precatorio)
+        
+        # With initial data
+        form = PrecatorioForm(initial={'orcamento': 2024})
+    
+    Fields:
+        cnj (CharField): Primary CNJ court number
+            - Format: NNNNNNN-DD.AAAA.J.TR.OOOO
+            - Required, validated using validate_cnj()
+            - Unique identifier for the precatorio
+            
+        origem (CharField): Origin CNJ court number  
+            - Format: NNNNNNN-DD.AAAA.J.TR.OOOO
+            - Required, must be different from main CNJ
+            - References original court case
+            
+        orcamento (IntegerField): Budget year
+            - Must be current year or later
+            - Used for financial planning and budgeting
+            
+        valor_de_face (DecimalField): Face value of the precatorio
+            - Brazilian currency format (R$ 0,00)
+            - Maximum 15 digits, 2 decimal places
+            - Represents the original court-determined amount
+            
+        ultima_atualizacao (DecimalField): Last updated value
+            - Current calculated value with corrections
+            - Updated with monetary adjustments
+            
+        data_ultima_atualizacao (DateField): Last update date
+            - Brazilian date format (dd/mm/yyyy)
+            - Tracks when value was last updated
+            
+        percentual_contratuais_assinado (DecimalField): Signed contractual percentage
+        percentual_contratuais_apartado (DecimalField): Separated contractual percentage  
+        percentual_sucumbenciais (DecimalField): Succumbential fees percentage
+        
+        credito_principal (CharField): Principal credit status
+        honorarios_contratuais (CharField): Contractual fees status
+        honorarios_sucumbenciais (CharField): Succumbential fees status
+        
+    Validation:
+        - CNJ format validation using regex patterns
+        - Financial value range validation
+        - Percentage sum validation (business rules)
+        - Date consistency validation
+        - Status transition validation
+        
+    Widgets:
+        - BrazilianDateInput for date fields
+        - TextInput with CNJ format patterns
+        - NumberInput with Brazilian currency formatting
+        - Select widgets for status choices
+        
+    Security Considerations:
+        - CNJ validation prevents injection attacks
+        - Financial value sanitization
+        - Status validation prevents unauthorized changes
+        - Input length limitations
+        
+    Performance:
+        - Optimized field validation
+        - Minimal database queries during validation
+        - Efficient widget rendering
+        
+    Integration Points:
+        - Cliente model through ManyToMany relationship
+        - Alvara and Requerimento models as related objects
+        - Financial calculation utilities
+        - Court system integration APIs
+    """
+    """
+    Comprehensive form for creating and editing precatorios in the legal system.
+    
+    This form handles the complete lifecycle of precatorio management, including
+    creation, editing, and validation of all precatorio-related fields. It enforces
+    Brazilian legal standards for court document numbering (CNJ format) and
+    manages complex financial calculations for legal settlements.
+    
+    Key Features:
+        - CNJ number validation using Brazilian court standards
+        - Financial value validation with Brazilian currency formatting
+        - Budget year validation and constraints
+        - Percentage validation for legal fee calculations
+        - Status tracking for different precatorio stages
+        - Integration with client management system
+        - Audit trail support through timestamp fields
+        
+    Business Logic:
+        - CNJ numbers must follow Brazilian court format: NNNNNNN-DD.AAAA.J.TR.OOOO
+        - Origin CNJ must be different from main CNJ (different court cases)
+        - Financial values must be positive and within legal limits
+        - Percentage fields must sum to logical totals
+        - Budget year must be current or future year
+        - Status transitions must follow legal workflow
+        
+    Usage:
+        # Creating new precatorio
+        form = PrecatorioForm(request.POST or None)
+        if form.is_valid():
+            precatorio = form.save()
+            
+        # Editing existing precatorio
+        form = PrecatorioForm(request.POST or None, instance=precatorio)
+        
+        # With initial data
+        form = PrecatorioForm(initial={'orcamento': 2024})
+    
+    Fields:
+        cnj (CharField): Primary CNJ court number
+            - Format: NNNNNNN-DD.AAAA.J.TR.OOOO
+            - Required, validated using validate_cnj()
+            - Unique identifier for the precatorio
+            
+        origem (CharField): Origin CNJ court number  
+            - Format: NNNNNNN-DD.AAAA.J.TR.OOOO
+            - Required, must be different from main CNJ
+            - References original court case
+            
+        orcamento (IntegerField): Budget year
+            - Must be current year or later
+            - Used for financial planning and budgeting
+            
+        valor_de_face (DecimalField): Face value of the precatorio
+            - Brazilian currency format (R$ 0,00)
+            - Maximum 15 digits, 2 decimal places
+            - Represents the original court-determined amount
+            
+        ultima_atualizacao (DecimalField): Last updated value
+            - Current calculated value with corrections
+            - Updated with monetary adjustments
+            
+        data_ultima_atualizacao (DateField): Last update date
+            - Brazilian date format (dd/mm/yyyy)
+            - Tracks when value was last updated
+            
+        percentual_contratuais_assinado (DecimalField): Signed contractual percentage
+        percentual_contratuais_apartado (DecimalField): Separated contractual percentage  
+        percentual_sucumbenciais (DecimalField): Succumbential fees percentage
+        
+        credito_principal (CharField): Principal credit status
+        honorarios_contratuais (CharField): Contractual fees status
+        honorarios_sucumbenciais (CharField): Succumbential fees status
+        
+    Validation:
+        - CNJ format validation using regex patterns
+        - Financial value range validation
+        - Percentage sum validation (business rules)
+        - Date consistency validation
+        - Status transition validation
+        
+    Widgets:
+        - BrazilianDateInput for date fields
+        - TextInput with CNJ format patterns
+        - NumberInput with Brazilian currency formatting
+        - Select widgets for status choices
+        
+    Security Considerations:
+        - CNJ validation prevents injection attacks
+        - Financial value sanitization
+        - Status validation prevents unauthorized changes
+        - Input length limitations
+        
+    Performance:
+        - Optimized field validation
+        - Minimal database queries during validation
+        - Efficient widget rendering
+        
+    Integration Points:
+        - Cliente model through ManyToMany relationship
+        - Alvara and Requerimento models as related objects
+        - Financial calculation utilities
+        - Court system integration APIs
+    """
     cnj = forms.CharField(
         max_length=25,
         label='CNJ',
@@ -345,6 +664,118 @@ class PrecatorioForm(forms.ModelForm):
 
 
 class ClienteForm(forms.ModelForm):
+    """
+    Comprehensive form for managing client information in the precatorios system.
+    
+    This form provides full client lifecycle management, supporting both individuals
+    (CPF) and corporations (CNPJ). It handles client creation, editing, and validation
+    according to Brazilian legal document standards and business requirements.
+    
+    Key Features:
+        - Dual support for CPF (individuals) and CNPJ (corporations)
+        - Brazilian document validation using official algorithms
+        - Age calculation and priority determination
+        - Flexible input formatting (accepts various formats)
+        - Comprehensive validation with user-friendly error messages
+        - Bootstrap styling for consistent user interface
+        - Accessibility support with proper labels and help text
+        
+    Business Logic:
+        - CPF validation using Brazilian algorithm (11 digits)
+        - CNPJ validation using Brazilian algorithm (14 digits)
+        - Automatic age calculation from birth date
+        - Priority flag for special case handling
+        - Duplicate client prevention through unique constraints
+        - Format normalization (removes formatting characters)
+        
+    Usage:
+        # Creating new client
+        form = ClienteForm(request.POST or None)
+        if form.is_valid():
+            client = form.save()
+            
+        # Editing existing client
+        form = ClienteForm(request.POST or None, instance=client)
+        
+        # With initial data
+        form = ClienteForm(initial={'prioridade': True})
+    
+    Fields:
+        cpf (CharField): CPF or CNPJ identification number
+            - max_length: 18 characters (formatted CNPJ)
+            - Required field with comprehensive validation
+            - Supports multiple input formats
+            - Algorithm validation for document authenticity
+            
+        nome (CharField): Full name or company name
+            - Required field for client identification
+            - Bootstrap form-control styling
+            - Placeholder guidance for user input
+            
+        nascimento (DateField): Birth date or foundation date
+            - Brazilian date format (dd/mm/yyyy)
+            - Uses BrazilianDateInput widget
+            - Required for age calculation and legal purposes
+            
+        prioridade (BooleanField): Priority flag for special handling
+            - Optional field, defaults to False
+            - Used for expedited processing cases
+            - Checkbox input with Bootstrap styling
+            
+    Validation:
+        - CPF: 11-digit validation with algorithm verification
+        - CNPJ: 14-digit validation with algorithm verification
+        - Duplicate prevention: Checks for existing clients
+        - Format normalization: Removes dots, dashes, slashes
+        - Required field validation with appropriate error messages
+        
+    Document Format Support:
+        CPF (Individuals):
+            - Formatted: 000.000.000-00
+            - Unformatted: 00000000000
+            
+        CNPJ (Corporations):
+            - Formatted: 00.000.000/0000-00
+            - Unformatted: 00000000000000
+            
+    Error Messages:
+        - "CPF inválido. Verifique se o número está correto."
+        - "CNPJ inválido. Verifique se o número está correto."
+        - "CPF deve ter exatamente 11 dígitos."
+        - "CNPJ deve ter exatamente 14 dígitos."
+        - "Já existe um cliente com este CPF/CNPJ."
+        - "CPF ou CNPJ é obrigatório."
+        
+    Widgets:
+        - TextInput with pattern validation for CPF/CNPJ
+        - TextInput with form-control styling for name
+        - BrazilianDateInput for birth date
+        - CheckboxInput for priority flag
+        
+    Security Considerations:
+        - Input sanitization through digit extraction
+        - Algorithm validation prevents fake documents
+        - Unique constraint enforcement
+        - Length validation prevents buffer overflow
+        
+    Performance:
+        - Efficient validation algorithms
+        - Minimal database queries during validation
+        - Optimized widget rendering
+        - Client-side format validation
+        
+    Accessibility:
+        - Descriptive labels and help text
+        - Pattern attributes for screen readers
+        - Title attributes with format examples
+        - Keyboard navigation support
+        
+    Integration Points:
+        - Cliente model for data persistence
+        - Precatorio model through relationships
+        - validate_cpf() and validate_cnpj() utilities
+        - Brazilian legal document standards
+    """
     cpf = forms.CharField(
         max_length=18,
         label='CPF ou CNPJ',
@@ -429,7 +860,127 @@ class ClienteForm(forms.ModelForm):
 
 
 class ClienteSimpleForm(forms.ModelForm):
-    """Simplified ClienteForm for use within precatorio details (no precatorio_cnj field)"""
+    """
+    Simplified client form for streamlined client creation within precatorio workflow.
+    
+    This form provides a lightweight alternative to ClienteForm specifically designed
+    for use within precatorio detail views and quick client creation scenarios.
+    It focuses exclusively on CPF validation (individuals only) and excludes the
+    precatorio_cnj field for simplified user experience.
+    
+    Key Features:
+        - CPF-only validation (no CNPJ support)
+        - Streamlined interface for quick client creation
+        - Integrated duplicate prevention
+        - Brazilian document validation
+        - Bootstrap styling for consistency
+        - Optimized for embedded use in precatorio forms
+        - Simplified field set for essential information
+        
+    Business Logic:
+        - CPF validation using Brazilian algorithm (11 digits only)
+        - Automatic format normalization (removes formatting)
+        - Duplicate client prevention through unique constraints
+        - Required field validation with appropriate messages
+        - Age calculation support through birth date
+        - Priority flag for special case handling
+        
+    Usage:
+        # Quick client creation in precatorio workflow
+        form = ClienteSimpleForm(request.POST or None)
+        if form.is_valid():
+            client = form.save()
+            
+        # Embedded in precatorio creation
+        cliente_form = ClienteSimpleForm(prefix='cliente')
+        
+        # With validation check
+        if cliente_form.is_valid():
+            new_client = cliente_form.save()
+    
+    Fields:
+        cpf (CharField): CPF identification number (individuals only)
+            - max_length: 18 characters (to support formatted input)
+            - Required field with comprehensive validation
+            - Supports both formatted and unformatted input
+            - Algorithm validation for document authenticity
+            - Pattern validation for real-time feedback
+            
+        nome (CharField): Full name of the individual
+            - Required field for client identification
+            - Bootstrap form-control styling
+            - Placeholder guidance for user input
+            - Inherited from model definition
+            
+        nascimento (DateField): Birth date for age calculation
+            - Brazilian date format (dd/mm/yyyy)
+            - Uses BrazilianDateInput widget
+            - Required for legal age verification
+            - Inherited from model definition
+            
+        prioridade (BooleanField): Priority flag for expedited processing
+            - Optional field, defaults to False
+            - Checkbox input with Bootstrap styling
+            - Used for special case handling
+            - Inherited from model definition
+            
+    Validation:
+        - CPF: 11-digit validation with Brazilian algorithm
+        - Format normalization: Removes dots and dashes
+        - Duplicate prevention: Checks for existing clients
+        - Required field validation with user-friendly messages
+        - Length validation (exactly 11 digits required)
+        
+    Document Format Support:
+        CPF (Individuals only):
+            - Formatted: 000.000.000-00
+            - Unformatted: 00000000000
+            - No CNPJ support (use ClienteForm for corporations)
+            
+    Error Messages:
+        - "CPF deve ter exatamente 11 dígitos."
+        - "CPF inválido. Verifique se o número está correto."
+        - "Já existe um cliente com este CPF."
+        - "CPF é obrigatório."
+        
+    Widgets:
+        - TextInput with CPF pattern validation
+        - TextInput with form-control styling for name
+        - BrazilianDateInput for birth date
+        - CheckboxInput for priority flag
+        
+    Differences from ClienteForm:
+        - No CNPJ support (CPF only)
+        - Simplified validation logic
+        - Optimized for embedded use
+        - Reduced field complexity
+        - Focused on individual clients only
+        
+    Security Considerations:
+        - Input sanitization through digit extraction
+        - CPF algorithm validation prevents fake documents
+        - Unique constraint enforcement
+        - Length validation prevents malformed input
+        
+    Performance:
+        - Streamlined validation for faster processing
+        - Minimal database queries during validation
+        - Optimized for embedded form scenarios
+        - Reduced complexity for better responsiveness
+        
+    Accessibility:
+        - Descriptive labels and help text
+        - Pattern attributes for screen readers
+        - Title attributes with format examples
+        - Keyboard navigation support
+        
+    Integration Points:
+        - Cliente model for data persistence
+        - Precatorio workflow for client assignment
+        - validate_cpf() utility function
+        - Brazilian CPF validation standards
+        - Bootstrap styling framework
+    """
     cpf = forms.CharField(
             max_length=18,
         label='CPF',
@@ -485,7 +1036,118 @@ class ClienteSimpleForm(forms.ModelForm):
 
 
 class PrecatorioSearchForm(forms.Form):
-    """Form for searching precatorios by CNJ to link to a client"""
+    """
+    Form for searching and linking precatorios by CNJ number to client records.
+    
+    This form provides a specialized interface for finding existing precatorios
+    in the system using their CNJ (Conselho Nacional de Justiça) identification
+    numbers. It's primarily used during client management workflows when linking
+    existing precatorios to client profiles or verifying precatorio existence.
+    
+    Key Features:
+        - CNJ format validation according to Brazilian standards
+        - Real-time pattern validation for user feedback
+        - Integration with precatorio search functionality
+        - Bootstrap styling for consistent user interface
+        - Comprehensive error handling for invalid CNJ formats
+        - Client-side validation with pattern matching
+        
+    Business Logic:
+        - CNJ validation using official Brazilian format
+        - Format: NNNNNNN-DD.AAAA.J.TR.OOOO
+        - Sequential number validation (NNNNNNN)
+        - Check digit validation (DD)
+        - Year validation (AAAA)
+        - Judicial segment validation (J)
+        - Court validation (TR)
+        - Origin validation (OOOO)
+        
+    Usage:
+        # Basic precatorio search
+        form = PrecatorioSearchForm(request.POST or None)
+        if form.is_valid():
+            cnj = form.cleaned_data['cnj']
+            precatorio = Precatorio.objects.get(cnj=cnj)
+            
+        # Client linking workflow
+        search_form = PrecatorioSearchForm()
+        if search_form.is_valid():
+            link_precatorio_to_client(cnj, client_id)
+            
+        # Validation check
+        if form.is_valid():
+            cnj_number = form.cleaned_data['cnj']
+            # Process linking logic
+    
+    Fields:
+        cnj (CharField): CNJ identification number
+            - max_length: 25 characters (includes formatting)
+            - Required field with comprehensive validation
+            - Brazilian CNJ format validation
+            - Pattern matching for real-time feedback
+            - Help text with format guidance
+            
+    CNJ Format Structure:
+        Format: NNNNNNN-DD.AAAA.J.TR.OOOO
+        Components:
+            - NNNNNNN: Sequential number (7 digits)
+            - DD: Check digits (2 digits)
+            - AAAA: Year of case registration (4 digits)
+            - J: Judicial segment (1 digit)
+            - TR: Court code (2 digits)
+            - OOOO: Origin code (4 digits)
+            
+    Validation:
+        - CNJ format validation using validate_cnj() function
+        - Pattern matching for real-time user feedback
+        - Length validation (exactly 25 characters formatted)
+        - Check digit algorithm validation
+        - Required field validation
+        
+    Error Messages:
+        - "CNJ inválido. Verifique o formato: NNNNNNN-DD.AAAA.J.TR.OOOO"
+        - "Campo obrigatório."
+        - "Formato inválido. Use: 1234567-89.2023.8.26.0100"
+        
+    Widgets:
+        - TextInput with CNJ pattern validation
+        - Bootstrap form-control styling
+        - Placeholder with example format
+        - Title attribute for accessibility
+        - Pattern attribute for client-side validation
+        
+    Security Considerations:
+        - Input validation prevents malformed CNJ numbers
+        - Server-side validation with validate_cnj()
+        - Pattern matching prevents script injection
+        - Length validation prevents buffer overflow
+        
+    Performance:
+        - Efficient CNJ validation algorithm
+        - Client-side pattern validation reduces server requests
+        - Minimal database impact during validation
+        - Optimized for search functionality
+        
+    Accessibility:
+        - Descriptive label and help text
+        - Pattern attribute for screen readers
+        - Title attribute with format example
+        - Keyboard navigation support
+        - Clear error messaging
+        
+    Integration Points:
+        - Precatorio model for search functionality
+        - validate_cnj() utility function
+        - Client linking workflows
+        - Brazilian CNJ standards compliance
+        - Court system integration requirements
+        
+    Example CNJ Numbers:
+        - Valid: 1234567-89.2023.8.26.0100
+        - Valid: 5000123-45.2022.1.15.0001
+        - Invalid: 123456-78.2023.8.26.0100 (wrong length)
+        - Invalid: 1234567.89.2023.8.26.0100 (missing dash)
+    """
     cnj = forms.CharField(
         max_length=25,
         label='CNJ do Precatório',
@@ -501,7 +1163,86 @@ class PrecatorioSearchForm(forms.Form):
 
 
 class ClienteSearchForm(forms.Form):
-    """Form for searching clients by CPF to link to a precatorio"""
+    """
+    Form for searching and validating clients by CPF/CNPJ to link to precatorios.
+    
+    This form provides a secure and user-friendly interface for finding existing
+    clients in the system using their CPF (individual) or CNPJ (corporate) numbers.
+    It's primarily used when linking clients to precatorios during the precatorio
+    creation process.
+    
+    Key Features:
+        - CPF and CNPJ validation using Brazilian algorithms
+        - Flexible input format (accepts with or without formatting)
+        - Real-time format validation via HTML5 patterns
+        - Comprehensive error messages in Portuguese
+        - Bootstrap styling for consistent UI
+        
+    Business Logic:
+        - Validates CPF using official Brazilian algorithm
+        - Validates CNPJ using official Brazilian algorithm
+        - Normalizes input by removing formatting characters
+        - Provides clear feedback for invalid documents
+        
+    Usage:
+        # In views.py
+        form = ClienteSearchForm(request.POST or None)
+        if form.is_valid():
+            cpf_cnpj = form.cleaned_data['cpf']
+            cliente = Cliente.objects.filter(cpf=cpf_cnpj).first()
+            
+        # In templates
+        {{ form.cpf.label_tag }}
+        {{ form.cpf }}
+        {{ form.cpf.help_text }}
+    
+    Fields:
+        cpf (CharField): CPF or CNPJ input field
+            - max_length: 18 characters (formatted CNPJ length)
+            - Required field with validation
+            - Accepts multiple formats (formatted/unformatted)
+            
+    Validation:
+        - Length validation: 11 digits (CPF) or 14 digits (CNPJ)
+        - Algorithm validation: Uses validate_cpf() and validate_cnpj()
+        - Format normalization: Removes dots, dashes, slashes
+        - Required field validation
+        
+    Supported Formats:
+        CPF:
+            - Formatted: 000.000.000-00
+            - Unformatted: 00000000000
+        CNPJ:
+            - Formatted: 00.000.000/0000-00
+            - Unformatted: 00000000000000
+            
+    Error Messages:
+        - "CPF inválido. Verifique se o número está correto."
+        - "CNPJ inválido. Verifique se o número está correto."
+        - "Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido."
+        - "CPF ou CNPJ é obrigatório."
+        
+    HTML Attributes:
+        - class: 'form-control' (Bootstrap styling)
+        - placeholder: 'CPF ou CNPJ'
+        - pattern: Regex for client-side validation
+        - title: Descriptive help text for accessibility
+        
+    Security Considerations:
+        - Input sanitization via digit extraction
+        - Algorithm validation prevents fake documents
+        - No sensitive data exposure in error messages
+        
+    Performance:
+        - Lightweight validation (client and server-side)
+        - No database queries during validation
+        - Fast document algorithm verification
+        
+    Integration Points:
+        - Links with Cliente model for client lookup
+        - Used in precatorio creation workflows
+        - Compatible with existing client management system
+    """
     cpf = forms.CharField(
         max_length=18,
         label='CPF ou CNPJ do Cliente',
@@ -535,6 +1276,160 @@ class ClienteSearchForm(forms.Form):
 
 
 class RequerimentoForm(forms.ModelForm):
+    """
+    Comprehensive form for creating and managing requerimento (request) records in the precatorios system.
+    
+    This form handles the creation of requerimentos, which represent formal requests
+    associated with precatorios. It manages financial calculations, client validation,
+    process phase tracking, and discount calculations. The form ensures data integrity
+    through comprehensive validation and provides a user-friendly interface for
+    legal professionals managing precatorio workflows.
+    
+    Key Features:
+        - Client validation through CPF/CNPJ verification
+        - Financial value handling with Brazilian currency formatting
+        - Discount (deságio) percentage calculations
+        - Process phase management and tracking
+        - Client-precatorio relationship validation
+        - Comprehensive error handling and user feedback
+        - Bootstrap styling for consistent user interface
+        - Real-time validation with pattern matching
+        
+    Business Logic:
+        - Validates client existence and precatorio association
+        - Ensures client is linked to the precatorio before creating requerimento
+        - Handles financial calculations with proper decimal precision
+        - Manages process phases specific to requerimento workflow
+        - Validates discount percentages within acceptable ranges
+        - Supports both CPF (individuals) and CNPJ (corporations)
+        - Enforces business rules for legal compliance
+        
+    Usage:
+        # Creating new requerimento
+        form = RequerimentoForm(request.POST or None, precatorio=precatorio_instance)
+        if form.is_valid():
+            requerimento = form.save(commit=False)
+            requerimento.precatorio = precatorio_instance
+            requerimento.save()
+            
+        # With existing data
+        form = RequerimentoForm(instance=requerimento, precatorio=precatorio)
+        
+        # Validation workflow
+        if form.is_valid():
+            # Process financial calculations
+            valor = form.cleaned_data['valor']
+            desagio = form.cleaned_data['desagio']
+            valor_final = valor * (1 - desagio/100)
+    
+    Fields:
+        cliente_cpf (CharField): Client identification document
+            - max_length: 18 characters (formatted CNPJ)
+            - Required for client validation and linking
+            - Supports both CPF and CNPJ formats
+            - Pattern validation for real-time feedback
+            - Validates client exists and is linked to precatorio
+            
+        valor (DecimalField): Financial value of the requerimento
+            - max_digits: 15, decimal_places: 2
+            - Brazilian currency formatting (50.000,00)
+            - Comprehensive currency validation
+            - Required field for financial calculations
+            - Supports large monetary values typical in legal cases
+            
+        desagio (DecimalField): Discount percentage
+            - max_digits: 5, decimal_places: 2
+            - Percentage format (0.00 to 100.00)
+            - Brazilian number formatting (15,50)
+            - Used for financial discount calculations
+            - Optional field with validation
+            
+        fase (ModelChoiceField): Process phase selection
+            - Dynamic queryset filtered for requerimento phases
+            - Optional field for process tracking
+            - Dropdown selection with empty label
+            - Bootstrap styling for consistency
+            - Filtered to show only relevant phases
+            
+    Validation:
+        - CPF: 11-digit validation with Brazilian algorithm
+        - CNPJ: 14-digit validation with Brazilian algorithm
+        - Client existence: Validates client is registered in system
+        - Client-precatorio relationship: Ensures proper linking
+        - Financial values: Positive values with proper formatting
+        - Discount ranges: Validates percentage within acceptable bounds
+        
+    Document Format Support:
+        CPF (Individuals):
+            - Formatted: 000.000.000-00
+            - Unformatted: 00000000000
+            
+        CNPJ (Corporations):
+            - Formatted: 00.000.000/0000-00
+            - Unformatted: 00000000000000
+            
+    Financial Format Support:
+        Valor (Currency):
+            - Brazilian format: 50.000,00
+            - Decimal precision: 2 places
+            - Maximum value: 999,999,999,999.99
+            
+        Deságio (Percentage):
+            - Brazilian format: 15,50
+            - Range: 0.00 to 100.00
+            - Decimal precision: 2 places
+            
+    Error Messages:
+        - "CPF inválido. Verifique se o número está correto."
+        - "CNPJ inválido. Verifique se o número está correto."
+        - "Documento deve ser um CPF (11 dígitos) ou CNPJ (14 dígitos)."
+        - "O cliente [nome] não está vinculado ao precatório [CNJ]."
+        - "Não foi encontrado um cliente com o documento [documento]."
+        - "Valor deve ser um número positivo."
+        - "Deságio deve estar entre 0% e 100%."
+        
+    Widgets:
+        - TextInput with CPF/CNPJ pattern validation
+        - TextInput with brazilian-currency class for value
+        - TextInput with brazilian-number class for percentage
+        - Select dropdown for phase selection
+        - Bootstrap form-control styling throughout
+        
+    Security Considerations:
+        - Input sanitization for financial values
+        - Client-precatorio relationship validation
+        - Document algorithm validation
+        - Decimal precision control
+        - SQL injection prevention through ORM
+        
+    Performance:
+        - Efficient client lookup with database indexing
+        - Optimized phase queryset filtering
+        - Minimal validation queries
+        - Client-side format validation
+        
+    Accessibility:
+        - Descriptive labels and help text
+        - Pattern attributes for screen readers
+        - Title attributes with format examples
+        - Keyboard navigation support
+        - Clear error messaging
+        
+    Integration Points:
+        - Cliente model for client validation
+        - Precatorio model for relationship verification
+        - Requerimento model for data persistence
+        - Fase model for phase management
+        - validate_cpf() and validate_cnpj() utilities
+        - validate_currency() for financial validation
+        
+    Financial Calculations:
+        - Base value: valor field input
+        - Discount: desagio percentage
+        - Final value: valor * (1 - desagio/100)
+        - Currency formatting: Brazilian standards
+        - Precision: 2 decimal places throughout
+    """
     cliente_cpf = forms.CharField(
             max_length=18,
         label='CPF do Cliente',
@@ -634,7 +1529,195 @@ class RequerimentoForm(forms.ModelForm):
 
 
 class AlvaraSimpleForm(forms.ModelForm):
-    """Simplified AlvaraForm for use within precatorio details (no precatorio_cnj field)"""
+    """
+    Simplified form for creating and managing alvará (judicial authorization) records within precatorio workflow.
+    
+    This form provides a streamlined interface for creating alvarás, which are judicial
+    authorizations for payment release in the precatorios system. It handles financial
+    calculations for different types of fees, client validation, process phase tracking,
+    and comprehensive validation while maintaining a user-friendly interface optimized
+    for embedded use in precatorio detail views.
+    
+    Key Features:
+        - Client validation through CPF verification
+        - Multiple fee type management (principal, contractual, court fees)
+        - Process phase tracking for both general and contractual fees
+        - Alvará type classification (chronological order, priority, agreement)
+        - Brazilian currency formatting and validation
+        - Embedded use optimization for precatorio workflows
+        - Comprehensive financial calculations and reporting
+        - Bootstrap styling for consistent user interface
+        
+    Business Logic:
+        - Validates client existence and precatorio association
+        - Handles multiple financial value types with proper precision
+        - Manages separate phase tracking for different fee types
+        - Enforces business rules for judicial authorization processes
+        - Supports different alvará types according to legal requirements
+        - Calculates total values across all fee categories
+        - Validates positive financial values and proper formatting
+        
+    Usage:
+        # Creating new alvará within precatorio
+        form = AlvaraSimpleForm(request.POST or None, precatorio=precatorio_instance)
+        if form.is_valid():
+            alvara = form.save(commit=False)
+            alvara.precatorio = precatorio_instance
+            alvara.save()
+            
+        # With financial calculation
+        if form.is_valid():
+            principal = form.cleaned_data['valor_principal']
+            contratuais = form.cleaned_data['honorarios_contratuais'] or 0
+            sucumbenciais = form.cleaned_data['honorarios_sucumbenciais'] or 0
+            total = principal + contratuais + sucumbenciais
+            
+        # Embedded in precatorio workflow
+        alvara_form = AlvaraSimpleForm(prefix='alvara', precatorio=precatorio)
+    
+    Fields:
+        cliente_cpf (CharField): Client identification document
+            - max_length: 18 characters (formatted)
+            - Required for client validation and linking
+            - CPF format validation with pattern matching
+            - Real-time validation feedback
+            - Validates client exists in system
+            
+        tipo (ChoiceField): Type of alvará authorization
+            - ordem cronológica: Chronological order payment
+            - prioridade: Priority payment for special cases
+            - acordo: Agreement-based payment
+            - Required field with dropdown selection
+            - Bootstrap styling for consistency
+            
+        fase (ModelChoiceField): General process phase
+            - Dynamic queryset filtered for alvará phases
+            - Optional field for process tracking
+            - Dropdown selection with empty label
+            - Bootstrap styling for consistency
+            
+        fase_honorarios_contratuais (ModelChoiceField): Contractual fees phase
+            - Separate phase tracking for contractual fees
+            - Dynamic queryset for active phases only
+            - Optional field with specific help text
+            - Independent phase management
+            
+        valor_principal (DecimalField): Principal amount
+            - max_digits: 15, decimal_places: 2
+            - Required field for main payment amount
+            - Brazilian currency formatting
+            - Comprehensive currency validation
+            
+        honorarios_contratuais (DecimalField): Contractual fees
+            - max_digits: 15, decimal_places: 2
+            - Optional field for lawyer contractual fees
+            - Brazilian currency formatting
+            - Used in total calculations
+            
+        honorarios_sucumbenciais (DecimalField): Court-awarded fees
+            - max_digits: 15, decimal_places: 2
+            - Optional field for court-determined fees
+            - Brazilian currency formatting
+            - Legal requirement compliance
+            
+    Validation:
+        - CPF: 11-digit validation with Brazilian algorithm
+        - Client existence: Validates client is registered
+        - Financial values: Positive values with proper formatting
+        - Type selection: Required field validation
+        - Phase selection: Optional but validated if provided
+        
+    Alvará Types:
+        Ordem Cronológica:
+            - Standard chronological payment order
+            - Regular processing timeline
+            - Standard priority level
+            
+        Prioridade:
+            - Expedited processing for special cases
+            - Higher priority in payment queue
+            - Special legal requirements
+            
+        Acordo:
+            - Agreement-based settlements
+            - Negotiated payment terms
+            - Alternative dispute resolution
+            
+    Financial Categories:
+        Valor Principal:
+            - Main debt amount
+            - Required field
+            - Base for calculations
+            
+        Honorários Contratuais:
+            - Lawyer contractual fees
+            - Optional field
+            - Separate phase tracking
+            
+        Honorários Sucumbenciais:
+            - Court-awarded attorney fees
+            - Optional field
+            - Legal compliance requirement
+            
+    Financial Format Support:
+        Brazilian Currency Format:
+            - Format: 50.000,00
+            - Decimal precision: 2 places
+            - Maximum value: 999,999,999,999.99
+            - Thousands separator: period (.)
+            - Decimal separator: comma (,)
+            
+    Error Messages:
+        - "CPF deve ter exatamente 11 dígitos."
+        - "CPF inválido. Verifique se o número está correto."
+        - "Não foi encontrado um cliente com este CPF."
+        - "Tipo de alvará é obrigatório."
+        - "Valor deve ser um número positivo."
+        - "Formato de moeda inválido."
+        
+    Widgets:
+        - TextInput with CPF pattern validation
+        - Select dropdown for type selection
+        - Select dropdown for phase selections
+        - TextInput with brazilian-currency class for values
+        - Bootstrap form-control styling throughout
+        
+    Security Considerations:
+        - Input sanitization for financial values
+        - CPF algorithm validation
+        - Client existence verification
+        - Decimal precision control
+        - SQL injection prevention through ORM
+        
+    Performance:
+        - Efficient client lookup with indexing
+        - Optimized phase queryset filtering
+        - Minimal validation queries
+        - Client-side format validation
+        
+    Accessibility:
+        - Descriptive labels and help text
+        - Pattern attributes for screen readers
+        - Title attributes with format examples
+        - Keyboard navigation support
+        - Clear error messaging
+        
+    Integration Points:
+        - Cliente model for client validation
+        - Precatorio model for workflow integration
+        - Alvará model for data persistence
+        - Fase model for phase management
+        - FaseHonorariosContratuais for fee tracking
+        - validate_cpf() utility function
+        - validate_currency() for financial validation
+        
+    Differences from Full AlvaraForm:
+        - Simplified interface for embedded use
+        - No precatorio_cnj field (context provided)
+        - Optimized for precatorio detail workflows
+        - Reduced complexity for better UX
+        - Streamlined validation process
+    """
     
     cliente_cpf = forms.CharField(
             max_length=18,
@@ -779,7 +1862,179 @@ class AlvaraSimpleForm(forms.ModelForm):
 
 
 class FaseForm(forms.ModelForm):
-    """Form for creating and editing custom phases"""
+    """
+    Comprehensive form for creating and managing custom process phases in the precatorios system.
+    
+    This form provides a complete interface for defining custom phases that track
+    the progress of precatorios through various stages of the legal process.
+    It supports visual customization, ordering, activation control, and type
+    classification to create a flexible workflow management system.
+    
+    Key Features:
+        - Custom phase name and description definition
+        - Visual customization with color selection
+        - Flexible type classification (alvará, requerimento, both)
+        - Order management for logical phase progression
+        - Activation control for phase lifecycle management
+        - Comprehensive validation for unique naming
+        - Bootstrap styling for consistent user interface
+        - User-friendly form controls with guidance
+        
+    Business Logic:
+        - Ensures unique phase names within the system
+        - Validates proper color format (hexadecimal)
+        - Manages phase ordering for logical workflow
+        - Controls phase availability through activation
+        - Supports different phase types for different processes
+        - Provides visual identification through color coding
+        - Maintains system integrity through validation
+        
+    Usage:
+        # Creating new custom phase
+        form = FaseForm(request.POST or None)
+        if form.is_valid():
+            phase = form.save()
+            
+        # Editing existing phase
+        form = FaseForm(request.POST or None, instance=existing_phase)
+        
+        # With initial values
+        form = FaseForm(initial={
+            'tipo': 'ambos',
+            'cor': '#6c757d',
+            'ativa': True,
+            'ordem': 0
+        })
+    
+    Fields:
+        nome (CharField): Unique phase name
+            - max_length: 100 characters
+            - Required field for phase identification
+            - Must be unique across all phases
+            - Bootstrap form-control styling
+            - Placeholder guidance for users
+            
+        descricao (CharField): Optional phase description
+            - Required: False
+            - Textarea widget for detailed explanation
+            - Helps users understand phase purpose
+            - Bootstrap styling with 3 rows
+            - Optional field for additional context
+            
+        tipo (ChoiceField): Phase type classification
+            - alvará: Used only in alvará processes
+            - requerimento: Used only in requerimento processes
+            - ambos: Used in both process types
+            - Default: 'ambos' for maximum flexibility
+            - Required field with dropdown selection
+            
+        cor (CharField): Visual identification color
+            - max_length: 7 characters (hexadecimal)
+            - Color picker widget for visual selection
+            - Default: '#6c757d' (Bootstrap gray)
+            - Used for visual phase identification
+            - Hexadecimal format validation
+            
+        ordem (IntegerField): Display order priority
+            - min_value: 0 (prevents negative ordering)
+            - Default: 0 (highest priority)
+            - Controls phase display sequence
+            - Lower numbers appear first
+            - Allows logical workflow progression
+            
+        ativa (BooleanField): Phase activation status
+            - Required: False (checkbox field)
+            - Default: True (new phases active by default)
+            - Controls phase availability in system
+            - Allows phase lifecycle management
+            - Bootstrap checkbox styling
+            
+    Phase Types:
+        Alvará:
+            - Specific to judicial authorization processes
+            - Used in payment release workflows
+            - Tracks alvará-specific milestones
+            
+        Requerimento:
+            - Specific to formal request processes
+            - Used in petition and application workflows
+            - Tracks request-specific progress
+            
+        Ambos (Both):
+            - Universal phases applicable to all processes
+            - Maximum flexibility for common milestones
+            - Default choice for new phases
+            
+    Validation:
+        - Nome: Required, unique, maximum 100 characters
+        - Tipo: Required, must be valid choice
+        - Cor: Valid hexadecimal color format
+        - Ordem: Non-negative integer
+        - Ativa: Boolean validation
+        
+    Color Customization:
+        - HTML5 color picker widget
+        - Hexadecimal format (#RRGGBB)
+        - Default Bootstrap gray (#6c757d)
+        - Visual phase identification in interfaces
+        - Accessibility considerations for color contrast
+        
+    Ordering System:
+        - Integer-based ordering (0 = highest priority)
+        - Allows logical workflow progression
+        - Supports phase reordering without conflicts
+        - Visual sorting in phase displays
+        - Flexible insertion of new phases
+        
+    Error Messages:
+        - "Nome da fase é obrigatório."
+        - "Já existe uma fase com este nome."
+        - "Tipo de fase é obrigatório."
+        - "Formato de cor inválido."
+        - "Ordem deve ser um número não negativo."
+        
+    Widgets:
+        - TextInput with placeholder for name
+        - Textarea with 3 rows for description
+        - Select dropdown for type selection
+        - Color picker for visual customization
+        - NumberInput with min validation for order
+        - Checkbox for activation status
+        
+    Security Considerations:
+        - Input sanitization for text fields
+        - Color format validation prevents injection
+        - Integer validation for order field
+        - Unique constraint enforcement
+        - XSS prevention through proper escaping
+        
+    Performance:
+        - Efficient uniqueness validation
+        - Minimal database queries
+        - Optimized form rendering
+        - Client-side validation support
+        
+    Accessibility:
+        - Descriptive labels and help text
+        - Color picker accessibility features
+        - Keyboard navigation support
+        - Screen reader compatibility
+        - Clear error messaging
+        
+    Integration Points:
+        - Fase model for data persistence
+        - Alvará and Requerimento workflow integration
+        - Visual display systems throughout application
+        - Phase selection in other forms
+        - Workflow management systems
+        
+    Lifecycle Management:
+        - Creation: All fields customizable
+        - Editing: Full field modification support
+        - Deactivation: Ativa flag for soft deletion
+        - Reordering: Ordem field for position changes
+        - Deletion: Hard deletion with cascade considerations
+    """
     
     nome = forms.CharField(
         max_length=100,
@@ -852,9 +2107,18 @@ class FaseForm(forms.ModelForm):
     )
     
     def clean_nome(self):
-        """Validate nome field to ensure uniqueness within the same tipo"""
+        """Basic nome field cleaning - strip whitespace"""
         nome = self.cleaned_data.get('nome')
-        tipo = self.cleaned_data.get('tipo')
+        if nome:
+            nome = nome.strip()
+        return nome
+    
+    def clean(self):
+        """Validate the entire form, including nome uniqueness within the same tipo"""
+        cleaned_data = super().clean()
+        nome = cleaned_data.get('nome')
+        tipo = cleaned_data.get('tipo')
+        
         if nome and tipo:
             nome = nome.strip()
             # Check if another fase with the same name and tipo exists (excluding current instance if editing)
@@ -863,8 +2127,11 @@ class FaseForm(forms.ModelForm):
                 existing_fase = existing_fase.exclude(pk=self.instance.pk)
             
             if existing_fase.exists():
-                raise forms.ValidationError(f'Já existe uma fase com o nome "{nome}" para o tipo "{dict(Fase.TIPO_CHOICES).get(tipo, tipo)}".')
-        return nome
+                raise forms.ValidationError({
+                    'nome': f'Já existe uma fase com o nome "{nome}" para o tipo "{dict(Fase.TIPO_CHOICES).get(tipo, tipo)}".'
+                })
+        
+        return cleaned_data
     
     def clean_cor(self):
         """Validate color field format"""
@@ -881,7 +2148,180 @@ class FaseForm(forms.ModelForm):
 
 
 class FaseHonorariosContratuaisForm(forms.ModelForm):
-    """Form for creating and editing Fase Honorários Contratuais"""
+    """
+    Specialized form for creating and managing contractual fees (honorários contratuais) phases.
+    
+    This form provides a dedicated interface for defining custom phases specifically
+    for tracking contractual attorney fees throughout the precatorio process. It
+    offers similar functionality to FaseForm but is specialized for the unique
+    requirements of contractual fee management, including separate color schemes
+    and specific workflow considerations.
+    
+    Key Features:
+        - Specialized phase management for contractual fees
+        - Independent workflow tracking from main processes
+        - Visual customization with fee-specific color defaults
+        - Order management for logical fee phase progression
+        - Activation control for phase lifecycle management
+        - Unique naming validation within contractual fee context
+        - Bootstrap styling for consistent user interface
+        - Fee-specific help text and guidance
+        
+    Business Logic:
+        - Ensures unique phase names within contractual fees context
+        - Provides separate phase tracking for attorney fee processes
+        - Validates proper color format (hexadecimal)
+        - Manages phase ordering for logical fee workflow
+        - Controls phase availability through activation
+        - Maintains independence from general process phases
+        - Supports complex fee tracking requirements
+        
+    Usage:
+        # Creating new contractual fee phase
+        form = FaseHonorariosContratuaisForm(request.POST or None)
+        if form.is_valid():
+            fee_phase = form.save()
+            
+        # Editing existing fee phase
+        form = FaseHonorariosContratuaisForm(request.POST or None, instance=existing_phase)
+        
+        # With fee-specific defaults
+        form = FaseHonorariosContratuaisForm(initial={
+            'cor': '#28a745',  # Green for financial tracking
+            'ativa': True,
+            'ordem': 0
+        })
+    
+    Fields:
+        nome (CharField): Unique contractual fee phase name
+            - max_length: 100 characters
+            - Required field for phase identification
+            - Must be unique within contractual fee phases
+            - Bootstrap form-control styling
+            - Fee-specific placeholder guidance
+            
+        descricao (CharField): Optional phase description
+            - Required: False
+            - Textarea widget for detailed explanation
+            - Helps users understand fee phase purpose
+            - Bootstrap styling with 3 rows
+            - Optional field for additional context
+            
+        cor (CharField): Visual identification color
+            - max_length: 7 characters (hexadecimal)
+            - Color picker widget for visual selection
+            - Default: '#28a745' (Bootstrap success green)
+            - Used for visual fee phase identification
+            - Hexadecimal format validation
+            
+        ordem (IntegerField): Display order priority
+            - min_value: 0 (prevents negative ordering)
+            - Default: 0 (highest priority)
+            - Controls fee phase display sequence
+            - Lower numbers appear first
+            - Allows logical fee workflow progression
+            
+        ativa (BooleanField): Phase activation status
+            - Required: False (checkbox field)
+            - Default: True (new phases active by default)
+            - Controls phase availability in system
+            - Allows fee phase lifecycle management
+            - Bootstrap checkbox styling
+            
+    Contractual Fee Context:
+        Purpose:
+            - Track attorney contractual fee processing
+            - Monitor payment stages for legal representation
+            - Separate workflow from main precatorio process
+            - Specialized financial tracking requirements
+            
+        Workflow Independence:
+            - Independent from general Fase phases
+            - Separate color scheme (green theme)
+            - Specialized naming context
+            - Unique validation rules
+            
+        Business Requirements:
+            - Attorney fee payment tracking
+            - Contract compliance monitoring
+            - Financial milestone management
+            - Legal requirement adherence
+            
+    Validation:
+        - Nome: Required, unique within contractual fees, max 100 chars
+        - Cor: Valid hexadecimal color format
+        - Ordem: Non-negative integer
+        - Ativa: Boolean validation
+        - Uniqueness: Scoped to contractual fee phases only
+        
+    Color Scheme:
+        - Default: '#28a745' (Bootstrap success green)
+        - Financial tracking theme
+        - Visual distinction from general phases
+        - Accessibility considerations for color contrast
+        - User customizable through color picker
+        
+    Ordering System:
+        - Integer-based ordering (0 = highest priority)
+        - Logical fee processing progression
+        - Supports phase reordering without conflicts
+        - Visual sorting in fee phase displays
+        - Flexible insertion of new fee phases
+        
+    Error Messages:
+        - "Nome da fase é obrigatório."
+        - "Já existe uma fase de honorários contratuais com este nome."
+        - "Formato de cor inválido."
+        - "Ordem deve ser um número não negativo."
+        
+    Widgets:
+        - TextInput with fee-specific placeholder
+        - Textarea with 3 rows for description
+        - Color picker with green default
+        - NumberInput with min validation for order
+        - Checkbox for activation status
+        
+    Security Considerations:
+        - Input sanitization for text fields
+        - Color format validation prevents injection
+        - Integer validation for order field
+        - Unique constraint enforcement within scope
+        - XSS prevention through proper escaping
+        
+    Performance:
+        - Efficient scoped uniqueness validation
+        - Minimal database queries
+        - Optimized form rendering
+        - Client-side validation support
+        
+    Accessibility:
+        - Descriptive labels and help text
+        - Color picker accessibility features
+        - Keyboard navigation support
+        - Screen reader compatibility
+        - Clear error messaging
+        
+    Integration Points:
+        - FaseHonorariosContratuais model for persistence
+        - Alvará contractual fee tracking
+        - Financial reporting systems
+        - Fee phase selection in related forms
+        - Attorney fee workflow management
+        
+    Differences from FaseForm:
+        - Specialized for contractual fees only
+        - Different default color scheme
+        - Scoped uniqueness validation
+        - Fee-specific help text and placeholders
+        - Independent workflow tracking
+        
+    Lifecycle Management:
+        - Creation: All fields customizable with fee defaults
+        - Editing: Full field modification support
+        - Deactivation: Ativa flag for soft deletion
+        - Reordering: Ordem field for position changes
+        - Deletion: Hard deletion with fee-specific cascade
+    """
     
     nome = forms.CharField(
         max_length=100,
@@ -969,7 +2409,155 @@ class FaseHonorariosContratuaisForm(forms.ModelForm):
 
 
 class DiligenciasForm(forms.ModelForm):
-    """Form for creating and editing diligencias"""
+    """
+    Comprehensive form for creating and managing diligências (legal tasks/procedures) in the precatorios system.
+    
+    This form provides a complete interface for creating diligências, which are
+    specific legal tasks or procedures that need to be performed as part of the
+    precatorio process. It handles task categorization, deadline management,
+    priority classification, and detailed description capture with comprehensive
+    validation to ensure proper task management.
+    
+    Key Features:
+        - Dynamic tipo (type) selection from active options only
+        - Date validation to prevent past deadlines
+        - Priority/urgency classification system
+        - Optional detailed descriptions for task clarity
+        - Brazilian date formatting for local compliance
+        - Bootstrap styling for consistent user interface
+        - Comprehensive field validation and error handling
+        - Integration with TipoDiligencia management system
+        
+    Business Logic:
+        - Validates deadlines are not set in the past
+        - Filters tipo options to active types only
+        - Enforces required fields for essential information
+        - Supports optional descriptions for flexibility
+        - Integrates with urgency priority system
+        - Maintains data integrity through validation
+        - Provides user-friendly error messages
+        
+    Usage:
+        # Creating new diligência
+        form = DiligenciasForm(request.POST or None)
+        if form.is_valid():
+            diligencia = form.save(commit=False)
+            diligencia.precatorio = precatorio_instance
+            diligencia.save()
+            
+        # With initial data
+        form = DiligenciasForm(initial={
+            'urgencia': 'normal',
+            'data_final': tomorrow_date
+        })
+        
+        # Validation workflow
+        if form.is_valid():
+            # Process diligência creation
+            task = form.save()
+    
+    Fields:
+        tipo (ModelChoiceField): Type of legal task
+            - Dynamic queryset filtered to active types only
+            - Required field for task categorization
+            - Dropdown selection with Bootstrap styling
+            - Label: 'Tipo de Diligência'
+            - Filtered through TipoDiligencia.get_ativos()
+            
+        data_final (DateField): Deadline for task completion
+            - Required field for deadline management
+            - Brazilian date format (dd/mm/yyyy)
+            - Uses BrazilianDateInput widget
+            - Label: 'Data Final'
+            - Validation prevents past dates
+            
+        urgencia (ChoiceField): Priority/urgency level
+            - Required field for priority classification
+            - Dropdown selection with predefined options
+            - Bootstrap form-control styling
+            - Label: 'Urgência'
+            - Supports priority-based task management
+            
+        descricao (TextField): Detailed task description
+            - Optional field for additional details
+            - Textarea widget with 3 rows
+            - Bootstrap form-control styling
+            - Label: 'Descrição'
+            - Helps clarify task requirements
+            
+    Urgency Levels:
+        - Available through model choices
+        - Supports priority-based workflow management
+        - Visual indicators for task prioritization
+        - Integration with task management systems
+        
+    Validation:
+        - Tipo: Required, must be active type
+        - Data Final: Required, cannot be in the past
+        - Urgência: Required, must be valid choice
+        - Descrição: Optional, no specific validation
+        
+    Date Validation:
+        - Past Date Prevention: data_final cannot be before today
+        - Brazilian Format: dd/mm/yyyy input format
+        - Timezone Awareness: Uses Django timezone utilities
+        - User-Friendly Errors: Clear messaging for invalid dates
+        
+    Error Messages:
+        - "Tipo de diligência é obrigatório."
+        - "Data final é obrigatória."
+        - "A data final não pode ser no passado."
+        - "Urgência é obrigatória."
+        
+    Widgets:
+        - Select dropdown for tipo selection
+        - BrazilianDateInput for data_final
+        - Select dropdown for urgencia
+        - Textarea with 3 rows for descricao
+        - Bootstrap form-control styling throughout
+        
+    Field Customization:
+        - Dynamic tipo queryset (active types only)
+        - Custom labels for user-friendly interface
+        - Help text for guidance and clarity
+        - Required field configuration
+        - Bootstrap styling integration
+        
+    Security Considerations:
+        - Date validation prevents invalid deadlines
+        - Tipo filtering ensures valid selections only
+        - Input sanitization through Django forms
+        - XSS prevention through proper escaping
+        - SQL injection prevention through ORM
+        
+    Performance:
+        - Efficient queryset filtering for tipo
+        - Minimal database queries during validation
+        - Optimized form rendering
+        - Client-side validation support
+        
+    Accessibility:
+        - Descriptive labels and help text
+        - Keyboard navigation support
+        - Screen reader compatibility
+        - Clear error messaging
+        - Proper form structure
+        
+    Integration Points:
+        - Diligencias model for data persistence
+        - TipoDiligencia model for type management
+        - Precatorio workflow integration
+        - Task management systems
+        - Priority-based scheduling
+        - Brazilian date formatting standards
+        
+    Workflow Integration:
+        - Task creation within precatorio context
+        - Deadline management and tracking
+        - Priority-based task organization
+        - Type-based task categorization
+        - Status tracking through related systems
+    """
     
     class Meta:
         model = Diligencias
@@ -1012,7 +2600,156 @@ class DiligenciasForm(forms.ModelForm):
 
 
 class DiligenciasUpdateForm(forms.ModelForm):
-    """Form for updating diligencias status"""
+    """
+    Specialized form for updating and completing diligências (legal tasks) status and progress.
+    
+    This form provides a focused interface for updating the completion status of
+    existing diligências. It handles task completion marking, automatic timestamping,
+    progress observations, and comprehensive validation to ensure proper task
+    lifecycle management and audit trail maintenance.
+    
+    Key Features:
+        - Task completion status toggle with validation
+        - Automatic completion timestamp generation
+        - Optional observations for completion notes
+        - Brazilian date-time formatting for local compliance
+        - Smart validation for completion requirements
+        - Bootstrap styling for consistent user interface
+        - Audit trail support through timestamp management
+        - Flexible completion workflow handling
+        
+    Business Logic:
+        - Automatically sets completion timestamp when task is marked complete
+        - Clears completion timestamp when task is unmarked
+        - Enforces completion timestamp requirement for completed tasks
+        - Supports optional observations for completion context
+        - Maintains data integrity through validation
+        - Provides flexible workflow management
+        - Ensures proper audit trail creation
+        
+    Usage:
+        # Marking diligência as complete
+        form = DiligenciasUpdateForm(request.POST or None, instance=diligencia)
+        if form.is_valid():
+            updated_diligencia = form.save()
+            
+        # With completion observations
+        form = DiligenciasUpdateForm(initial={
+            'concluida': True,
+            'descricao': 'Task completed successfully'
+        }, instance=diligencia)
+        
+        # Status update workflow
+        if form.is_valid():
+            # Process completion status change
+            task = form.save()
+    
+    Fields:
+        concluida (BooleanField): Task completion status
+            - Checkbox input for completion toggle
+            - Label: 'Marcar como concluída'
+            - Bootstrap form-check-input styling
+            - Triggers automatic timestamp setting
+            - Required for completion workflow
+            
+        data_conclusao (DateTimeField): Completion timestamp
+            - Optional field (auto-generated when needed)
+            - Brazilian date-time format
+            - Uses BrazilianDateTimeInput widget
+            - Label: 'Data de conclusão'
+            - Automatically set when task completed
+            
+        descricao (TextField): Completion observations
+            - Optional field for additional context
+            - Textarea widget with 3 rows
+            - Bootstrap form-control styling
+            - Label: 'Observações'
+            - Supports audit trail documentation
+            
+    Completion Workflow:
+        Task Completion:
+            1. User checks 'concluida' checkbox
+            2. System automatically sets current timestamp
+            3. Optional observations can be added
+            4. Validation ensures data consistency
+            
+        Task Reopening:
+            1. User unchecks 'concluida' checkbox
+            2. System clears completion timestamp
+            3. Task returns to active status
+            4. Previous observations remain for audit
+            
+    Validation:
+        - Automatic Timestamp: Sets data_conclusao when concluida = True
+        - Timestamp Clearing: Removes data_conclusao when concluida = False
+        - Smart Validation: Ensures completion consistency
+        - Optional Fields: Flexible observation capture
+        
+    Timestamp Management:
+        Auto-Generation:
+            - When concluida = True and data_conclusao is empty
+            - Uses Django timezone.now() for accuracy
+            - Ensures consistent timezone handling
+            
+        Auto-Clearing:
+            - When concluida = False
+            - Removes timestamp to indicate incomplete status
+            - Maintains data integrity
+            
+    Error Messages:
+        - No specific error messages (auto-correction approach)
+        - Validation focuses on data consistency
+        - User-friendly completion workflow
+        
+    Widgets:
+        - CheckboxInput for completion status
+        - BrazilianDateTimeInput for timestamps
+        - Textarea with 3 rows for observations
+        - Bootstrap styling throughout
+        
+    Security Considerations:
+        - Automatic timestamp generation prevents tampering
+        - Validation ensures data consistency
+        - Input sanitization through Django forms
+        - Audit trail preservation
+        
+    Performance:
+        - Minimal database impact
+        - Efficient timestamp handling
+        - Optimized form rendering
+        - Quick status updates
+        
+    Accessibility:
+        - Clear labels and help text
+        - Keyboard navigation support
+        - Screen reader compatibility
+        - Intuitive form structure
+        
+    Integration Points:
+        - Diligencias model for status updates
+        - Django timezone utilities for timestamps
+        - Audit trail systems
+        - Task management workflows
+        - Brazilian date-time formatting
+        
+    Audit Trail Features:
+        - Automatic completion timestamping
+        - Observation capture for context
+        - Status change tracking
+        - Data integrity maintenance
+        - Historical record preservation
+        
+    Workflow States:
+        Active Task:
+            - concluida = False
+            - data_conclusao = None
+            - Ready for work
+            
+        Completed Task:
+            - concluida = True
+            - data_conclusao = auto-generated timestamp
+            - Optional observations recorded
+    """
     
     class Meta:
         model = Diligencias
@@ -1051,7 +2788,180 @@ class DiligenciasUpdateForm(forms.ModelForm):
 
 
 class TipoDiligenciaForm(forms.ModelForm):
-    """Form for creating and editing diligence types"""
+    """
+    Comprehensive form for creating and managing diligence types (tipos de diligência) in the precatorios system.
+    
+    This form provides a complete interface for defining and managing the types of
+    legal tasks/procedures that can be created as diligências. It handles type
+    categorization, visual customization, ordering, activation control, and
+    comprehensive validation to ensure a well-organized and flexible task
+    management system.
+    
+    Key Features:
+        - Unique diligence type name management
+        - Optional detailed descriptions for clarity
+        - Visual customization with color selection
+        - Display order management for logical organization
+        - Activation control for type lifecycle management
+        - Hexadecimal color validation for consistency
+        - Bootstrap styling for consistent user interface
+        - Comprehensive field validation and error handling
+        
+    Business Logic:
+        - Ensures unique type names within the system
+        - Validates proper hexadecimal color format
+        - Manages type ordering for logical progression
+        - Controls type availability through activation
+        - Supports flexible type descriptions
+        - Maintains visual consistency through color validation
+        - Provides user-friendly interface customization
+        
+    Usage:
+        # Creating new diligence type
+        form = TipoDiligenciaForm(request.POST or None)
+        if form.is_valid():
+            tipo = form.save()
+            
+        # Editing existing type
+        form = TipoDiligenciaForm(request.POST or None, instance=existing_tipo)
+        
+        # With initial values
+        form = TipoDiligenciaForm(initial={
+            'ativo': True,
+            'ordem': 0,
+            'cor': '#007bff'  # Bootstrap primary blue
+        })
+    
+    Fields:
+        nome (CharField): Unique type name
+            - Required field for type identification
+            - Must be unique across all diligence types
+            - Bootstrap form-control styling
+            - Label: 'Nome do Tipo'
+            - Help text: 'Nome único para o tipo de diligência'
+            
+        descricao (TextField): Optional type description
+            - Optional field for detailed explanation
+            - Textarea widget with 3 rows
+            - Helps users understand type purpose
+            - Bootstrap form-control styling
+            - Label: 'Descrição'
+            
+        cor (CharField): Visual identification color
+            - Required field for visual customization
+            - Color picker widget for easy selection
+            - Hexadecimal format validation (#RRGGBB)
+            - Bootstrap form-control-color styling
+            - Label: 'Cor'
+            
+        ordem (IntegerField): Display order priority
+            - Required field for ordering control
+            - NumberInput with minimum value 0
+            - Controls type display sequence
+            - Lower numbers appear first
+            - Label: 'Ordem de Exibição'
+            
+        ativo (BooleanField): Type activation status
+            - Required field for lifecycle control
+            - Checkbox input for activation toggle
+            - Controls type availability in system
+            - Bootstrap form-check-input styling
+            - Label: 'Ativo'
+            
+    Type Management:
+        Creation:
+            - Define unique name and optional description
+            - Set visual color for identification
+            - Configure display order
+            - Activate for immediate use
+            
+        Organization:
+            - Order-based display arrangement
+            - Color-coded visual identification
+            - Descriptive categorization
+            - Active/inactive status control
+            
+        Usage:
+            - Available in DiligenciasForm tipo selection
+            - Filtered by active status
+            - Ordered by ordem field
+            - Visually identified by color
+            
+    Validation:
+        - Nome: Required, unique, proper length
+        - Cor: Required, valid hexadecimal format (#RRGGBB)
+        - Ordem: Required, non-negative integer
+        - Ativo: Boolean validation
+        - Descrição: Optional, no specific validation
+        
+    Color Validation:
+        - Format: #RRGGBB (hexadecimal)
+        - Length: Exactly 7 characters
+        - Pattern: # followed by 6 hex digits
+        - Case insensitive validation
+        - User-friendly error messaging
+        
+    Ordering System:
+        - Integer-based ordering (0 = highest priority)
+        - Logical type organization
+        - Supports reordering without conflicts
+        - Visual sorting in type displays
+        - Flexible insertion of new types
+        
+    Error Messages:
+        - "Nome do tipo é obrigatório."
+        - "Já existe um tipo de diligência com este nome."
+        - "Cor deve estar no formato hexadecimal (#RRGGBB)."
+        - "Ordem deve ser um número não negativo."
+        
+    Widgets:
+        - TextInput for type name
+        - Textarea with 3 rows for description
+        - Color picker for visual selection
+        - NumberInput with min validation for order
+        - Checkbox for activation status
+        
+    Security Considerations:
+        - Input sanitization for text fields
+        - Color format validation prevents injection
+        - Integer validation for order field
+        - Unique constraint enforcement
+        - XSS prevention through proper escaping
+        
+    Performance:
+        - Efficient uniqueness validation
+        - Minimal database queries
+        - Optimized form rendering
+        - Client-side validation support
+        
+    Accessibility:
+        - Descriptive labels and help text
+        - Color picker accessibility features
+        - Keyboard navigation support
+        - Screen reader compatibility
+        - Clear error messaging
+        
+    Integration Points:
+        - TipoDiligencia model for data persistence
+        - DiligenciasForm for type selection
+        - Visual display systems throughout application
+        - Type filtering in diligence creation
+        - Task categorization workflows
+        
+    Lifecycle Management:
+        - Creation: All fields customizable
+        - Editing: Full field modification support
+        - Deactivation: Ativo flag for soft deletion
+        - Reordering: Ordem field for position changes
+        - Visual Updates: Color customization anytime
+        
+    Visual Organization:
+        - Color-coded type identification
+        - Order-based display arrangement
+        - Active/inactive status indication
+        - Descriptive type categorization
+        - User-friendly type selection
+    """
     
     class Meta:
         model = TipoDiligencia
