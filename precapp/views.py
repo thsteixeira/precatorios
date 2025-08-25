@@ -15,7 +15,10 @@ from .forms import (
     DiligenciasForm, DiligenciasUpdateForm
 )
 
-# Authentication Views
+# ===============================
+# AUTHENTICATION VIEWS
+# ===============================
+
 def login_view(request):
     """Custom login view"""
     if request.user.is_authenticated:
@@ -48,7 +51,9 @@ def logout_view(request):
     messages.info(request, 'Você foi desconectado com sucesso.')
     return redirect('login')
 
-# Create your views here.
+# ===============================
+# HOME VIEWS
+# ===============================
 
 @login_required
 def home_view(request):
@@ -118,6 +123,11 @@ def home_view(request):
     }
     
     return render(request, 'precapp/home.html', context)
+
+
+# ===============================
+# PRECATORIO VIEWS
+# ===============================
 
 @login_required
 def novoPrec_view(request):
@@ -269,6 +279,7 @@ def precatorio_view(request):
     }
     
     return render(request, 'precapp/precatorio_list.html', context)
+
 
 @login_required
 def precatorio_detalhe_view(request, precatorio_cnj):
@@ -516,6 +527,42 @@ def precatorio_detalhe_view(request, precatorio_cnj):
 
 
 @login_required
+def delete_precatorio_view(request, precatorio_cnj):
+    """View to delete a precatório"""
+    precatorio = get_object_or_404(Precatorio, cnj=precatorio_cnj)
+    
+    if request.method == 'POST':
+        precatorio_cnj_display = precatorio.cnj
+        
+        # Check if precatorio has associated clientes
+        if precatorio.clientes.exists():
+            messages.error(request, f'Não é possível excluir o precatório {precatorio_cnj_display} pois ele possui clientes associados. Remova as associações primeiro.')
+            return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
+        
+        # Check if precatorio has associated alvaras
+        if hasattr(precatorio, 'alvara_set') and precatorio.alvara_set.exists():
+            messages.error(request, f'Não é possível excluir o precatório {precatorio_cnj_display} pois ele possui alvarás associados. Remova os alvarás primeiro.')
+            return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
+        
+        # Check if precatorio has associated requerimentos
+        if hasattr(precatorio, 'requerimento_set') and precatorio.requerimento_set.exists():
+            messages.error(request, f'Não é possível excluir o precatório {precatorio_cnj_display} pois ele possui requerimentos associados. Remova os requerimentos primeiro.')
+            return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
+        
+        precatorio.delete()
+        messages.success(request, f'Precatório {precatorio_cnj_display} foi excluído com sucesso!')
+        return redirect('precatorios')
+    
+    # If not POST, redirect to precatorio detail
+    return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
+
+
+# ===============================
+# CLIENTE VIEWS
+# ===============================
+
+
+@login_required
 def clientes_view(request):
     """View to display all clients with filtering support"""
     clientes = Cliente.objects.all().prefetch_related(
@@ -696,6 +743,119 @@ def cliente_detail_view(request, cpf):
 
 
 @login_required
+def novo_cliente_view(request):
+    """View to create a new client"""
+    if request.method == 'POST':
+        form = ClienteForm(request.POST)
+        if form.is_valid():
+            cliente = form.save()
+            messages.success(request, f'Cliente {cliente.nome} foi criado com sucesso!')
+            return redirect('cliente_detail', cpf=cliente.cpf)
+    else:
+        form = ClienteForm()
+    
+    context = {
+        'form': form,
+    }
+    return render(request, 'precapp/novo_cliente.html', context)
+
+
+@login_required
+def delete_cliente_view(request, cpf):
+    """View to delete a client"""
+    cliente = get_object_or_404(Cliente, cpf=cpf)
+    
+    if request.method == 'POST':
+        cliente_nome = cliente.nome
+        
+        # Check if cliente has associated precatorios
+        if cliente.precatorios.exists():
+            messages.error(request, f'Não é possível excluir o cliente {cliente_nome} pois ele está associado a precatórios. Remova as associações primeiro.')
+            return redirect('cliente_detail', cpf=cpf)
+        
+        # Check if cliente has associated alvaras
+        if hasattr(cliente, 'alvara_set') and cliente.alvara_set.exists():
+            messages.error(request, f'Não é possível excluir o cliente {cliente_nome} pois ele possui alvarás associados. Remova os alvarás primeiro.')
+            return redirect('cliente_detail', cpf=cpf)
+        
+        # Check if cliente has associated requerimentos
+        if hasattr(cliente, 'requerimento_set') and cliente.requerimento_set.exists():
+            messages.error(request, f'Não é possível excluir o cliente {cliente_nome} pois ele possui requerimentos associados. Remova os requerimentos primeiro.')
+            return redirect('cliente_detail', cpf=cpf)
+        
+        cliente.delete()
+        messages.success(request, f'Cliente {cliente_nome} foi excluído com sucesso!')
+        return redirect('clientes')
+    
+    # If not POST, redirect to client detail
+    return redirect('cliente_detail', cpf=cpf)
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_priority_by_age(request):
+    """Update priority status for clients over 60 years old"""
+    from datetime import date, timedelta
+    
+    try:
+        # Calculate date 60 years ago
+        sixty_years_ago = date.today() - timedelta(days=60*365.25)
+        
+        # Find clients born before this date (older than 60) without priority
+        clients_over_60 = Cliente.objects.filter(
+            nascimento__lt=sixty_years_ago,
+            prioridade=False
+        )
+        
+        count_before = clients_over_60.count()
+        
+        if count_before > 0:
+            # Update their priority status
+            updated_count = clients_over_60.update(prioridade=True)
+            
+            messages.success(
+                request, 
+                f'✅ {updated_count} cliente(s) com mais de 60 anos foram atualizados para status prioritário.'
+            )
+            
+            # Log some examples for transparency
+            if updated_count > 0:
+                examples = Cliente.objects.filter(
+                    nascimento__lt=sixty_years_ago,
+                    prioridade=True
+                )[:3]
+                
+                example_names = [client.nome for client in examples]
+                if len(example_names) > 0:
+                    examples_text = ", ".join(example_names)
+                    if updated_count > 3:
+                        examples_text += f" e mais {updated_count - 3} cliente(s)"
+                    
+                    messages.info(
+                        request,
+                        f'Exemplos atualizados: {examples_text}'
+                    )
+        else:
+            messages.info(
+                request,
+                '📋 Nenhum cliente encontrado que precise ser atualizado. Todos os clientes com mais de 60 anos já possuem status prioritário.'
+            )
+            
+    except Exception as e:
+        messages.error(
+            request,
+            f'❌ Erro ao atualizar prioridades: {str(e)}'
+        )
+    
+    return redirect('clientes')
+
+
+# ===============================
+# ALVARA VIEWS
+# ===============================
+
+
+@login_required
 def alvaras_view(request):
     """View to display all alvarás with filtering support"""
     alvaras = Alvara.objects.all().select_related('precatorio', 'cliente', 'fase', 'fase_honorarios_contratuais').order_by('-id')
@@ -779,6 +939,11 @@ def delete_alvara_view(request, alvara_id):
     return redirect('alvara_detail', alvara_id=alvara_id)
 
 
+# ===============================
+# REQUERIMENTO VIEWS
+# ===============================
+
+
 @login_required
 def requerimento_list_view(request):
     """View to list all requerimentos with filtering"""
@@ -835,86 +1000,6 @@ def requerimento_list_view(request):
         'current_fase': fase_filter,
     }
     return render(request, 'precapp/requerimento_list.html', context)
-
-
-@login_required
-def novo_cliente_view(request):
-    """View to create a new client"""
-    if request.method == 'POST':
-        form = ClienteForm(request.POST)
-        if form.is_valid():
-            cliente = form.save()
-            messages.success(request, f'Cliente {cliente.nome} foi criado com sucesso!')
-            return redirect('cliente_detail', cpf=cliente.cpf)
-    else:
-        form = ClienteForm()
-    
-    context = {
-        'form': form,
-    }
-    return render(request, 'precapp/novo_cliente.html', context)
-
-
-@login_required
-def delete_cliente_view(request, cpf):
-    """View to delete a client"""
-    cliente = get_object_or_404(Cliente, cpf=cpf)
-    
-    if request.method == 'POST':
-        cliente_nome = cliente.nome
-        
-        # Check if cliente has associated precatorios
-        if cliente.precatorios.exists():
-            messages.error(request, f'Não é possível excluir o cliente {cliente_nome} pois ele está associado a precatórios. Remova as associações primeiro.')
-            return redirect('cliente_detail', cpf=cpf)
-        
-        # Check if cliente has associated alvaras
-        if hasattr(cliente, 'alvara_set') and cliente.alvara_set.exists():
-            messages.error(request, f'Não é possível excluir o cliente {cliente_nome} pois ele possui alvarás associados. Remova os alvarás primeiro.')
-            return redirect('cliente_detail', cpf=cpf)
-        
-        # Check if cliente has associated requerimentos
-        if hasattr(cliente, 'requerimento_set') and cliente.requerimento_set.exists():
-            messages.error(request, f'Não é possível excluir o cliente {cliente_nome} pois ele possui requerimentos associados. Remova os requerimentos primeiro.')
-            return redirect('cliente_detail', cpf=cpf)
-        
-        cliente.delete()
-        messages.success(request, f'Cliente {cliente_nome} foi excluído com sucesso!')
-        return redirect('clientes')
-    
-    # If not POST, redirect to client detail
-    return redirect('cliente_detail', cpf=cpf)
-
-
-@login_required
-def delete_precatorio_view(request, precatorio_cnj):
-    """View to delete a precatório"""
-    precatorio = get_object_or_404(Precatorio, cnj=precatorio_cnj)
-    
-    if request.method == 'POST':
-        precatorio_cnj_display = precatorio.cnj
-        
-        # Check if precatorio has associated clientes
-        if precatorio.clientes.exists():
-            messages.error(request, f'Não é possível excluir o precatório {precatorio_cnj_display} pois ele possui clientes associados. Remova as associações primeiro.')
-            return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
-        
-        # Check if precatorio has associated alvaras
-        if hasattr(precatorio, 'alvara_set') and precatorio.alvara_set.exists():
-            messages.error(request, f'Não é possível excluir o precatório {precatorio_cnj_display} pois ele possui alvarás associados. Remova os alvarás primeiro.')
-            return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
-        
-        # Check if precatorio has associated requerimentos
-        if hasattr(precatorio, 'requerimento_set') and precatorio.requerimento_set.exists():
-            messages.error(request, f'Não é possível excluir o precatório {precatorio_cnj_display} pois ele possui requerimentos associados. Remova os requerimentos primeiro.')
-            return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
-        
-        precatorio.delete()
-        messages.success(request, f'Precatório {precatorio_cnj_display} foi excluído com sucesso!')
-        return redirect('precatorios')
-    
-    # If not POST, redirect to precatorio detail
-    return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
 
 
 # ===============================
@@ -1039,7 +1124,9 @@ def ativar_fase_view(request, fase_id):
     return redirect('fases')
 
 
-# FASE HONORÁRIOS CONTRATUAIS MANAGEMENT VIEWS
+
+# ===============================
+# FASE HONORÁRIOS CONTRATUAIS VIEWS
 # ===============================
 
 @login_required
@@ -1150,6 +1237,7 @@ def ativar_fase_honorarios_view(request, fase_id):
     return redirect('fases_honorarios')
 
 
+# ===============================
 # TIPO DILIGENCIA VIEWS
 # ===============================
 
@@ -1306,7 +1394,8 @@ def ativar_tipo_diligencia_view(request, tipo_id):
     return redirect('tipos_diligencia')
 
 
-# CUSTOMIZAÇÃO PAGE
+# ===============================
+# CUSTOMIZAÇÃO VIEWS
 # ===============================
 
 @login_required
@@ -1342,66 +1431,9 @@ def customizacao_view(request):
     return render(request, 'precapp/customizacao.html', context)
 
 
-@login_required
-@require_http_methods(["POST"])
-def update_priority_by_age(request):
-    """Update priority status for clients over 60 years old"""
-    from datetime import date, timedelta
-    
-    try:
-        # Calculate date 60 years ago
-        sixty_years_ago = date.today() - timedelta(days=60*365.25)
-        
-        # Find clients born before this date (older than 60) without priority
-        clients_over_60 = Cliente.objects.filter(
-            nascimento__lt=sixty_years_ago,
-            prioridade=False
-        )
-        
-        count_before = clients_over_60.count()
-        
-        if count_before > 0:
-            # Update their priority status
-            updated_count = clients_over_60.update(prioridade=True)
-            
-            messages.success(
-                request, 
-                f'✅ {updated_count} cliente(s) com mais de 60 anos foram atualizados para status prioritário.'
-            )
-            
-            # Log some examples for transparency
-            if updated_count > 0:
-                examples = Cliente.objects.filter(
-                    nascimento__lt=sixty_years_ago,
-                    prioridade=True
-                )[:3]
-                
-                example_names = [client.nome for client in examples]
-                if len(example_names) > 0:
-                    examples_text = ", ".join(example_names)
-                    if updated_count > 3:
-                        examples_text += f" e mais {updated_count - 3} cliente(s)"
-                    
-                    messages.info(
-                        request,
-                        f'Exemplos atualizados: {examples_text}'
-                    )
-        else:
-            messages.info(
-                request,
-                '📋 Nenhum cliente encontrado que precise ser atualizado. Todos os clientes com mais de 60 anos já possuem status prioritário.'
-            )
-            
-    except Exception as e:
-        messages.error(
-            request,
-            f'❌ Erro ao atualizar prioridades: {str(e)}'
-        )
-    
-    return redirect('clientes')
-
-
-# ===== DILIGENCIA CRUD VIEWS =====
+# ===============================
+# DILIGENCIA VIEWS
+# ===============================
 
 @login_required
 def nova_diligencia_view(request, cpf):
