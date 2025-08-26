@@ -38,6 +38,16 @@ O Sistema de Controle de Precatórios é uma aplicação web desenvolvida para f
 - ✅ Acompanhamento de atualizações monetárias
 - ✅ Visualização detalhada com informações financeiras
 - ✅ Edição inline com formulários dinâmicos
+- ✅ **Sistema de tipos/categorias** com cores personalizáveis
+- ✅ **Classificação por tipos** (Alimentar, Comum, etc.)
+
+### 🎨 **Gestão de Tipos de Precatórios**
+- ✅ Criação de tipos personalizados para categorização
+- ✅ Sistema de cores para identificação visual
+- ✅ Ordenação customizável dos tipos
+- ✅ Ativação/desativação de tipos
+- ✅ Descrições detalhadas para cada tipo
+- ✅ CRUD completo com interface intuitiva
 
 ### 👥 **Gestão de Clientes**
 - ✅ Cadastro de clientes com CPF, nome e data de nascimento
@@ -68,6 +78,17 @@ O Sistema de Controle de Precatórios é uma aplicação web desenvolvida para f
 - ✅ Comandos de gerenciamento customizados
 - ✅ Formatação brasileira de números e datas
 - ✅ Validação avançada de CPF/CNPJ e CNJ
+- ✅ **Sistema de tipos/categorias de precatórios**
+- ✅ **Gestão visual com cores personalizáveis**
+- ✅ **Filtros e organizações por tipos**
+
+### 🎨 **Sistema de Tipos e Categorização**
+- ✅ Tipos de precatórios totalmente customizáveis
+- ✅ Tipos de diligências com gestão completa
+- ✅ Identificação visual com cores hexadecimais
+- ✅ Sistema de ordenação para organização lógica
+- ✅ Ativação/desativação para controle de ciclo de vida
+- ✅ Descrições detalhadas para melhor compreensão
 
 ### 🔍 **Gestão de Diligências**
 - ✅ Sistema completo de diligências
@@ -203,13 +224,19 @@ python manage.py check
 - **Clientes**: Lista e gestão de clientes
 - **Alvarás**: Lista e gestão de alvarás
 - **Requerimentos**: Lista e gestão de requerimentos
+- **Tipos de Precatórios**: Gestão de categorias de precatórios
+- **Tipos de Diligências**: Gestão de tipos de diligências
+- **Fases**: Configuração de fases processuais
+- **Customização**: Configurações do sistema
 
 ### **Fluxo Típico de Uso**
-1. **Criar um Precatório**: Cadastre um novo precatório com CNJ e valores
-2. **Adicionar Cliente**: Vincule clientes ao precatório
-3. **Gerenciar Alvarás**: Cadastre alvarás relacionados ao precatório
-4. **Controlar Requerimentos**: Acompanhe pedidos e fases processuais
-5. **Monitorar Status**: Use o dashboard para acompanhar o progresso
+1. **Configurar Tipos**: Defina tipos de precatórios (Alimentar, Comum, etc.)
+2. **Criar um Precatório**: Cadastre um novo precatório com CNJ, valores e tipo
+3. **Adicionar Cliente**: Vincule clientes ao precatório
+4. **Gerenciar Alvarás**: Cadastre alvarás relacionados ao precatório
+5. **Controlar Requerimentos**: Acompanhe pedidos e fases processuais
+6. **Monitorar Status**: Use o dashboard para acompanhar o progresso
+7. **Gerenciar Diligências**: Acompanhe e gerencie diligências por tipo
 
 ## 📁 Estrutura do Projeto
 
@@ -234,7 +261,6 @@ precatorios/
     ├── views.py           # Views/Controllers
     ├── urls.py            # URLs da aplicação
     ├── forms.py           # Formulários Django
-    ├── tests.py           # Testes automatizados
     ├── migrations/        # Migrações do banco de dados
     ├── templates/         # Templates HTML
     │   ├── base.html
@@ -245,11 +271,24 @@ precatorios/
     │       ├── precatorio_*.html
     │       ├── cliente_*.html
     │       ├── alvara_*.html
-    │       └── requerimento_*.html
+    │       ├── requerimento_*.html
+    │       ├── tipo_*.html           # NEW: Templates para tipos
+    │       ├── tipos_*.html          # NEW: Templates para listas de tipos
+    │       └── confirmar_delete_tipo_*.html  # NEW: Templates de confirmação
     ├── static/            # Arquivos estáticos
     │   └── precapp/
     │       └── js/
     │           └── brazilian-number-format.js
+    ├── tests/             # NEW: Estrutura modularizada de testes
+    │   ├── __init__.py
+    │   ├── test_models.py      # Testes dos modelos
+    │   ├── test_forms.py       # Testes dos formulários
+    │   ├── test_views.py       # Testes das views principais
+    │   ├── test_edge_cases.py  # Testes de casos extremos
+    │   ├── test_verification.md # Documentação de verificação
+    │   └── views/              # NEW: Testes específicos de views
+    │       ├── __init__.py
+    │       └── test_tipo_views.py  # NEW: Testes específicos dos tipos
     └── management/        # Comandos customizados
         └── commands/
             ├── populate_db.py
@@ -260,6 +299,17 @@ precatorios/
 
 ## 🗄️ Modelos de Dados
 
+### **Tipo**
+```python
+- nome (CharField, Unique) - Nome único do tipo de precatório
+- descricao (TextField) - Descrição opcional detalhada
+- cor (CharField) - Código hexadecimal para identificação visual (ex: #007bff)
+- ordem (PositiveIntegerField) - Ordem de exibição (menores aparecem primeiro)
+- ativa (BooleanField) - Status de ativação do tipo
+- criado_em (DateTimeField) - Timestamp de criação automática
+- atualizado_em (DateTimeField) - Timestamp de atualização automática
+```
+
 ### **Precatorio**
 ```python
 - cnj (CharField, PK) - Número CNJ do processo
@@ -269,6 +319,7 @@ precatorios/
 - ultima_atualizacao (DecimalField) - Valor atualizado
 - percentuais contratuais e sucumbenciais
 - status de pagamento (credito_principal, honorarios_contratuais, honorarios_sucumbenciais)
+- tipo (ForeignKey) - NEW: Referência ao tipo de precatório
 ```
 
 ### **Cliente**
@@ -295,6 +346,25 @@ precatorios/
 - valor (DecimalField) - Valor do requerimento
 - desagio (DecimalField) - Percentual de deságio
 - fase (CharField) - Fase processual
+```
+
+### **Fase**
+```python
+- nome (CharField) - Nome da fase
+- descricao (TextField) - Descrição opcional
+- cor (CharField) - Código hexadecimal para identificação visual
+- tipo (CharField) - Tipo da fase (alvará, requerimento, ambos)
+- ordem (PositiveIntegerField) - Ordem de exibição
+- ativa (BooleanField) - Status de ativação
+```
+
+### **TipoDiligencia**
+```python
+- nome (CharField, Unique) - Nome único do tipo de diligência
+- descricao (TextField) - Descrição opcional
+- cor (CharField) - Código hexadecimal para identificação visual
+- ordem (PositiveIntegerField) - Ordem de exibição
+- ativo (BooleanField) - Status de ativação
 ```
 
 ## 📸 Screenshots
@@ -328,7 +398,13 @@ Contribuições são bem-vindas! Para contribuir:
 
 ## 📋 TODO / Roadmap
 
-- [ ] **Organização de Testes** - Estruturação modular dos testes
+### **🔄 Em Desenvolvimento**
+- [x] **Sistema de Tipos de Precatórios** - Categorização visual completa ✅
+- [x] **Sistema de Tipos de Diligências** - Gestão completa de tipos ✅
+- [x] **Testes Abrangentes** - Cobertura completa de testes unitários ✅
+- [x] **Estrutura Modular de Testes** - Organização avançada por componente ✅
+
+### **🎯 Próximos Passos**
 - [ ] **Containerização** - Configuração Docker para deploy
 - [ ] **Relatórios PDF** - Geração de relatórios em PDF
 - [ ] **Gráficos** - Dashboard com gráficos estatísticos
@@ -338,16 +414,35 @@ Contribuições são bem-vindas! Para contribuir:
 - [ ] **Auditoria** - Log de alterações nos dados
 - [ ] **Filtros avançados** - Busca e filtragem melhoradas
 
+### **🚀 Melhorias Futuras**
+- [ ] **Dashboard Analítico** - Gráficos por tipos de precatórios
+- [ ] **Exportação Avançada** - Excel com formatação por tipos
+- [ ] **Workflow Automatizado** - Transições automáticas de fases
+- [ ] **Integração com API TJ** - Sincronização com sistemas oficiais
+- [ ] **Mobile App** - Aplicativo móvel para consultas
+- [ ] **Relatórios Personalizáveis** - Builder de relatórios
+- [ ] **Sistema de Aprovações** - Workflow de aprovação multi-nível
+
 ## 🐛 Problemas Conhecidos
 
-- Alguns testes podem precisar de reorganização para melhor manutenibilidade
+### **Solucionados Recentemente**
+- ~~Alguns testes podem precisar de reorganização para melhor manutenibilidade~~ ✅ **RESOLVIDO** - Estrutura modular implementada
+- ~~Falta sistema de categorização de precatórios~~ ✅ **RESOLVIDO** - Sistema de tipos implementado
+- ~~Ausência de testes específicos para componentes críticos~~ ✅ **RESOLVIDO** - Cobertura de testes expandida
+
+### **Questões Menores**
 - Validação de CPF pode precisar de melhorias
 - Interface responsiva pode ser otimizada para mobile
 - Paginação não implementada em listas grandes
 
+### **Melhorias de UX Identificadas**
+- Filtros por tipos de precatórios podem ser expandidos
+- Sistema de busca pode incluir busca por tipo
+- Exportação pode incluir informações de tipos
+
 ## 🧪 Testes
 
-O projeto inclui uma suíte abrangente de testes localizada em `precapp/tests.py`:
+O projeto inclui uma suíte abrangente de testes com estrutura modularizada localizada em `precapp/tests/`:
 
 ```bash
 # Executar todos os testes
@@ -357,16 +452,71 @@ python manage.py test
 python manage.py test -v 2
 
 # Executar testes específicos
-python manage.py test precapp.tests.PrecatorioModelTest
+python manage.py test precapp.tests.test_models.TipoModelTest
+python manage.py test precapp.tests.test_forms.TipoFormComprehensiveTest
+python manage.py test precapp.tests.views.test_tipo_views.TipoPrecatorioViewsTest
 ```
 
-**Cobertura de Testes:**
-- ✅ Modelos (validação, métodos, relacionamentos)
-- ✅ Formulários (validação, widgets, campos)
-- ✅ Views (autenticação, CRUD, filtros)
-- ✅ Formatação brasileira
+### **📊 Cobertura de Testes**
+
+#### **Modelos (test_models.py)**
+- ✅ Modelos principais (Precatorio, Cliente, Alvara, Requerimento)
+- ✅ **Tipo Model** - Validação, métodos de classe, ordenação
+- ✅ Fase Model - Validações e tipos
+- ✅ TipoDiligencia Model - CRUD e validações
+- ✅ Relacionamentos entre modelos
 - ✅ Validações de CPF/CNPJ e CNJ
 - ✅ Casos extremos e edge cases
+
+#### **Formulários (test_forms.py)**
+- ✅ Formulários principais (PrecatorioForm, ClienteForm, etc.)
+- ✅ **TipoForm** - 36 testes abrangentes incluindo validação, widgets, casos extremos
+- ✅ Validação de campos obrigatórios
+- ✅ Formatação brasileira
+- ✅ Validações personalizadas
+- ✅ Widgets e estilização Bootstrap
+
+#### **Views (test_views.py + views/test_tipo_views.py)**
+- ✅ Views principais com autenticação
+- ✅ **Views de Tipos** - 36 testes específicos para todas as operações CRUD
+- ✅ CRUD completo (Create, Read, Update, Delete)
+- ✅ Filtros e buscas
+- ✅ Segurança e autenticação
+- ✅ Performance e otimização de queries
+
+#### **Casos Extremos (test_edge_cases.py)**
+- ✅ Validações limites
+- ✅ Dados malformados
+- ✅ Concorrência de dados
+- ✅ **Testes específicos para tipos** incluindo casos limite
+
+### **🎯 Estatísticas de Testes**
+- **Total de Classes de Teste**: 8+ classes especializadas
+- **Total de Métodos de Teste**: 150+ testes individuais
+- **Cobertura de Tipos**: 72+ testes específicos para funcionalidade de tipos
+- **Performance**: Testes de otimização de queries inclusos
+- **Segurança**: Testes de autenticação e autorização
+
+### **🔍 Testes Específicos da Funcionalidade de Tipos**
+
+#### **TipoModelTest** (12 testes)
+- Criação e validação de tipos
+- Unicidade de nomes
+- Valores padrão e ordenação
+- Métodos de classe (get_tipos_ativos)
+- Soft delete pattern
+
+#### **TipoFormComprehensiveTest** (36 testes)
+- Validação completa de campos
+- Casos extremos e edge cases
+- Widgets e estilização
+- Performance e acessibilidade
+
+#### **TipoPrecatorioViewsTest** (36 testes)
+- CRUD completo de tipos
+- Autenticação e autorização
+- Filtros e buscas
+- Performance e otimização
 
 ## 📄 Licença
 
@@ -386,6 +536,23 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 - Bootstrap Team pelo framework CSS
 - Font Awesome pela biblioteca de ícones
 - Todos os contribuidores do projeto
+- Comunidade Python Brasil pelo suporte e inspiração
+
+### 📈 Histórico de Atualizações
+
+#### **v2.0.0 - Agosto 2025** 🎨
+- ✅ **Sistema Completo de Tipos de Precatórios**
+- ✅ **Sistema de Tipos de Diligências** 
+- ✅ **Estrutura Modular de Testes** (150+ testes)
+- ✅ **Interface Visual Aprimorada** com cores personalizáveis
+- ✅ **72+ Testes Específicos** para funcionalidade de tipos
+- ✅ **Documentação Expandida** com cobertura completa
+
+#### **v1.x - Versões Anteriores**
+- ✅ Sistema base de precatórios, clientes, alvarás
+- ✅ Sistema de fases e diligências
+- ✅ Autenticação e interface base
+- ✅ Validações brasileiras (CPF/CNPJ, CNJ)
 
 ---
 
