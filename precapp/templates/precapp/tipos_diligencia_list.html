@@ -86,42 +86,6 @@
                 </div>
             </div>
 
-            <!-- Filter Section -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <form method="get" class="row g-3">
-                        <div class="col-md-4">
-                            <label for="nome" class="form-label">Nome do Tipo</label>
-                            <input type="text" class="form-control" id="nome" name="nome" value="{{ request.GET.nome }}" placeholder="Digite o nome...">
-                        </div>
-                        <div class="col-md-3">
-                            <label for="status" class="form-label">Status</label>
-                            <select class="form-select" id="status" name="status">
-                                <option value="">Todos</option>
-                                <option value="ativo" {% if request.GET.status == 'ativo' %}selected{% endif %}>Ativos</option>
-                                <option value="inativo" {% if request.GET.status == 'inativo' %}selected{% endif %}>Inativos</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="ordenar" class="form-label">Ordenar por</label>
-                            <select class="form-select" id="ordenar" name="ordenar">
-                                <option value="nome" {% if request.GET.ordenar == 'nome' or not request.GET.ordenar %}selected{% endif %}>Nome</option>
-                                <option value="-criado_em" {% if request.GET.ordenar == '-criado_em' %}selected{% endif %}>Mais Recentes</option>
-                                <option value="criado_em" {% if request.GET.ordenar == 'criado_em' %}selected{% endif %}>Mais Antigos</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-outline-info me-2">
-                                <i class="fas fa-search"></i> Filtrar
-                            </button>
-                            <a href="{% url 'tipos_diligencia' %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-times"></i>
-                            </a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
             <!-- Types List -->
             <div class="card">
                 <div class="card-body">
@@ -219,15 +183,6 @@
                                                                     <label class="form-label">Ordem</label>
                                                                     <input type="number" class="form-control" name="ordem" value="{{ tipo.ordem }}" min="0" placeholder="0">
                                                                 </div>
-                                                                
-                                                                <!-- Ativo Field -->
-                                                                <div class="col-md-4 mb-3">
-                                                                    <label class="form-label d-block">Status</label>
-                                                                    <div class="form-check">
-                                                                        <input type="checkbox" class="form-check-input" name="ativo" id="ativo-{{ tipo.id }}" {% if tipo.ativo %}checked{% endif %}>
-                                                                        <label class="form-check-label" for="ativo-{{ tipo.id }}">Tipo Ativo</label>
-                                                                    </div>
-                                                                </div>
                                                             </div>
                                                             
                                                             <!-- Descrição Field (full width) -->
@@ -240,47 +195,42 @@
                                                             
                                                             <!-- Actions -->
                                                             <div class="row">
-                                                                <div class="col-12">
-                                                                    <div class="d-flex justify-content-between">
-                                                                        <div class="btn-group">
-                                                                            <button type="submit" name="update_tipo" class="btn btn-success btn-sm">
-                                                                                <i class="fas fa-save me-1"></i>Salvar Alterações
+                                                                <div class="col-md-4 mb-3">
+                                                                    <label class="form-label d-block">Status</label>
+                                                                    <div class="form-check">
+                                                                        <input type="checkbox" class="form-check-input" name="ativo" id="ativo-{{ tipo.id }}" {% if tipo.ativo %}checked{% endif %}>
+                                                                        <label class="form-check-label" for="ativo-{{ tipo.id }}">Tipo Ativo</label>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <div class="col-md-8 mb-3 d-flex align-items-end">
+                                                                    <div class="btn-group w-100" role="group">
+                                                                        <button type="submit" name="update_tipo" class="btn btn-success btn-sm">
+                                                                            <i class="fas fa-save me-1"></i>Salvar
+                                                                        </button>
+                                                                        <button type="button" class="btn btn-warning btn-sm" 
+                                                                                onclick="toggleTipoDiligenciaStatus({{ tipo.id }}, {{ tipo.ativo|yesno:'false,true' }})">
+                                                                            <i class="fas fa-{% if tipo.ativo %}pause{% else %}play{% endif %} me-1"></i>
+                                                                            {% if tipo.ativo %}Desativar{% else %}Ativar{% endif %}
+                                                                        </button>
+                                                                        {% if tipo.diligencias_count == 0 %}
+                                                                            <button type="button" class="btn btn-danger btn-sm" 
+                                                                                    onclick="deleteTipoDiligencia({{ tipo.id }}, '{{ tipo.nome }}')">
+                                                                                <i class="fas fa-trash me-1"></i>Excluir
                                                                             </button>
-                                                                            <button type="button" class="btn btn-secondary btn-sm" 
-                                                                                    data-bs-toggle="collapse" 
-                                                                                    data-bs-target="#editTipoDiligenciaForm-{{ tipo.id }}" 
-                                                                                    title="Cancelar">
-                                                                                <i class="fas fa-times me-1"></i>Cancelar
+                                                                        {% else %}
+                                                                            <button class="btn btn-outline-danger btn-sm" 
+                                                                                    title="Não é possível excluir - existem {{ tipo.diligencias_count }} diligência(s) vinculada(s)" 
+                                                                                    disabled>
+                                                                                <i class="fas fa-trash me-1"></i>Excluir
                                                                             </button>
-                                                                        </div>
-                                                                        
-                                                                        <div class="btn-group">
-                                                                            <form method="post" action="{% url 'ativar_tipo_diligencia' tipo.id %}" class="d-inline">
-                                                                                {% csrf_token %}
-                                                                                <input type="hidden" name="ativo" value="{% if tipo.ativo %}false{% else %}true{% endif %}">
-                                                                                <button type="submit" class="btn btn-warning btn-sm" 
-                                                                                        onclick="return confirm('{% if tipo.ativo %}Desativar{% else %}Ativar{% endif %} o tipo {{ tipo.nome }}?')">
-                                                                                    <i class="fas fa-{% if tipo.ativo %}pause{% else %}play{% endif %} me-1"></i>
-                                                                                    {% if tipo.ativo %}Desativar{% else %}Ativar{% endif %}
-                                                                                </button>
-                                                                            </form>
-                                                                            
-                                                                            {% if tipo.diligencias_count == 0 %}
-                                                                                <form method="post" action="{% url 'deletar_tipo_diligencia' tipo.id %}" class="d-inline">
-                                                                                    {% csrf_token %}
-                                                                                    <button type="submit" class="btn btn-danger btn-sm" 
-                                                                                            onclick="return confirm('Tem certeza que deseja excluir o tipo {{ tipo.nome }}? Esta ação não pode ser desfeita.')">
-                                                                                        <i class="fas fa-trash me-1"></i>Excluir
-                                                                                    </button>
-                                                                                </form>
-                                                                            {% else %}
-                                                                                <button class="btn btn-outline-danger btn-sm" 
-                                                                                        title="Não é possível excluir - existem {{ tipo.diligencias_count }} diligência(s) vinculada(s)" 
-                                                                                        disabled>
-                                                                                    <i class="fas fa-trash me-1"></i>Excluir
-                                                                                </button>
-                                                                            {% endif %}
-                                                                        </div>
+                                                                        {% endif %}
+                                                                        <button type="button" class="btn btn-secondary btn-sm" 
+                                                                                data-bs-toggle="collapse" 
+                                                                                data-bs-target="#editTipoDiligenciaForm-{{ tipo.id }}" 
+                                                                                title="Cancelar">
+                                                                            <i class="fas fa-times me-1"></i>Cancelar
+                                                                        </button>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -347,4 +297,51 @@
         </div>
     </div>
 </div>
+
+<script>
+function toggleTipoDiligenciaStatus(tipoId, currentStatus) {
+    // Create a form and submit it to toggle the tipo status
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/tipos-diligencia/' + tipoId + '/ativar/';
+    
+    // Add CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
+    // Add the ativo field
+    const ativoInput = document.createElement('input');
+    ativoInput.type = 'hidden';
+    ativoInput.name = 'ativo';
+    ativoInput.value = currentStatus ? 'false' : 'true';
+    form.appendChild(ativoInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function deleteTipoDiligencia(tipoId, tipoNome) {
+    if (confirm('Tem certeza que deseja excluir o tipo ' + tipoNome + '? Esta ação não pode ser desfeita.')) {
+        // Create a form and submit it to delete the tipo
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/tipos-diligencia/' + tipoId + '/deletar/';
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
 {% endblock content %}

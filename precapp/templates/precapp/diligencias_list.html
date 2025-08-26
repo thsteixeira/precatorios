@@ -157,6 +157,7 @@
                                 <th>Urgência</th>
                                 <th>Status</th>
                                 <th>Criado em</th>
+                                <th>Concluído em</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -211,6 +212,16 @@
                                         {{ diligencia.data_criacao|date:"d/m/Y H:i" }}
                                         {% if diligencia.criado_por %}
                                             <br><small class="text-muted">{{ diligencia.criado_por }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if diligencia.concluida and diligencia.data_conclusao %}
+                                            {{ diligencia.data_conclusao|date:"d/m/Y H:i" }}
+                                            {% if diligencia.concluido_por %}
+                                                <br><small class="text-muted">{{ diligencia.concluido_por }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
                                 </tr>

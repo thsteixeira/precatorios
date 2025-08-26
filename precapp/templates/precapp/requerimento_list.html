@@ -106,7 +106,11 @@
                                                     <i class="fas fa-user text-white"></i>
                                                 </div>
                                                 <div>
-                                                    <div class="fw-bold">{{ requerimento.cliente.nome }}</div>
+                                                    <div class="fw-bold">
+                                                        <a href="{% url 'cliente_detail' requerimento.cliente.cpf %}" class="text-decoration-none">
+                                                            {{ requerimento.cliente.nome }}
+                                                        </a>
+                                                    </div>
                                                     <div class="text-muted small">
                                                         <i class="fas fa-id-card me-1"></i>
                                                         CPF ou CNPJ: {{ requerimento.cliente.cpf }}

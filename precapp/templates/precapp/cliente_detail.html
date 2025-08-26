@@ -436,7 +436,10 @@
                                                 </div>
                                                 <div class="col-4">
                                                     <small class="text-muted">Criado:</small><br>
-                                                    <small>{{ diligencia.criado_em|date:"d/m/Y" }}</small>
+                                                    <small>{{ diligencia.criado_em|date:"d/m/Y" }}</small><br>
+                                                    <small class="text-primary">
+                                                        <i class="fas fa-user-plus me-1"></i>{{ diligencia.criado_por|default:"N/A" }}
+                                                    </small>
                                                 </div>
                                             </div>
                                             
@@ -445,10 +448,6 @@
                                                     <small class="text-muted">{{ diligencia.descricao|truncatechars:80 }}</small>
                                                 </div>
                                             {% endif %}
-                                            
-                                            <div class="mt-2">
-                                                <small class="text-muted">Por: {{ diligencia.criador }}</small>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -497,17 +496,27 @@
                                             </div>
                                             
                                             <div class="row text-center mb-2">
-                                                <div class="col-4">
+                                                <div class="col-3">
                                                     <small class="text-muted">Concluída:</small><br>
-                                                    <small class="fw-bold text-success">{{ diligencia.data_conclusao|date:"d/m/Y" }}</small>
+                                                    <small class="fw-bold text-success">{{ diligencia.data_conclusao|date:"d/m/Y" }}</small><br>
+                                                    <small class="text-success">
+                                                        <i class="fas fa-user-check me-1"></i>{{ diligencia.concluido_por|default:"N/A" }}
+                                                    </small>
                                                 </div>
-                                                <div class="col-4">
+                                                <div class="col-3">
                                                     <small class="text-muted">Urgência:</small><br>
                                                     <span class="badge bg-{{ diligencia.get_urgencia_color }}" style="font-size: 0.7em;">{{ diligencia.get_urgencia_display }}</span>
                                                 </div>
-                                                <div class="col-4">
+                                                <div class="col-3">
                                                     <small class="text-muted">Criado:</small><br>
-                                                    <small>{{ diligencia.criado_em|date:"d/m/Y" }}</small>
+                                                    <small>{{ diligencia.criado_em|date:"d/m/Y" }}</small><br>
+                                                    <small class="text-primary">
+                                                        <i class="fas fa-user-plus me-1"></i>{{ diligencia.criado_por|default:"N/A" }}
+                                                    </small>
+                                                </div>
+                                                <div class="col-3">
+                                                    <small class="text-muted">Status:</small><br>
+                                                    <span class="badge bg-success" style="font-size: 0.7em;">Concluída</span>
                                                 </div>
                                             </div>
                                             
@@ -516,10 +525,6 @@
                                                     <small class="text-muted">{{ diligencia.descricao|truncatechars:80 }}</small>
                                                 </div>
                                             {% endif %}
-                                            
-                                            <div class="mt-2">
-                                                <small class="text-muted">Por: {{ diligencia.criador }}</small>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
