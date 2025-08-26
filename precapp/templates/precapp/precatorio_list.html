@@ -10,9 +10,14 @@
                 <i class="fas fa-search text-primary me-2"></i>
                 Consultar Precatórios
             </h2>
-            <a href="{% url 'novo_precatorio' %}" class="btn btn-success">
-                <i class="fas fa-plus me-1"></i>Novo Precatório
-            </a>
+            <div class="btn-group" role="group">
+                <a href="{% url 'novo_precatorio' %}" class="btn btn-success">
+                    <i class="fas fa-plus me-1"></i>Novo Precatório
+                </a>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#importModal">
+                    <i class="fas fa-file-excel me-1"></i>Importar Excel
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -234,6 +239,61 @@
     </div>
 </div>
 {% endif %}
+
+<!-- Import Excel Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importModalLabel">
+                    <i class="fas fa-file-excel text-success me-2"></i>
+                    Importar Precatórios do Excel
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'import_excel' %}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Instruções de Importação:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Selecione um arquivo Excel (.xlsx ou .xls)</li>
+                            <li>O arquivo deve conter as colunas: CNJ, CNJ Origem, Orçamento, Nome, CPF, Nascimento, Valor</li>
+                            <li>Tamanho máximo: 10MB</li>
+                            <li>Dados duplicados serão ignorados automaticamente</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="excel_file" class="form-label">
+                            <i class="fas fa-upload me-1"></i>Arquivo Excel
+                        </label>
+                        <input type="file" class="form-control" id="excel_file" name="excel_file" 
+                               accept=".xlsx,.xls" required>
+                        <div class="form-text">
+                            Formatos aceitos: .xlsx, .xls (máximo 10MB)
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Atenção:</strong> A importação pode levar alguns minutos dependendo do tamanho do arquivo.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="importBtn">
+                        <i class="fas fa-file-import me-1"></i>Importar Dados
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_css %}
@@ -276,4 +336,67 @@
         border: 1px solid #bee5eb;
     }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const importForm = document.querySelector('#importModal form');
+    const importBtn = document.getElementById('importBtn');
+    const fileInput = document.getElementById('excel_file');
+    
+    // Show loading state during import
+    importForm.addEventListener('submit', function() {
+        importBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Importando...';
+        importBtn.disabled = true;
+        
+        // Disable close button during import
+        const closeBtn = document.querySelector('#importModal .btn-close');
+        const cancelBtn = document.querySelector('#importModal .btn-secondary');
+        if (closeBtn) closeBtn.disabled = true;
+        if (cancelBtn) cancelBtn.disabled = true;
+    });
+    
+    // Validate file size before upload
+    fileInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            if (file.size > maxSize) {
+                alert('O arquivo é muito grande. O limite é de 10MB.');
+                this.value = '';
+                return;
+            }
+            
+            // Check file extension
+            const validExtensions = ['.xlsx', '.xls'];
+            const fileName = file.name.toLowerCase();
+            const isValid = validExtensions.some(ext => fileName.endsWith(ext));
+            
+            if (!isValid) {
+                alert('Por favor, selecione um arquivo Excel válido (.xlsx ou .xls).');
+                this.value = '';
+                return;
+            }
+        }
+    });
+    
+    // Reset modal when closed
+    const modal = document.getElementById('importModal');
+    modal.addEventListener('hidden.bs.modal', function() {
+        // Reset form
+        importForm.reset();
+        
+        // Reset button state
+        importBtn.innerHTML = '<i class="fas fa-file-import me-1"></i>Importar Dados';
+        importBtn.disabled = false;
+        
+        // Re-enable close buttons
+        const closeBtn = document.querySelector('#importModal .btn-close');
+        const cancelBtn = document.querySelector('#importModal .btn-secondary');
+        if (closeBtn) closeBtn.disabled = false;
+        if (cancelBtn) cancelBtn.disabled = false;
+    });
+});
+</script>
 {% endblock %}

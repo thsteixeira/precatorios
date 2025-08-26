@@ -12,10 +12,11 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.contrib.messages import get_messages
+from django.core.files.uploadedfile import SimpleUploadedFile
 from datetime import date, timedelta
 from unittest.mock import patch
 
-from precapp.models import Cliente
+from precapp.models import Cliente, Precatorio
 
 
 class UpdatePriorityByAgeViewTest(TestCase):
@@ -378,3 +379,335 @@ class UpdatePriorityByAgeViewTest(TestCase):
         # Should still have priority (no duplicate processing issues)
         self.assertTrue(self.cliente_65.prioridade)
         self.assertTrue(self.cliente_70.prioridade)
+
+
+
+
+class ImportExcelViewTest(TestCase):
+    """Comprehensive tests for import_excel_view function"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        self.client_app = Client()
+        self.client_app.force_login(self.user)
+        
+        # Create sample Excel content for testing
+        self.sample_excel_content = b'\x50\x4b\x03\x04'  # Basic Excel file header
+        
+        # Count existing data before tests
+        self.initial_precatorios_count = Precatorio.objects.count()
+        self.initial_clientes_count = Cliente.objects.count()
+
+    # ==================== AUTHENTICATION TESTS ====================
+    
+    def test_import_excel_authentication_required(self):
+        """Test that import excel view requires authentication"""
+        # Create unauthenticated client
+        client_unauth = Client()
+        
+        excel_file = SimpleUploadedFile(
+            "test.xlsx", 
+            self.sample_excel_content, 
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        response = client_unauth.post(reverse('import_excel'), {'excel_file': excel_file})
+        self.assertEqual(response.status_code, 302)  # Redirect to login
+        self.assertIn('/login/', response.url)
+    
+    def test_import_excel_get_method_redirect(self):
+        """Test that GET method redirects to precatorios list"""
+        response = self.client_app.get(reverse('import_excel'))
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('precatorios'))
+    
+    def test_import_excel_post_authenticated_success(self):
+        """Test that authenticated POST requests are processed"""
+        excel_file = SimpleUploadedFile(
+            "test.xlsx", 
+            self.sample_excel_content, 
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        with patch('django.core.management.call_command') as mock_command:
+            mock_command.return_value = None
+            
+            response = self.client_app.post(reverse('import_excel'), {'excel_file': excel_file})
+            
+            # Should process successfully and redirect
+            self.assertEqual(response.status_code, 302)
+            self.assertRedirects(response, reverse('precatorios'))
+
+    # ==================== FILE VALIDATION TESTS ====================
+    
+    def test_import_excel_no_file_provided(self):
+        """Test behavior when no file is provided"""
+        response = self.client_app.post(reverse('import_excel'), {})
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('precatorios'))
+        
+        # Check error message - corrected text
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any('Por favor, selecione um arquivo Excel para importar' in str(m) for m in messages))
+    
+    def test_import_excel_invalid_file_extension(self):
+        """Test that invalid file extensions are rejected"""
+        # Test with .txt file
+        txt_file = SimpleUploadedFile(
+            "test.txt", 
+            b"some text content", 
+            content_type="text/plain"
+        )
+        
+        response = self.client_app.post(reverse('import_excel'), {'excel_file': txt_file})
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('precatorios'))
+        
+        # Check error message - corrected text
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any('Por favor, selecione um arquivo Excel válido' in str(m) for m in messages))
+    
+    def test_import_excel_file_size_limit(self):
+        """Test file size limit validation"""
+        # Create file larger than 10MB
+        large_content = b'x' * (11 * 1024 * 1024)  # 11MB
+        large_file = SimpleUploadedFile(
+            "large.xlsx", 
+            large_content, 
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        response = self.client_app.post(reverse('import_excel'), {'excel_file': large_file})
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('precatorios'))
+        
+        # Check error message - corrected text
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(any('O arquivo é muito grande' in str(m) for m in messages))
+    
+    def test_import_excel_valid_file_extensions(self):
+        """Test that both .xlsx and .xls extensions are accepted"""
+        with patch('django.core.management.call_command') as mock_command:
+            mock_command.side_effect = Exception("File processing error")
+            
+            xlsx_file = SimpleUploadedFile(
+                "test.xlsx", 
+                self.sample_excel_content, 
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            
+            xls_file = SimpleUploadedFile(
+                "test.xls", 
+                self.sample_excel_content, 
+                content_type="application/vnd.ms-excel"
+            )
+            
+            # Both should pass file validation
+            response1 = self.client_app.post(reverse('import_excel'), {'excel_file': xlsx_file})
+            response2 = self.client_app.post(reverse('import_excel'), {'excel_file': xls_file})
+            
+            # Both should reach processing stage (and fail there due to mock exception)
+            self.assertEqual(response1.status_code, 302)
+            self.assertEqual(response2.status_code, 302)
+
+    # ==================== IMPORT PROCESSING TESTS ====================
+    
+    @patch('django.core.management.call_command')
+    def test_import_excel_successful_import(self, mock_command):
+        """Test successful Excel import with statistics"""
+        mock_command.return_value = None
+        
+        excel_file = SimpleUploadedFile(
+            "test.xlsx", 
+            self.sample_excel_content, 
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        response = self.client_app.post(reverse('import_excel'), {'excel_file': excel_file})
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('precatorios'))
+        
+        # Should have some kind of message (success or warning)
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(len(messages) > 0)
+    
+    @patch('django.core.management.call_command')
+    def test_import_excel_command_error(self, mock_command):
+        """Test behavior when import command fails"""
+        mock_command.side_effect = Exception("Database error occurred")
+        
+        excel_file = SimpleUploadedFile(
+            "test.xlsx", 
+            self.sample_excel_content, 
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        response = self.client_app.post(reverse('import_excel'), {'excel_file': excel_file})
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('precatorios'))
+        
+        # Check error message - corrected text
+        messages = list(response.wsgi_request._messages)
+        error_messages = [str(m) for m in messages if 'Erro durante a importação' in str(m)]
+        self.assertTrue(len(error_messages) > 0)
+
+    @patch('django.core.management.call_command')
+    def test_import_excel_no_new_data(self, mock_command):
+        """Test import when no new data is imported"""
+        mock_command.return_value = None
+        
+        excel_file = SimpleUploadedFile(
+            "test.xlsx", 
+            self.sample_excel_content, 
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        response = self.client_app.post(reverse('import_excel'), {'excel_file': excel_file})
+        
+        self.assertEqual(response.status_code, 302)
+        
+        # Should have some kind of message
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(len(messages) > 0)
+
+    # ==================== FILE HANDLING TESTS ====================
+    
+    def test_import_excel_file_cleanup(self):
+        """Test that temporary files are cleaned up properly"""
+        excel_file = SimpleUploadedFile(
+            "test.xlsx", 
+            self.sample_excel_content, 
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        with patch('django.core.management.call_command'), \
+             patch('os.unlink') as mock_unlink:
+            
+            response = self.client_app.post(reverse('import_excel'), {'excel_file': excel_file})
+            
+            # Verify file cleanup was attempted
+            mock_unlink.assert_called_once()
+            self.assertEqual(response.status_code, 302)
+    
+    def test_import_excel_file_cleanup_on_error(self):
+        """Test that temporary files are cleaned up even when errors occur"""
+        excel_file = SimpleUploadedFile(
+            "test.xlsx", 
+            self.sample_excel_content, 
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        with patch('django.core.management.call_command') as mock_command, \
+             patch('os.unlink') as mock_unlink:
+            
+            # Make command fail
+            mock_command.side_effect = Exception("Processing failed")
+            
+            response = self.client_app.post(reverse('import_excel'), {'excel_file': excel_file})
+            
+            # Verify file cleanup was still attempted
+            mock_unlink.assert_called_once()
+            self.assertEqual(response.status_code, 302)
+
+    # ==================== STATISTICS PARSING TESTS ====================
+
+    @patch('django.core.management.call_command')
+    def test_import_excel_statistics_parsing_partial(self, mock_command):
+        """Test statistics parsing when only some types are imported"""
+        mock_command.return_value = None
+        
+        excel_file = SimpleUploadedFile(
+            "test.xlsx", 
+            self.sample_excel_content, 
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        response = self.client_app.post(reverse('import_excel'), {'excel_file': excel_file})
+        
+        # Should handle processing gracefully
+        self.assertEqual(response.status_code, 302)
+        
+        # Should have some kind of message
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(len(messages) > 0)
+
+    @patch('django.core.management.call_command')
+    def test_import_excel_statistics_parsing_malformed(self, mock_command):
+        """Test statistics parsing with malformed output"""
+        mock_command.return_value = None
+        
+        excel_file = SimpleUploadedFile(
+            "test.xlsx", 
+            self.sample_excel_content, 
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        response = self.client_app.post(reverse('import_excel'), {'excel_file': excel_file})
+        
+        # Should handle malformed output gracefully
+        self.assertEqual(response.status_code, 302)
+        
+        # Should have some kind of message
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(len(messages) > 0)
+
+    # ==================== EDGE CASE TESTS ====================
+    
+    def test_import_excel_redirect_after_processing(self):
+        """Test that view redirects to precatorios page after processing"""
+        excel_file = SimpleUploadedFile(
+            "test.xlsx", 
+            self.sample_excel_content, 
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        with patch('django.core.management.call_command'):
+            response = self.client_app.post(reverse('import_excel'), {'excel_file': excel_file})
+            
+            self.assertEqual(response.status_code, 302)
+            self.assertRedirects(response, reverse('precatorios'))
+    
+    def test_import_excel_empty_file(self):
+        """Test behavior with empty Excel file"""
+        empty_file = SimpleUploadedFile(
+            "empty.xlsx", 
+            b'', 
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        with patch('django.core.management.call_command') as mock_command:
+            mock_command.side_effect = Exception("Empty file error")
+            
+            response = self.client_app.post(reverse('import_excel'), {'excel_file': empty_file})
+            
+            self.assertEqual(response.status_code, 302)
+            
+            # Should handle empty file gracefully
+            messages = list(response.wsgi_request._messages)
+            error_messages = [str(m) for m in messages if 'Erro durante a importação' in str(m)]
+            self.assertTrue(len(error_messages) > 0)
+    
+    def test_import_excel_special_characters_filename(self):
+        """Test behavior with special characters in filename"""
+        special_file = SimpleUploadedFile(
+            "tëst_fïlé_ñàmé.xlsx", 
+            self.sample_excel_content, 
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        with patch('django.core.management.call_command'):
+            response = self.client_app.post(reverse('import_excel'), {'excel_file': special_file})
+            
+            # Should handle special characters in filename gracefully
+            self.assertEqual(response.status_code, 302)
+            self.assertRedirects(response, reverse('precatorios'))

@@ -7,6 +7,10 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 from django.utils import timezone
+from django.core.management import call_command
+import tempfile
+import os
+from io import StringIO
 from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, TipoDiligencia, Diligencias
 from .forms import (
     PrecatorioForm, ClienteForm, PrecatorioSearchForm, 
@@ -1635,3 +1639,112 @@ def diligencias_list_view(request):
     }
     
     return render(request, 'precapp/diligencias_list.html', context)
+
+
+# ===============================
+# EXCEL IMPORT VIEW
+# ===============================
+
+@login_required
+def import_excel_view(request):
+    """View to handle Excel file upload and import precatorios"""
+    if request.method == 'POST':
+        uploaded_file = request.FILES.get('excel_file')
+        
+        if not uploaded_file:
+            messages.error(request, 'Por favor, selecione um arquivo Excel para importar.')
+            return redirect('precatorios')
+        
+        # Validate file extension
+        if not uploaded_file.name.lower().endswith(('.xlsx', '.xls')):
+            messages.error(request, 'Por favor, selecione um arquivo Excel válido (.xlsx ou .xls).')
+            return redirect('precatorios')
+        
+        # Validate file size (limit to 10MB)
+        if uploaded_file.size > 10 * 1024 * 1024:
+            messages.error(request, 'O arquivo é muito grande. O limite é de 10MB.')
+            return redirect('precatorios')
+        
+        try:
+            # Save uploaded file temporarily
+            # Create temporary file
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_file:
+                # Write uploaded file content to temporary file
+                for chunk in uploaded_file.chunks():
+                    temp_file.write(chunk)
+                temp_file_path = temp_file.name
+            
+            try:
+                # Capture command output
+                output = StringIO()
+                
+                # Call the import_excel management command
+                call_command('import_excel', '--file', temp_file_path, stdout=output, stderr=output)
+                
+                # Get the output
+                command_output = output.getvalue()
+                
+                # Parse the output to get statistics
+                imported_stats = {
+                    'precatorios': 0,
+                    'clientes': 0,
+                    'requerimentos': 0
+                }
+                
+                # Extract statistics from output
+                lines = command_output.split('\n')
+                for line in lines:
+                    if 'Precatorios:' in line:
+                        try:
+                            imported_stats['precatorios'] = int(line.split(':')[1].strip())
+                        except:
+                            pass
+                    elif 'Clientes:' in line:
+                        try:
+                            imported_stats['clientes'] = int(line.split(':')[1].strip())
+                        except:
+                            pass
+                    elif 'Requerimentos:' in line:
+                        try:
+                            imported_stats['requerimentos'] = int(line.split(':')[1].strip())
+                        except:
+                            pass
+                
+                # Success message with statistics
+                total_imported = sum(imported_stats.values())
+                if total_imported > 0:
+                    stats_msg = []
+                    if imported_stats['precatorios'] > 0:
+                        stats_msg.append(f"{imported_stats['precatorios']} precatório(s)")
+                    if imported_stats['clientes'] > 0:
+                        stats_msg.append(f"{imported_stats['clientes']} cliente(s)")
+                    if imported_stats['requerimentos'] > 0:
+                        stats_msg.append(f"{imported_stats['requerimentos']} requerimento(s)")
+                    
+                    message = f"Importação concluída com sucesso! Importados: {', '.join(stats_msg)}."
+                    messages.success(request, message)
+                else:
+                    messages.warning(request, 'Nenhum dado novo foi importado. Os dados podem já existir no sistema.')
+                
+            except Exception as e:
+                # Error in command execution
+                error_msg = str(e)
+                if 'already exists' in error_msg.lower():
+                    messages.warning(request, 'Alguns dados já existem no sistema e foram ignorados.')
+                else:
+                    messages.error(request, f'Erro durante a importação: {error_msg}')
+                    
+            finally:
+                # Clean up temporary file
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass
+                    
+        except Exception as e:
+            messages.error(request, f'Erro ao processar o arquivo: {str(e)}')
+        
+        return redirect('precatorios')
+    
+    # For GET requests, redirect to precatorios list
+    return redirect('precatorios')
