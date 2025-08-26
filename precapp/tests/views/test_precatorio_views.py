@@ -1795,8 +1795,8 @@ class PrecatorioViewTest(TestCase):
         self.client_app.login(username='testuser', password='testpass123')
         
         # The view makes several queries for statistics calculation
-        # We expect: session, user, statistics (5 counts), main query, prefetch requerimentos, prefetch fases
-        with self.assertNumQueries(11):  # Adjusted for actual query count including statistics
+        # We expect: session, user, statistics (5 counts), tipos, main query, prefetch requerimentos, prefetch fases
+        with self.assertNumQueries(12):  # Adjusted for actual query count including statistics and tipos
             response = self.client_app.get(self.precatorios_url)
             precatorios = list(response.context['precatorios'])
             
@@ -1840,7 +1840,7 @@ class PrecatorioViewTest(TestCase):
         
         self.client_app.login(username='testuser', password='testpass123')
         
-        with self.assertNumQueries(11):  # Should remain efficient including statistics
+        with self.assertNumQueries(12):  # Should remain efficient including statistics and tipos
             response = self.client_app.get(self.precatorios_url)
             # Should handle 54 total precatorios efficiently
             self.assertEqual(len(response.context['precatorios']), 54)

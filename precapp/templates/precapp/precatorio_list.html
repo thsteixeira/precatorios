@@ -74,6 +74,17 @@
                         </select>
                     </div>
                     <div class="col-md-2">
+                        <label for="tipo" class="form-label">Tipo</label>
+                        <select class="form-control" id="tipo" name="tipo">
+                            <option value="">Todos</option>
+                            {% for tipo in tipos %}
+                                <option value="{{ tipo.id }}" {% if current_tipo == tipo.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ tipo.nome }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
                         <label for="tipo_requerimento" class="form-label">Requerimento Acordo</label>
                         <select class="form-control" id="tipo_requerimento" name="tipo_requerimento">
                             <option value="">Todos</option>
@@ -127,6 +138,7 @@
                                 <tr>
                                     <th scope="col">CNJ</th>
                                     <th scope="col">Origem</th>
+                                    <th scope="col">Tipo</th>
                                     <th scope="col">Valor</th>
                                     <th scope="col">Status de Pagamento</th>
                                 </tr>
@@ -142,6 +154,15 @@
                                             </a>
                                         </td>
                                         <td>{{ precatorio.origem|truncatechars:25 }}</td>
+                                        <td>
+                                            {% if precatorio.tipo %}
+                                                <span class="badge" style="background-color: {{ precatorio.tipo.cor }}; color: white;">
+                                                    {{ precatorio.tipo.nome }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
                                         <td>
                                             <span class="text-success fw-bold">
                                                 R$ {{ precatorio.valor_de_face|floatformat:2 }}

@@ -11,11 +11,11 @@ from django.core.management import call_command
 import tempfile
 import os
 from io import StringIO
-from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, TipoDiligencia, Diligencias
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo, FaseHonorariosContratuais, TipoDiligencia, Diligencias
 from .forms import (
     PrecatorioForm, ClienteForm, PrecatorioSearchForm, 
     ClienteSearchForm, RequerimentoForm, ClienteSimpleForm, 
-    AlvaraSimpleForm, FaseForm, FaseHonorariosContratuaisForm, TipoDiligenciaForm,
+    AlvaraSimpleForm, FaseForm, TipoForm, FaseHonorariosContratuaisForm, TipoDiligenciaForm,
     DiligenciasForm, DiligenciasUpdateForm
 )
 
@@ -161,6 +161,7 @@ def precatorio_view(request):
     credito_principal_filter = request.GET.get('credito_principal', '')
     honorarios_contratuais_filter = request.GET.get('honorarios_contratuais', '')
     honorarios_sucumbenciais_filter = request.GET.get('honorarios_sucumbenciais', '')
+    tipo_filter = request.GET.get('tipo', '')
     tipo_requerimento_filter = request.GET.get('tipo_requerimento', '')
     requerimento_deferido_filter = request.GET.get('requerimento_deferido', '')
     
@@ -178,6 +179,9 @@ def precatorio_view(request):
     
     if honorarios_sucumbenciais_filter:
         precatorios = precatorios.filter(honorarios_sucumbenciais=honorarios_sucumbenciais_filter)
+    
+    if tipo_filter:
+        precatorios = precatorios.filter(tipo_id=tipo_filter)
     
     # Filter by tipo de requerimento and deferimento status
     # These filters should work together - if both are selected, we need requerimentos that match BOTH conditions
@@ -264,6 +268,9 @@ def precatorio_view(request):
     ).values_list('precatorio__cnj', flat=True).distinct()
     prioritarios = precatorios.filter(cnj__in=prioritarios_cnjs).count()
     
+    # Get all active tipos for the filter dropdown
+    tipos = Tipo.get_tipos_ativos()
+    
     context = {
         'precatorios': precatorios,
         'total_precatorios': total_precatorios,
@@ -272,12 +279,14 @@ def precatorio_view(request):
         'parciais_principal': parciais_principal,
         'vendidos_principal': vendidos_principal,
         'prioritarios': prioritarios,
+        'tipos': tipos,
         # Include current filter values to maintain state in form
         'current_cnj': cnj_filter,
         'current_origem': origem_filter,
         'current_credito_principal': credito_principal_filter,
         'current_honorarios_contratuais': honorarios_contratuais_filter,
         'current_honorarios_sucumbenciais': honorarios_sucumbenciais_filter,
+        'current_tipo': tipo_filter,
         'current_tipo_requerimento': tipo_requerimento_filter,
         'current_requerimento_deferido': requerimento_deferido_filter,
     }
@@ -1399,15 +1408,133 @@ def ativar_tipo_diligencia_view(request, tipo_id):
 
 
 # ===============================
+# TIPO PRECATÓRIO VIEWS
+# ===============================
+
+@login_required
+def tipos_precatorio_view(request):
+    """List all tipos de precatório"""
+    tipos = Tipo.objects.all().order_by('ordem', 'nome')
+    
+    context = {
+        'tipos': tipos,
+        'total_tipos': tipos.count(),
+        'tipos_ativos': tipos.filter(ativa=True).count(),
+        'tipos_inativos': tipos.filter(ativa=False).count(),
+    }
+    
+    return render(request, 'precapp/tipos_precatorio_list.html', context)
+
+
+@login_required
+def novo_tipo_precatorio_view(request):
+    """Create a new tipo de precatório"""
+    if request.method == 'POST':
+        form = TipoForm(request.POST)
+        if form.is_valid():
+            tipo = form.save()
+            messages.success(request, f'Tipo "{tipo.nome}" criado com sucesso!')
+            return redirect('tipos_precatorio')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = TipoForm()
+    
+    return render(request, 'precapp/tipo_precatorio_form.html', {
+        'form': form,
+        'title': 'Novo Tipo de Precatório'
+    })
+
+
+@login_required
+def editar_tipo_precatorio_view(request, tipo_id):
+    """Edit an existing tipo de precatório"""
+    tipo = get_object_or_404(Tipo, id=tipo_id)
+    
+    if request.method == 'POST':
+        form = TipoForm(request.POST, instance=tipo)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Tipo "{tipo.nome}" atualizado com sucesso!')
+            return redirect('tipos_precatorio')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = TipoForm(instance=tipo)
+    
+    return render(request, 'precapp/tipo_precatorio_form.html', {
+        'form': form,
+        'tipo': tipo,
+        'title': f'Editar Tipo: {tipo.nome}'
+    })
+
+
+@login_required
+def deletar_tipo_precatorio_view(request, tipo_id):
+    """Delete a tipo de precatório"""
+    tipo = get_object_or_404(Tipo, id=tipo_id)
+    
+    # Check if tipo is being used
+    precatorios_count = tipo.precatorio_set.count()
+    
+    if precatorios_count > 0:
+        messages.error(
+            request, 
+            f'Não é possível excluir o tipo "{tipo.nome}" pois ele está sendo usado por {precatorios_count} precatório(s).'
+        )
+        return redirect('tipos_precatorio')
+    
+    if request.method == 'POST':
+        tipo_nome = tipo.nome
+        tipo.delete()
+        messages.success(request, f'Tipo "{tipo_nome}" excluído com sucesso!')
+        return redirect('tipos_precatorio')
+    
+    return render(request, 'precapp/confirmar_delete_tipo_precatorio.html', {
+        'tipo': tipo,
+        'precatorios_count': precatorios_count
+    })
+
+
+@login_required
+def ativar_tipo_precatorio_view(request, tipo_id):
+    """Toggle activation status of a tipo de precatório"""
+    tipo = get_object_or_404(Tipo, id=tipo_id)
+    
+    # Handle POST data (from AJAX calls)
+    if request.method == 'POST':
+        ativo_value = request.POST.get('ativo', '').strip()
+        tipo.ativa = ativo_value.lower() == 'true'
+    else:
+        # Handle GET for backward compatibility
+        ativo_param = request.GET.get('ativo', '').lower()
+        if ativo_param == 'true':
+            tipo.ativa = True
+        elif ativo_param == 'false':
+            tipo.ativa = False
+        else:
+            # Toggle if no parameter
+            tipo.ativa = not tipo.ativa
+    
+    tipo.save()
+    
+    status = "ativado" if tipo.ativa else "desativado"
+    messages.success(request, f'Tipo de Precatório "{tipo.nome}" {status} com sucesso!')
+    
+    return redirect('tipos_precatorio')
+
+
+# ===============================
 # CUSTOMIZAÇÃO VIEWS
 # ===============================
 
 @login_required
 def customizacao_view(request):
-    """Central customization page for managing phases and diligence types"""
-    # Get statistics for both phase types and diligence types
+    """Central customization page for managing phases, types, and diligence types"""
+    # Get statistics for phases, types, and diligence types
     fases_principais = Fase.objects.all()
     fases_honorarios = FaseHonorariosContratuais.objects.all()
+    tipos_precatorio = Tipo.objects.all()
     tipos_diligencia = TipoDiligencia.objects.all()
     
     context = {
@@ -1421,6 +1548,11 @@ def customizacao_view(request):
         'fases_honorarios_ativas': fases_honorarios.filter(ativa=True).count(),
         'fases_honorarios_inativas': fases_honorarios.filter(ativa=False).count(),
         
+        # Tipos Precatório stats
+        'total_tipos_precatorio': tipos_precatorio.count(),
+        'tipos_precatorio_ativos': tipos_precatorio.filter(ativa=True).count(),
+        'tipos_precatorio_inativos': tipos_precatorio.filter(ativa=False).count(),
+        
         # Tipos Diligência stats
         'total_tipos_diligencia': tipos_diligencia.count(),
         'tipos_diligencia_ativos': tipos_diligencia.filter(ativo=True).count(),
@@ -1429,6 +1561,7 @@ def customizacao_view(request):
         # Recent items (last 5 of each type)
         'recent_fases_principais': fases_principais.order_by('-criado_em')[:5],
         'recent_fases_honorarios': fases_honorarios.order_by('-criado_em')[:5],
+        'recent_tipos_precatorio': tipos_precatorio.order_by('-criado_em')[:5],
         'recent_tipos_diligencia': tipos_diligencia.order_by('-criado_em')[:5],
     }
     

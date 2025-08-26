@@ -39,7 +39,7 @@ from decimal import Decimal
 
 from precapp.models import (
     Fase, FaseHonorariosContratuais, Precatorio, Cliente, 
-    Alvara, Requerimento, TipoDiligencia, Diligencias
+    Alvara, Requerimento, TipoDiligencia, Diligencias, Tipo
 )
 
 
@@ -280,6 +280,271 @@ class FaseHonorariosContratuaisModelTest(TestCase):
         self.assertEqual(ativas.count(), 2)
 
 
+class TipoModelTest(TestCase):
+    """
+    Comprehensive test suite for the Tipo model.
+    
+    The Tipo model represents different categories or types that can be assigned
+    to Precatórios for classification and organization. This test class validates:
+    
+    - Model creation with visual and organizational properties
+    - Unique constraint on 'nome' field
+    - Default value assignment (cor, ativa, ordem, timestamps)
+    - Color field validation for hexadecimal values
+    - Ordering behavior (ordem, nome)
+    - Active/inactive status management
+    - Class methods for filtering active types
+    - String representation consistency
+    - Business rule enforcement for type management
+    
+    Key Features Tested:
+    - Unique type names across the system
+    - Color coding for visual categorization (hexadecimal format)
+    - Display ordering for organized presentation
+    - Active status control for availability
+    - Automatic timestamping for audit trail
+    - Class method for retrieving active types only
+    
+    Business Rules:
+    - Each tipo name must be globally unique
+    - Only active tipos are available for precatorio assignment
+    - Default color is blue (#007bff)
+    - Ordering determines display sequence in forms
+    - Deactivation preserves data integrity (soft delete pattern)
+    
+    Integration Points:
+    - Used as ForeignKey in Precatorio model
+    - Supports SET_NULL deletion to preserve historical data
+    - Visual identification through color coding
+    - Form integration through get_tipos_ativos() method
+    """
+    
+    def setUp(self):
+        """Set up test data for Tipo model tests"""
+        self.tipo_data = {
+            'nome': 'Alimentar',
+            'descricao': 'Precatórios de natureza alimentar com preferência de pagamento',
+            'cor': '#28a745',
+            'ativa': True,
+            'ordem': 1
+        }
+    
+    def test_tipo_creation(self):
+        """
+        Test creating a tipo with valid data.
+        
+        Validates that:
+        - A Tipo instance can be created with valid data
+        - full_clean() passes without raising ValidationError
+        - The instance can be saved to the database
+        - All field values are correctly assigned
+        """
+        tipo = Tipo(**self.tipo_data)
+        tipo.full_clean()  # This should not raise ValidationError
+        tipo.save()
+        self.assertEqual(tipo.nome, 'Alimentar')
+        self.assertEqual(tipo.descricao, 'Precatórios de natureza alimentar com preferência de pagamento')
+        self.assertEqual(tipo.cor, '#28a745')
+        self.assertTrue(tipo.ativa)
+        self.assertEqual(tipo.ordem, 1)
+    
+    def test_tipo_str_method(self):
+        """
+        Test the __str__ method of Tipo.
+        
+        Validates that the string representation returns the tipo name
+        as expected, providing a human-readable identification.
+        """
+        tipo = Tipo(**self.tipo_data)
+        expected_str = tipo.nome
+        self.assertEqual(str(tipo), expected_str)
+    
+    def test_tipo_required_fields(self):
+        """
+        Test that required fields are enforced.
+        
+        Validates that:
+        - 'nome' field is required and cannot be empty
+        - Other fields have defaults and should not fail validation
+        """
+        # Test without nome (nome is required)
+        with self.assertRaises(ValidationError):
+            tipo = Tipo(descricao='Test', cor='#007bff', ativa=True)
+            tipo.full_clean()
+        
+        # Test valid creation with just nome
+        tipo = Tipo(nome='Test Tipo')
+        tipo.full_clean()  # Should pass
+        tipo.save()
+        self.assertEqual(tipo.nome, 'Test Tipo')
+    
+    def test_tipo_unique_constraint(self):
+        """
+        Test that nome field has unique constraint.
+        
+        Validates that:
+        - Two tipos cannot have the same name
+        - Database constraint is properly enforced
+        - Appropriate error is raised on duplicate creation
+        """
+        # Create first tipo
+        Tipo.objects.create(**self.tipo_data)
+        
+        # Try to create duplicate - should raise exception
+        with self.assertRaises(Exception):  # Could be ValidationError or IntegrityError
+            duplicate_tipo = Tipo(**self.tipo_data)
+            duplicate_tipo.full_clean()
+            duplicate_tipo.save()
+    
+    def test_tipo_default_values(self):
+        """
+        Test default values for optional fields.
+        
+        Validates that:
+        - cor field defaults to '#007bff' (blue)
+        - ativa field defaults to True
+        - ordem field defaults to 0
+        - Timestamp fields are automatically set
+        """
+        tipo = Tipo.objects.create(nome='Test Default')
+        self.assertEqual(tipo.cor, '#007bff')  # Default color from model
+        self.assertTrue(tipo.ativa)  # Default to active
+        self.assertEqual(tipo.ordem, 0)  # Default order
+        self.assertIsNotNone(tipo.criado_em)  # Auto timestamp
+        self.assertIsNotNone(tipo.atualizado_em)  # Auto timestamp
+    
+    def test_tipo_color_field_validation(self):
+        """
+        Test color field accepts valid hexadecimal colors.
+        
+        Validates various valid color formats and ensures
+        the field properly handles hexadecimal color codes.
+        """
+        valid_colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFFFF', '#000000', '#123ABC']
+        for color in valid_colors:
+            with self.subTest(color=color):
+                data = self.tipo_data.copy()
+                data['cor'] = color
+                data['nome'] = f'Test {color}'  # Unique name for each test
+                tipo = Tipo(**data)
+                tipo.full_clean()
+                tipo.save()
+                self.assertEqual(tipo.cor, color)
+    
+    def test_tipo_ordering(self):
+        """
+        Test that tipos are ordered by ordem and nome.
+        
+        Validates the model's Meta ordering configuration:
+        - Primary sort by ordem field (ascending)
+        - Secondary sort by nome field (alphabetical)
+        """
+        # Create tipos with different orders and names
+        Tipo.objects.create(nome='C Tipo', ordem=2)
+        Tipo.objects.create(nome='A Tipo', ordem=1)
+        Tipo.objects.create(nome='B Tipo', ordem=1)
+        Tipo.objects.create(nome='D Tipo', ordem=0)
+        
+        tipos = Tipo.objects.all()
+        expected_order = ['D Tipo', 'A Tipo', 'B Tipo', 'C Tipo']
+        actual_order = [tipo.nome for tipo in tipos]
+        self.assertEqual(actual_order, expected_order)
+    
+    def test_get_tipos_ativos_class_method(self):
+        """
+        Test get_tipos_ativos class method.
+        
+        Validates that:
+        - Method returns only active tipos
+        - Inactive tipos are excluded
+        - Results are properly ordered
+        - Method is accessible as class method
+        """
+        # Create active and inactive tipos
+        ativo1 = Tipo.objects.create(nome='Ativo 1', ativa=True, ordem=2)
+        ativo2 = Tipo.objects.create(nome='Ativo 2', ativa=True, ordem=1)
+        inativo = Tipo.objects.create(nome='Inativo', ativa=False, ordem=0)
+        
+        tipos_ativos = Tipo.get_tipos_ativos()
+        
+        # Check that only active tipos are returned
+        self.assertIn(ativo1, tipos_ativos)
+        self.assertIn(ativo2, tipos_ativos)
+        self.assertNotIn(inativo, tipos_ativos)
+        self.assertEqual(tipos_ativos.count(), 2)
+        
+        # Check ordering (should be by ordem, then nome)
+        tipos_list = list(tipos_ativos)
+        self.assertEqual(tipos_list[0], ativo2)  # ordem=1
+        self.assertEqual(tipos_list[1], ativo1)  # ordem=2
+    
+    def test_tipo_soft_delete_pattern(self):
+        """
+        Test soft delete pattern through ativa field.
+        
+        Validates that:
+        - Tipos can be deactivated instead of deleted
+        - Deactivated tipos are excluded from active queries
+        - Data integrity is preserved when deactivating
+        """
+        # Create active tipo
+        tipo = Tipo.objects.create(nome='Test Deactivation', ativa=True)
+        
+        # Verify it appears in active tipos
+        self.assertIn(tipo, Tipo.get_tipos_ativos())
+        
+        # Deactivate the tipo
+        tipo.ativa = False
+        tipo.save()
+        
+        # Verify it no longer appears in active tipos
+        self.assertNotIn(tipo, Tipo.get_tipos_ativos())
+        
+        # Verify the tipo still exists in database
+        self.assertTrue(Tipo.objects.filter(nome='Test Deactivation').exists())
+    
+    def test_tipo_meta_configuration(self):
+        """
+        Test model Meta configuration.
+        
+        Validates that:
+        - Verbose names are properly set
+        - Ordering configuration is correct
+        """
+        meta = Tipo._meta
+        self.assertEqual(meta.verbose_name, "Tipo de Precatório")
+        self.assertEqual(meta.verbose_name_plural, "Tipos de Precatórios")
+        self.assertEqual(meta.ordering, ['ordem', 'nome'])
+    
+    def test_tipo_timestamps(self):
+        """
+        Test automatic timestamp functionality.
+        
+        Validates that:
+        - criado_em is set on creation
+        - atualizado_em is updated on save
+        - Timestamps are properly maintained
+        """
+        tipo = Tipo.objects.create(nome='Timestamp Test')
+        
+        # Check initial timestamps
+        self.assertIsNotNone(tipo.criado_em)
+        self.assertIsNotNone(tipo.atualizado_em)
+        initial_created = tipo.criado_em
+        initial_updated = tipo.atualizado_em
+        
+        # Update the tipo
+        import time
+        time.sleep(0.01)  # Ensure timestamp difference
+        tipo.descricao = 'Updated description'
+        tipo.save()
+        
+        # Check that atualizado_em changed but criado_em didn't
+        tipo.refresh_from_db()
+        self.assertEqual(tipo.criado_em, initial_created)
+        self.assertGreater(tipo.atualizado_em, initial_updated)
+
+
 class PrecatorioModelTest(TestCase):
     """
     Comprehensive test suite for the Precatorio model.
@@ -294,6 +559,7 @@ class PrecatorioModelTest(TestCase):
     - String representation format (CNJ - origem)
     - Financial field handling (floats, nulls, defaults)
     - Many-to-many relationship with Cliente model
+    - Foreign key relationship with Tipo model
     - Business rule compliance for Brazilian legal requirements
     
     Payment Status Testing:
@@ -306,10 +572,19 @@ class PrecatorioModelTest(TestCase):
     - Percentage tracking (contratuais_assinado, apartado, sucumbenciais)
     - Date tracking (data_ultima_atualizacao)
     - Multiple payment status fields (principal, contractual, succumbence)
+    - Optional tipo classification for categorization
     """
     
     def setUp(self):
         """Set up test data"""
+        # Create a tipo for testing
+        self.tipo = Tipo.objects.create(
+            nome='Alimentar',
+            descricao='Precatórios de natureza alimentar',
+            cor='#28a745',
+            ativa=True
+        )
+        
         self.precatorio_data = {
             'cnj': '1234567-89.2023.8.26.0100',
             'orcamento': 2023,
@@ -322,7 +597,8 @@ class PrecatorioModelTest(TestCase):
             'percentual_sucumbenciais': 20.0,
             'credito_principal': 'pendente',
             'honorarios_contratuais': 'pendente',
-            'honorarios_sucumbenciais': 'pendente'
+            'honorarios_sucumbenciais': 'pendente',
+            'tipo': self.tipo
         }
     
     def test_precatorio_creation(self):
@@ -333,6 +609,8 @@ class PrecatorioModelTest(TestCase):
         self.assertEqual(precatorio.cnj, '1234567-89.2023.8.26.0100')
         self.assertEqual(precatorio.orcamento, 2023)
         self.assertEqual(precatorio.valor_de_face, 100000.00)
+        self.assertEqual(precatorio.tipo, self.tipo)
+        self.assertEqual(precatorio.tipo.nome, 'Alimentar')
     
     def test_precatorio_str_method(self):
         """Test the __str__ method of Precatorio"""
@@ -366,6 +644,108 @@ class PrecatorioModelTest(TestCase):
             data['credito_principal'] = 'invalid_status'
             precatorio = Precatorio(**data)
             precatorio.full_clean()
+    
+    def test_precatorio_without_tipo(self):
+        """
+        Test creating a precatorio without tipo (should be allowed).
+        
+        Validates that:
+        - Tipo field is optional (null=True, blank=True)
+        - Precatorio can be created without specifying a tipo
+        - Default behavior when no tipo is assigned
+        """
+        data = self.precatorio_data.copy()
+        del data['tipo']  # Remove tipo from data
+        
+        precatorio = Precatorio(**data)
+        precatorio.full_clean()
+        precatorio.save()
+        
+        self.assertIsNone(precatorio.tipo)
+        self.assertEqual(precatorio.cnj, '1234567-89.2023.8.26.0100')
+    
+    def test_precatorio_tipo_relationship(self):
+        """
+        Test the foreign key relationship between Precatorio and Tipo.
+        
+        Validates that:
+        - Precatorio correctly references Tipo instance
+        - Relationship allows access to tipo properties
+        - SET_NULL behavior when tipo is deleted
+        """
+        precatorio = Precatorio.objects.create(**self.precatorio_data)
+        
+        # Test relationship access
+        self.assertEqual(precatorio.tipo.nome, 'Alimentar')
+        self.assertEqual(precatorio.tipo.cor, '#28a745')
+        
+        # Test SET_NULL behavior
+        tipo_id = self.tipo.id
+        self.tipo.delete()
+        precatorio.refresh_from_db()
+        self.assertIsNone(precatorio.tipo)
+    
+    def test_precatorio_tipo_filtering(self):
+        """
+        Test filtering precatorios by tipo.
+        
+        Validates that:
+        - Precatorios can be filtered by tipo
+        - Multiple precatorios can share the same tipo
+        - Filtering works correctly with related fields
+        """
+        # Create another tipo
+        comum_tipo = Tipo.objects.create(nome='Comum', cor='#6c757d')
+        
+        # Create precatorios with different tipos
+        precatorio1 = Precatorio.objects.create(**self.precatorio_data)
+        
+        data2 = self.precatorio_data.copy()
+        data2['cnj'] = '2345678-90.2023.8.26.0200'
+        data2['tipo'] = comum_tipo
+        precatorio2 = Precatorio.objects.create(**data2)
+        
+        data3 = self.precatorio_data.copy()
+        data3['cnj'] = '3456789-01.2023.8.26.0300'
+        data3['tipo'] = None
+        precatorio3 = Precatorio.objects.create(**data3)
+        
+        # Test filtering by tipo
+        alimentar_precatorios = Precatorio.objects.filter(tipo=self.tipo)
+        self.assertIn(precatorio1, alimentar_precatorios)
+        self.assertNotIn(precatorio2, alimentar_precatorios)
+        self.assertNotIn(precatorio3, alimentar_precatorios)
+        
+        comum_precatorios = Precatorio.objects.filter(tipo=comum_tipo)
+        self.assertIn(precatorio2, comum_precatorios)
+        self.assertNotIn(precatorio1, comum_precatorios)
+        
+        # Test filtering by null tipo
+        null_tipo_precatorios = Precatorio.objects.filter(tipo__isnull=True)
+        self.assertIn(precatorio3, null_tipo_precatorios)
+        self.assertNotIn(precatorio1, null_tipo_precatorios)
+        self.assertNotIn(precatorio2, null_tipo_precatorios)
+    
+    def test_precatorio_tipo_display(self):
+        """
+        Test tipo display functionality in precatorio context.
+        
+        Validates that:
+        - Tipo information is accessible through precatorio
+        - Color and name properties work correctly
+        - Handles cases where tipo is None
+        """
+        # Test with tipo
+        precatorio_with_tipo = Precatorio.objects.create(**self.precatorio_data)
+        self.assertEqual(precatorio_with_tipo.tipo.nome, 'Alimentar')
+        self.assertEqual(precatorio_with_tipo.tipo.cor, '#28a745')
+        
+        # Test without tipo
+        data_without_tipo = self.precatorio_data.copy()
+        data_without_tipo['cnj'] = '9876543-21.2023.8.26.0900'
+        data_without_tipo['tipo'] = None
+        precatorio_without_tipo = Precatorio.objects.create(**data_without_tipo)
+        self.assertIsNone(precatorio_without_tipo.tipo)
 
 
 class ClienteModelTest(TestCase):
@@ -486,6 +866,14 @@ class AlvaraModelTest(TestCase):
     
     def setUp(self):
         """Set up test data"""
+        # Create a tipo for testing
+        self.tipo = Tipo.objects.create(
+            nome='Comum',
+            descricao='Precatórios comuns',
+            cor='#6c757d',
+            ativa=True
+        )
+        
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
@@ -498,7 +886,8 @@ class AlvaraModelTest(TestCase):
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            tipo=self.tipo
         )
         self.cliente = Cliente.objects.create(
             cpf='12345678909',
@@ -578,6 +967,14 @@ class AlvaraModelWithHonorariosTest(TestCase):
     
     def setUp(self):
         """Set up test data"""
+        # Create a tipo for testing
+        self.tipo = Tipo.objects.create(
+            nome='Comum',
+            descricao='Precatórios comuns',
+            cor='#6c757d',
+            ativa=True
+        )
+        
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
@@ -590,7 +987,8 @@ class AlvaraModelWithHonorariosTest(TestCase):
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            tipo=self.tipo
         )
         self.cliente = Cliente.objects.create(
             cpf='98765432100',
@@ -704,6 +1102,14 @@ class RequerimentoModelTest(TestCase):
     
     def setUp(self):
         """Set up test data"""
+        # Create a tipo for testing
+        self.tipo = Tipo.objects.create(
+            nome='Comum',
+            descricao='Precatórios comuns',
+            cor='#6c757d',
+            ativa=True
+        )
+        
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
@@ -716,7 +1122,8 @@ class RequerimentoModelTest(TestCase):
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            tipo=self.tipo
         )
         self.cliente = Cliente.objects.create(
             cpf='12345678909',

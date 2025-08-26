@@ -8,6 +8,8 @@ from .views import (
     fases_view, nova_fase_view, editar_fase_view, deletar_fase_view, ativar_fase_view,
     fases_honorarios_view, nova_fase_honorarios_view, editar_fase_honorarios_view, 
     deletar_fase_honorarios_view, ativar_fase_honorarios_view, customizacao_view,
+    tipos_precatorio_view, novo_tipo_precatorio_view, editar_tipo_precatorio_view,
+    deletar_tipo_precatorio_view, ativar_tipo_precatorio_view,
     tipos_diligencia_view, novo_tipo_diligencia_view, editar_tipo_diligencia_view,
     deletar_tipo_diligencia_view, ativar_tipo_diligencia_view,
     nova_diligencia_view, editar_diligencia_view, deletar_diligencia_view, marcar_diligencia_concluida_view,
@@ -52,6 +54,13 @@ urlpatterns = [
     path('fases-honorarios/<int:fase_id>/editar/', editar_fase_honorarios_view, name='editar_fase_honorarios'),
     path('fases-honorarios/<int:fase_id>/deletar/', deletar_fase_honorarios_view, name='deletar_fase_honorarios'),
     path('fases-honorarios/<int:fase_id>/ativar/', ativar_fase_honorarios_view, name='ativar_fase_honorarios'),
+    
+    # Tipo Precatório Management URLs
+    path('tipos-precatorio/', tipos_precatorio_view, name='tipos_precatorio'),
+    path('tipos-precatorio/novo/', novo_tipo_precatorio_view, name='novo_tipo_precatorio'),
+    path('tipos-precatorio/<int:tipo_id>/editar/', editar_tipo_precatorio_view, name='editar_tipo_precatorio'),
+    path('tipos-precatorio/<int:tipo_id>/deletar/', deletar_tipo_precatorio_view, name='deletar_tipo_precatorio'),
+    path('tipos-precatorio/<int:tipo_id>/ativar/', ativar_tipo_precatorio_view, name='ativar_tipo_precatorio'),
     
     # Tipo Diligencia Management URLs
     path('tipos-diligencia/', tipos_diligencia_view, name='tipos_diligencia'),

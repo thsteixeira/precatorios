@@ -172,6 +172,78 @@ class FaseHonorariosContratuais(models.Model):
         verbose_name_plural = "Fases Honorários Contratuais"
         ordering = ['ordem', 'nome']
 
+class Tipo(models.Model):
+    """
+    Model for custom types that can be assigned to Precatórios.
+    
+    This model represents different categories or types that Precatórios can be
+    classified into. Each type can be configured with a specific color for visual
+    identification and can help organize and filter precatórios by their nature.
+    
+    Attributes:
+        nome (CharField): The name of the type (max 100 characters)
+        descricao (TextField): Optional description of the type
+        cor (CharField): Hexadecimal color code for visual identification (e.g., #007bff)
+        ordem (PositiveIntegerField): Display order (lower numbers appear first)
+        ativa (BooleanField): Whether this type is active for use
+        criado_em (DateTimeField): Timestamp when the type was created
+        atualizado_em (DateTimeField): Timestamp when the type was last updated
+    
+    Business Rules:
+        - Each type name must be unique
+        - Types are ordered by ordem, then by nome
+        - Only active types are available for selection in forms
+        - Default color is blue (#007bff)
+    
+    Usage Examples:
+        # Create a new type
+        tipo = Tipo.objects.create(
+            nome="Alimentar",
+            descricao="Precatórios de natureza alimentar",
+            cor="#28a745"
+        )
+        
+        # Get all active types
+        active_types = Tipo.get_tipos_ativos()
+    """
+    
+    nome = models.CharField(
+        max_length=100, 
+        unique=True,
+        help_text="Nome do tipo de precatório"
+    )
+    descricao = models.TextField(blank=True, help_text="Descrição opcional do tipo")
+    cor = models.CharField(
+        max_length=7, 
+        default='#007bff', 
+        help_text="Cor do tipo em hexadecimal (ex: #007bff)"
+    )
+    ordem = models.PositiveIntegerField(
+        default=0,
+        help_text="Ordem de exibição (números menores aparecem primeiro)"
+    )
+    ativa = models.BooleanField(default=True, help_text="Se este tipo está ativo para uso")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.nome
+    
+    @classmethod
+    def get_tipos_ativos(cls):
+        """
+        Get all active types for selection.
+        
+        Returns:
+            QuerySet: Active types ordered by ordem and nome
+        """
+        return cls.objects.filter(ativa=True).order_by('ordem', 'nome')
+    
+    class Meta:
+        verbose_name = "Tipo de Precatório"
+        verbose_name_plural = "Tipos de Precatórios"
+        ordering = ['ordem', 'nome']
+
 class Precatorio(models.Model):
     """
     Model representing a legal Precatório document.
@@ -261,6 +333,15 @@ class Precatorio(models.Model):
     percentual_contratuais_assinado = models.FloatField(null=True, blank=True)
     percentual_contratuais_apartado = models.FloatField(null=True, blank=True)
     percentual_sucumbenciais = models.FloatField(null=True, blank=True)
+    
+    tipo = models.ForeignKey(
+        'Tipo',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Tipo do precatório (ex: Alimentar, Comum, etc.)"
+    )
+    
     clientes = models.ManyToManyField('Cliente', related_name='precatorios')
 
     def __str__(self):

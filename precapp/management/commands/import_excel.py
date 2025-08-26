@@ -7,7 +7,7 @@ from decimal import Decimal, InvalidOperation
 from datetime import datetime
 import pandas as pd
 import os
-from precapp.models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, TipoDiligencia
+from precapp.models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, TipoDiligencia, Tipo
 
 
 class Command(BaseCommand):
@@ -47,6 +47,7 @@ class Command(BaseCommand):
         if not dry_run:
             self.create_main_phases()
             self.create_tipos_diligencia()
+            self.create_tipos_precatorio()
         
         try:
             self.import_excel_data(file_path, sheet_name, dry_run)
@@ -267,6 +268,53 @@ class Command(BaseCommand):
             self.stdout.write(f'Created {created_count} new diligencia types')
         else:
             self.stdout.write('All diligencia types already exist')
+        
+        self.stdout.write('')
+    
+    def create_tipos_precatorio(self):
+        """Create default tipos de precatorio"""
+        
+        tipos_precatorio = [
+            {
+                'nome': 'Descompressão',
+                'descricao': 'Precatórios originados de processos de descompressão salarial',
+                'cor': '#007bff',  # Azul
+                'ordem': 1
+            },
+            {
+                'nome': 'URV',
+                'descricao': 'Precatórios relacionados à Unidade Real de Valor',
+                'cor': '#28a745',  # Verde
+                'ordem': 2
+            },
+            {
+                'nome': 'Reclassificação',
+                'descricao': 'Precatórios originados de processos de reclassificação funcional',
+                'cor': '#ffc107',  # Amarelo
+                'ordem': 3
+            }
+        ]
+        
+        created_count = 0
+        for tipo_data in tipos_precatorio:
+            tipo, created = Tipo.objects.get_or_create(
+                nome=tipo_data['nome'],
+                defaults={
+                    'descricao': tipo_data['descricao'],
+                    'cor': tipo_data['cor'],
+                    'ordem': tipo_data['ordem'],
+                    'ativa': True
+                }
+            )
+            if created:
+                created_count += 1
+                self.stdout.write(f'✓ Created Tipo de Precatório: {tipo.nome} (ordem: {tipo.ordem})')
+        
+        if created_count > 0:
+            self.stdout.write(f'\n=== TIPOS DE PRECATÓRIO CREATED ===')
+            self.stdout.write(f'Created {created_count} new tipos de precatorio')
+        else:
+            self.stdout.write('All tipos de precatorio already exist')
         
         self.stdout.write('')
     

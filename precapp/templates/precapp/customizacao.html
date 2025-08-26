@@ -21,7 +21,7 @@
     <!-- Main Cards -->
     <div class="row g-4 mb-4">
         <!-- Fases Principais Card -->
-        <div class="col-lg-4">
+        <div class="col-lg-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h5 class="card-title mb-0">
@@ -87,7 +87,7 @@
         </div>
 
         <!-- Fases Honorários Card -->
-        <div class="col-lg-4">
+        <div class="col-lg-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-success text-white">
                     <h5 class="card-title mb-0">
@@ -152,8 +152,81 @@
             </div>
         </div>
 
+        <!-- Tipos de Precatório Card -->
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tags me-2"></i>Tipos de Precatório
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">
+                        Configure os tipos de classificação para precatórios
+                    </p>
+                    
+                    <!-- Statistics -->
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <h4 class="text-warning mb-0">{{ total_tipos_precatorio }}</h4>
+                                <small class="text-muted">Total</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <h4 class="text-success mb-0">{{ tipos_precatorio_ativos }}</h4>
+                                <small class="text-muted">Ativos</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <h4 class="text-secondary mb-0">{{ tipos_precatorio_inativos }}</h4>
+                                <small class="text-muted">Inativos</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Types -->
+                    {% if recent_tipos_precatorio %}
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-clock me-1"></i>Tipos Recentes:
+                        </h6>
+                        <div class="mb-3">
+                            {% for tipo in recent_tipos_precatorio %}
+                                <div class="d-flex align-items-center mb-1">
+                                    <div class="fase-color me-2" style="width: 8px; height: 8px; border-radius: 50%; background-color: {{ tipo.cor }};"></div>
+                                    <small class="text-muted">{{ tipo.nome }}</small>
+                                    {% if not tipo.ativa %}
+                                        <span class="badge bg-warning ms-1" style="font-size: 0.6em;">Inativo</span>
+                                    {% endif %}
+                                </div>
+                            {% empty %}
+                                <small class="text-muted">Nenhum tipo recente</small>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted mb-3">
+                            <i class="fas fa-tags fa-2x mb-2 opacity-50"></i>
+                            <p class="small mb-0">Nenhum tipo configurado</p>
+                        </div>
+                    {% endif %}
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'tipos_precatorio' %}" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-list me-1"></i>Gerenciar Tipos
+                        </a>
+                        <a href="{% url 'novo_tipo_precatorio' %}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-plus me-1"></i>Criar Novo Tipo
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Tipos Diligência Card -->
-        <div class="col-lg-4">
+        <div class="col-lg-6">
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-info text-white">
                     <h5 class="card-title mb-0">

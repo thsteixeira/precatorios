@@ -12,13 +12,13 @@ from datetime import date, timedelta
 
 from precapp.models import (
     Fase, FaseHonorariosContratuais, Precatorio, Cliente, 
-    Alvara, Requerimento, TipoDiligencia, Diligencias
+    Alvara, Requerimento, TipoDiligencia, Diligencias, Tipo
 )
 from precapp.forms import (
     FaseForm, FaseHonorariosContratuaisForm, AlvaraSimpleForm, 
     RequerimentoForm, PrecatorioForm, ClienteForm, ClienteSimpleForm,
     TipoDiligenciaForm, DiligenciasForm, DiligenciasUpdateForm,
-    PrecatorioSearchForm, ClienteSearchForm,
+    PrecatorioSearchForm, ClienteSearchForm, TipoForm,
     validate_cnj, validate_currency, BrazilianDateInput, BrazilianDateTimeInput
 )
 
@@ -1193,6 +1193,14 @@ class AlvaraFormTest(TestCase):
     
     def setUp(self):
         """Set up test data"""
+        # Create a tipo for testing
+        self.tipo = Tipo.objects.create(
+            nome='Comum',
+            descricao='Precatórios comuns',
+            cor='#6c757d',
+            ativa=True
+        )
+        
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
@@ -1205,7 +1213,8 @@ class AlvaraFormTest(TestCase):
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            tipo=self.tipo
         )
         self.cliente = Cliente.objects.create(
             cpf='12345678909',
@@ -1285,6 +1294,14 @@ class AlvaraSimpleFormComprehensiveTest(TestCase):
     
     def setUp(self):
         """Set up test data"""
+        # Create a tipo for testing
+        self.tipo = Tipo.objects.create(
+            nome='Comum',
+            descricao='Precatórios comuns',
+            cor='#6c757d',
+            ativa=True
+        )
+        
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
@@ -1297,7 +1314,8 @@ class AlvaraSimpleFormComprehensiveTest(TestCase):
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            tipo=self.tipo
         )
         
         self.cliente = Cliente.objects.create(
@@ -1741,6 +1759,14 @@ class RequerimentoFormComprehensiveTest(TestCase):
     
     def setUp(self):
         """Set up test data"""
+        # Create a tipo for testing
+        self.tipo = Tipo.objects.create(
+            nome='Comum',
+            descricao='Precatórios comuns',
+            cor='#6c757d',
+            ativa=True
+        )
+        
         self.precatorio = Precatorio.objects.create(
             cnj='1234567-89.2023.8.26.0100',
             orcamento=2023,
@@ -1753,7 +1779,8 @@ class RequerimentoFormComprehensiveTest(TestCase):
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            tipo=self.tipo
         )
         
         # Create another precatorio for testing client-precatorio relationship
@@ -1764,7 +1791,8 @@ class RequerimentoFormComprehensiveTest(TestCase):
             valor_de_face=50000.00,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            tipo=self.tipo
         )
         
         self.cliente = Cliente.objects.create(
@@ -2670,6 +2698,14 @@ class ClienteFormComprehensiveTest(TestCase):
     
     def setUp(self):
         """Set up test data for ClienteForm comprehensive tests"""
+        # Create a tipo for testing
+        self.tipo = Tipo.objects.create(
+            nome='Comum',
+            descricao='Precatórios comuns',
+            cor='#6c757d',
+            ativa=True
+        )
+        
         # Create test precatorio for CNJ validation
         self.test_precatorio = Precatorio.objects.create(
             cnj='7654321-98.2024.8.26.0200',
@@ -2678,7 +2714,8 @@ class ClienteFormComprehensiveTest(TestCase):
             valor_de_face=75000.00,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            tipo=self.tipo
         )
         
         self.valid_form_data = {
@@ -3004,7 +3041,8 @@ class ClienteFormComprehensiveTest(TestCase):
             valor_de_face=100000.00,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            tipo=self.tipo
         )
         
         # Test with the new precatorio CNJ
@@ -3743,6 +3781,14 @@ class PrecatorioSearchFormComprehensiveTest(TestCase):
     
     def setUp(self):
         """Set up test data for PrecatorioSearchForm testing"""
+        # Create tipo for Precatorio requirement
+        self.tipo = Tipo.objects.create(
+            nome='Aposentadoria',
+            cor='#007bff',
+            ordem=1,
+            ativa=True
+        )
+        
         self.valid_cnj_data = {
             'cnj': '1234567-89.2023.8.26.0100'
         }
@@ -3755,7 +3801,8 @@ class PrecatorioSearchFormComprehensiveTest(TestCase):
         self.test_precatorio = Precatorio.objects.create(
             cnj='9876543-21.2022.8.26.0001',
             orcamento=2022,
-            valor_de_face=50000.00
+            valor_de_face=50000.00,
+            tipo=self.tipo
         )
 
     def test_form_initialization_default(self):
@@ -4568,5 +4615,549 @@ class ClienteSearchFormComprehensiveTest(TestCase):
         
         # Should clean formatting and whitespace
         self.assertEqual(form_cnpj.cleaned_data['cpf'], '12345678000195')
+
+
+class TipoFormComprehensiveTest(TestCase):
+    """
+    Comprehensive test suite for TipoForm functionality and validation.
+    
+    This test class provides thorough coverage of the TipoForm, which is used for creating
+    and managing precatorio types (tipos de precatório) in the system. The tests validate
+    form behavior, field validation, uniqueness constraints, color validation, and
+    integration with the broader precatorio classification system.
+    
+    Test Coverage:
+        - Form initialization and field configuration
+        - Unique name validation and case sensitivity
+        - Color validation with hexadecimal format
+        - Order field validation and constraints
+        - Activation status handling
+        - Description field optional behavior
+        - Form submission and data persistence
+        - Error handling and validation messages
+        - Widget configuration and attributes
+        - Integration with Tipo model
+        
+    Key Test Areas:
+        - Nome Field: Tests uniqueness, length limits, and trimming
+        - Descricao Field: Tests optional nature and content handling
+        - Cor Field: Tests hexadecimal validation and format requirements
+        - Ordem Field: Tests numeric validation and ordering logic
+        - Ativa Field: Tests boolean behavior and default values
+        - Form Integration: Tests save operations and model integration
+        - Edge Cases: Tests boundary conditions and error scenarios
+        
+    Business Logic Testing:
+        - Validates unique type names prevent conflicts
+        - Tests color format ensures visual consistency
+        - Verifies ordering system allows logical organization
+        - Ensures activation control maintains system integrity
+        - Tests description flexibility for detailed explanations
+        
+    Setup Dependencies:
+        - Clean test database for uniqueness testing
+        - Tipo model instances for edit and conflict testing
+        - Proper test isolation for repeated execution
+    """
+    
+    def setUp(self):
+        """Set up test data"""
+        self.valid_form_data = {
+            'nome': 'Novo Tipo',
+            'descricao': 'Descrição do novo tipo',
+            'cor': '#007bff',
+            'ordem': 0,
+            'ativa': True
+        }
+        
+        # Create an existing tipo for uniqueness tests
+        self.existing_tipo = Tipo.objects.create(
+            nome='Tipo Existente',
+            descricao='Tipo já existente para testes',
+            cor='#ff0000',
+            ordem=1,
+            ativa=True
+        )
+    
+    # ============ BASIC FORM VALIDATION TESTS ============
+    
+    def test_valid_form_with_all_fields(self):
+        """Test form with all valid data"""
+        form = TipoForm(data=self.valid_form_data)
+        self.assertTrue(form.is_valid(), f"Form should be valid but got errors: {form.errors}")
+    
+    def test_minimal_valid_form(self):
+        """Test form with minimal required data"""
+        minimal_data = {
+            'nome': 'Tipo Mínimo',
+            'cor': '#000000',
+            'ordem': 0,
+            'ativa': True
+        }
+        form = TipoForm(data=minimal_data)
+        self.assertTrue(form.is_valid(), f"Minimal form should be valid but got errors: {form.errors}")
+    
+    def test_form_save_creates_object_correctly(self):
+        """Test form saving creates the object correctly"""
+        form = TipoForm(data=self.valid_form_data)
+        self.assertTrue(form.is_valid())
+        tipo = form.save()
+        self.assertEqual(tipo.nome, 'Novo Tipo')
+        self.assertEqual(tipo.descricao, 'Descrição do novo tipo')
+        self.assertEqual(tipo.cor, '#007bff')
+        self.assertEqual(tipo.ordem, 0)
+        self.assertTrue(tipo.ativa)
+    
+    def test_form_required_fields(self):
+        """Test form with missing required fields"""
+        required_fields = ['nome', 'cor', 'ordem']
+        
+        for field_name in required_fields:
+            with self.subTest(missing_field=field_name):
+                test_data = self.valid_form_data.copy()
+                del test_data[field_name]
+                form = TipoForm(data=test_data)
+                self.assertFalse(form.is_valid())
+                self.assertIn(field_name, form.errors)
+    
+    # ============ NOME FIELD VALIDATION TESTS ============
+    
+    def test_nome_required_validation(self):
+        """Test that nome field is required"""
+        test_data = self.valid_form_data.copy()
+        test_data['nome'] = ''
+        form = TipoForm(data=test_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('nome', form.errors)
+    
+    def test_nome_whitespace_trimming(self):
+        """Test that nome field strips whitespace"""
+        test_data = self.valid_form_data.copy()
+        test_data['nome'] = '  Nome com Espaços  '
+        form = TipoForm(data=test_data)
+        self.assertTrue(form.is_valid())
+        tipo = form.save()
+        self.assertEqual(tipo.nome, 'Nome com Espaços')  # Django strips leading/trailing whitespace
+    
+    def test_nome_uniqueness_validation(self):
+        """Test nome uniqueness validation"""
+        test_data = self.valid_form_data.copy()
+        test_data['nome'] = 'Tipo Existente'  # Same as existing tipo
+        form = TipoForm(data=test_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('nome', form.errors)
+        error_message = str(form.errors['nome'])
+        self.assertIn('já existe', error_message.lower())
+    
+    def test_nome_case_sensitivity(self):
+        """Test that nome validation is case-sensitive at database level"""
+        test_data = self.valid_form_data.copy()
+        test_data['nome'] = 'TIPO EXISTENTE'  # Uppercase version
+        form = TipoForm(data=test_data)
+        # This might be valid or invalid depending on database collation
+        if not form.is_valid():
+            self.assertIn('nome', form.errors)
+    
+    def test_nome_maximum_length(self):
+        """Test nome field maximum length"""
+        test_data = self.valid_form_data.copy()
+        test_data['nome'] = 'A' * 101  # Exceeds max_length
+        form = TipoForm(data=test_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('nome', form.errors)
+    
+    def test_nome_editing_existing_tipo_excludes_self(self):
+        """Test that editing existing tipo excludes itself from uniqueness check"""
+        edit_data = {
+            'nome': 'Tipo Existente',  # Same name as existing
+            'cor': '#00ff00',
+            'ordem': 1,
+            'ativa': True
+        }
+        form = TipoForm(data=edit_data, instance=self.existing_tipo)
+        self.assertTrue(form.is_valid())
+    
+    # ============ DESCRICAO FIELD VALIDATION TESTS ============
+    
+    def test_descricao_optional_field(self):
+        """Test that descricao field is optional"""
+        test_data = self.valid_form_data.copy()
+        del test_data['descricao']
+        form = TipoForm(data=test_data)
+        self.assertTrue(form.is_valid())
+    
+    def test_descricao_empty_string_allowed(self):
+        """Test that empty descricao is allowed"""
+        test_data = self.valid_form_data.copy()
+        test_data['descricao'] = ''
+        form = TipoForm(data=test_data)
+        self.assertTrue(form.is_valid())
+    
+    def test_descricao_with_content(self):
+        """Test that descricao field accepts content"""
+        test_data = self.valid_form_data.copy()
+        test_data['descricao'] = 'Esta é uma descrição muito detalhada do tipo de precatório com múltiplas linhas\ne informações importantes.'
+        form = TipoForm(data=test_data)
+        self.assertTrue(form.is_valid())
+        tipo = form.save()
+        self.assertEqual(tipo.descricao, test_data['descricao'])
+    
+    def test_descricao_with_special_characters(self):
+        """Test descricao field with special characters and Unicode"""
+        test_data = self.valid_form_data.copy()
+        test_data['descricao'] = 'Descrição com acentos: ção, ã, é, ç e emojis 🎯📋'
+        form = TipoForm(data=test_data)
+        self.assertTrue(form.is_valid())
+    
+    # ============ COR FIELD VALIDATION TESTS ============
+    
+    def test_cor_valid_hex_colors(self):
+        """Test that valid hex colors are accepted"""
+        valid_colors = [
+            '#000000', '#ffffff', '#FF0000', '#00ff00', '#0000FF',
+            '#123456', '#abcdef', '#ABCDEF', '#007bff', '#28a745',
+            '#ffc107', '#dc3545', '#6c757d', '#343a40', '#f8f9fa'
+        ]
+        
+        for color in valid_colors:
+            with self.subTest(color=color):
+                test_data = self.valid_form_data.copy()
+                test_data['cor'] = color
+                test_data['nome'] = f'Tipo {color}'  # Ensure unique names
+                form = TipoForm(data=test_data)
+                self.assertTrue(form.is_valid(), f"Color {color} should be valid but got errors: {form.errors}")
+    
+    def test_cor_invalid_hex_colors(self):
+        """Test that invalid hex colors are rejected"""
+        invalid_colors = [
+            'red', 'blue', 'green',  # Color names
+            '#FF', '#FFFF', '#FFFFF',  # Wrong length
+            '#GGGGGG', '#ZZZZZZ',  # Invalid hex characters
+            'FF0000', '00FF00',  # Missing #
+            '#FF00GG', '#GG0000',  # Mixed valid/invalid
+            '', '#', '##000000',  # Empty or malformed
+            'rgb(255,0,0)', 'hsl(0,100%,50%)',  # Other formats
+            '#ff00ff00',  # Too long (8 chars)
+        ]
+        
+        for color in invalid_colors:
+            with self.subTest(color=color):
+                test_data = self.valid_form_data.copy()
+                test_data['cor'] = color
+                test_data['nome'] = f'Tipo {color[:10]}'  # Ensure unique names
+                form = TipoForm(data=test_data)
+                self.assertFalse(form.is_valid(), f"Color {color} should be invalid but validation passed")
+                self.assertIn('cor', form.errors)
+    
+    def test_cor_case_handling(self):
+        """Test that color validation handles uppercase and lowercase"""
+        test_cases = [
+            ('#ff0000', True),  # lowercase
+            ('#FF0000', True),  # uppercase
+            ('#Ff0000', True),  # mixed case
+            ('#aAbBcC', True),  # mixed case with letters
+        ]
+        
+        for color, should_be_valid in test_cases:
+            with self.subTest(color=color, expected_valid=should_be_valid):
+                test_data = self.valid_form_data.copy()
+                test_data['cor'] = color
+                test_data['nome'] = f'Tipo {color}'
+                form = TipoForm(data=test_data)
+                if should_be_valid:
+                    self.assertTrue(form.is_valid(), f"Color {color} should be valid")
+                else:
+                    self.assertFalse(form.is_valid(), f"Color {color} should be invalid")
+    
+    def test_cor_required_validation(self):
+        """Test that cor field is required"""
+        test_data = self.valid_form_data.copy()
+        del test_data['cor']
+        form = TipoForm(data=test_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cor', form.errors)
+    
+    # ============ ORDEM FIELD VALIDATION TESTS ============
+    
+    def test_ordem_valid_values(self):
+        """Test valid ordem values"""
+        valid_orders = [0, 1, 5, 10, 100, 999, 9999]
+        
+        for ordem in valid_orders:
+            with self.subTest(ordem=ordem):
+                test_data = self.valid_form_data.copy()
+                test_data['ordem'] = ordem
+                test_data['nome'] = f'Tipo Ordem {ordem}'
+                form = TipoForm(data=test_data)
+                self.assertTrue(form.is_valid(), f"Ordem {ordem} should be valid")
+    
+    def test_ordem_negative_values(self):
+        """Test that negative ordem values are rejected"""
+        invalid_orders = [-1, -5, -100]
+        
+        for ordem in invalid_orders:
+            with self.subTest(ordem=ordem):
+                test_data = self.valid_form_data.copy()
+                test_data['ordem'] = ordem
+                form = TipoForm(data=test_data)
+                self.assertFalse(form.is_valid())
+                self.assertIn('ordem', form.errors)
+    
+    def test_ordem_non_integer_values(self):
+        """Test that non-integer ordem values are rejected"""
+        invalid_orders = ['abc', '12.5', '', None]
+        
+        for ordem in invalid_orders:
+            with self.subTest(ordem=ordem):
+                test_data = self.valid_form_data.copy()
+                test_data['ordem'] = ordem
+                form = TipoForm(data=test_data)
+                self.assertFalse(form.is_valid())
+                if ordem is not None:  # None would make the field missing
+                    self.assertIn('ordem', form.errors)
+    
+    def test_ordem_required_validation(self):
+        """Test that ordem field is required"""
+        test_data = self.valid_form_data.copy()
+        del test_data['ordem']
+        form = TipoForm(data=test_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('ordem', form.errors)
+    
+    # ============ ATIVA FIELD VALIDATION TESTS ============
+    
+    def test_ativa_boolean_values(self):
+        """Test that ativa field accepts boolean values"""
+        for ativa_value in [True, False]:
+            with self.subTest(ativa=ativa_value):
+                test_data = self.valid_form_data.copy()
+                test_data['ativa'] = ativa_value
+                test_data['nome'] = f'Tipo Ativa {ativa_value}'
+                form = TipoForm(data=test_data)
+                self.assertTrue(form.is_valid())
+                tipo = form.save()
+                self.assertEqual(tipo.ativa, ativa_value)
+    
+    def test_ativa_default_behavior(self):
+        """Test ativa field default behavior when not provided"""
+        test_data = self.valid_form_data.copy()
+        del test_data['ativa']
+        form = TipoForm(data=test_data)
+        # BooleanField behavior: missing = False in forms
+        self.assertTrue(form.is_valid())
+        tipo = form.save()
+        self.assertFalse(tipo.ativa)  # Should default to False when not checked
+    
+    def test_ativa_string_to_boolean_conversion(self):
+        """Test ativa field string to boolean conversion"""
+        string_boolean_cases = [
+            ('True', True),
+            ('true', True),
+            ('1', True),
+            ('on', True),
+            ('False', False),
+            ('false', False),
+            ('0', True),  # Django checkbox input treats '0' as truthy
+            ('off', True),  # Django checkbox input treats 'off' as truthy
+            ('', False),
+        ]
+        
+        for string_value, expected_bool in string_boolean_cases:
+            with self.subTest(string_value=string_value, expected=expected_bool):
+                test_data = self.valid_form_data.copy()
+                test_data['ativa'] = string_value
+                test_data['nome'] = f'Tipo {string_value}_{expected_bool}'
+                form = TipoForm(data=test_data)
+                if form.is_valid():
+                    tipo = form.save()
+                    self.assertEqual(tipo.ativa, expected_bool)
+    
+    # ============ FORM CONFIGURATION TESTS ============
+    
+    def test_form_field_widgets(self):
+        """Test that form fields have correct widgets and attributes"""
+        form = TipoForm()
+        
+        # Test nome field widget
+        nome_widget = form.fields['nome'].widget
+        self.assertIn('form-control', nome_widget.attrs.get('class', ''))
+        self.assertIn('Digite o nome do tipo', nome_widget.attrs.get('placeholder', ''))
+        
+        # Test descricao field widget
+        descricao_widget = form.fields['descricao'].widget
+        self.assertIn('form-control', descricao_widget.attrs.get('class', ''))
+        self.assertEqual(descricao_widget.attrs.get('rows'), 3)
+        
+        # Test cor field widget
+        cor_widget = form.fields['cor'].widget
+        self.assertIn('form-control', cor_widget.attrs.get('class', ''))
+        # Note: type='color' might not be preserved in widget attrs due to Django processing
+        self.assertEqual(cor_widget.attrs.get('value'), '#007bff')
+        self.assertEqual(cor_widget.attrs.get('maxlength'), '7')  # From model max_length
+        
+        # Test ordem field widget
+        ordem_widget = form.fields['ordem'].widget
+        self.assertIn('form-control', ordem_widget.attrs.get('class', ''))
+        self.assertEqual(ordem_widget.attrs.get('min'), 0)  # Django converts to int
+        self.assertEqual(ordem_widget.attrs.get('value'), '0')
+        
+        # Test ativa field widget
+        ativa_widget = form.fields['ativa'].widget
+        self.assertIn('form-check-input', ativa_widget.attrs.get('class', ''))
+    
+    def test_form_field_labels(self):
+        """Test that form fields have correct labels"""
+        form = TipoForm()
+        
+        self.assertEqual(form.fields['nome'].label, 'Nome do Tipo')
+        self.assertEqual(form.fields['descricao'].label, 'Descrição')
+        self.assertEqual(form.fields['cor'].label, 'Cor')
+        self.assertEqual(form.fields['ordem'].label, 'Ordem de Exibição')
+        self.assertEqual(form.fields['ativa'].label, 'Ativa')
+    
+    def test_form_field_help_texts(self):
+        """Test that form fields have appropriate help texts"""
+        form = TipoForm()
+        
+        self.assertIn('único', form.fields['nome'].help_text)
+        self.assertIn('opcional', form.fields['descricao'].help_text)
+        self.assertIn('identificação visual', form.fields['cor'].help_text)
+        self.assertIn('ordem de exibição', form.fields['ordem'].help_text)
+        self.assertIn('disponível para uso', form.fields['ativa'].help_text)
+    
+    def test_form_field_required_status(self):
+        """Test that form fields have correct required status"""
+        form = TipoForm()
+        
+        self.assertTrue(form.fields['nome'].required)
+        self.assertFalse(form.fields['descricao'].required)
+        self.assertTrue(form.fields['cor'].required)
+        self.assertTrue(form.fields['ordem'].required)
+        self.assertFalse(form.fields['ativa'].required)  # BooleanField
+    
+    def test_form_meta_configuration(self):
+        """Test that form Meta includes correct fields and model"""
+        form = TipoForm()
+        expected_fields = ['nome', 'descricao', 'cor', 'ordem', 'ativa']
+        
+        self.assertEqual(list(form.Meta.fields), expected_fields)
+        self.assertEqual(form.Meta.model, Tipo)
+    
+    # ============ EDGE CASES AND INTEGRATION TESTS ============
+    
+    def test_form_with_unicode_characters(self):
+        """Test form handles unicode characters in nome and descricao"""
+        test_data = self.valid_form_data.copy()
+        test_data['nome'] = 'Tipo com Acentuação: ção, ã, é'
+        test_data['descricao'] = 'Descrição com emojis 🎯 e caracteres especiais: ñ, ü, ç'
+        form = TipoForm(data=test_data)
+        self.assertTrue(form.is_valid())
+        tipo = form.save()
+        self.assertEqual(tipo.nome, test_data['nome'])
+        self.assertEqual(tipo.descricao, test_data['descricao'])
+    
+    def test_form_with_html_content(self):
+        """Test form handles HTML content safely"""
+        test_data = self.valid_form_data.copy()
+        test_data['nome'] = 'Tipo <script>alert("test")</script>'
+        test_data['descricao'] = '<b>Descrição</b> com <i>HTML</i> tags'
+        form = TipoForm(data=test_data)
+        self.assertTrue(form.is_valid())
+        # Django forms don't automatically escape, but templates should
+        tipo = form.save()
+        self.assertEqual(tipo.nome, test_data['nome'])
+        self.assertEqual(tipo.descricao, test_data['descricao'])
+    
+    def test_complete_workflow_create_and_edit(self):
+        """Test complete workflow of creating and editing a tipo"""
+        # Create new tipo
+        create_data = {
+            'nome': 'Tipo Teste Workflow',
+            'descricao': 'Descrição inicial',
+            'cor': '#28a745',
+            'ordem': 5,
+            'ativa': True
+        }
+        create_form = TipoForm(data=create_data)
+        self.assertTrue(create_form.is_valid())
+        created_tipo = create_form.save()
+        
+        # Edit the created tipo
+        edit_data = {
+            'nome': 'Tipo Teste Workflow Editado',
+            'descricao': 'Descrição atualizada',
+            'cor': '#ffc107',
+            'ordem': 10,
+            'ativa': False
+        }
+        edit_form = TipoForm(data=edit_data, instance=created_tipo)
+        self.assertTrue(edit_form.is_valid())
+        edited_tipo = edit_form.save()
+        
+        # Verify changes
+        self.assertEqual(edited_tipo.nome, 'Tipo Teste Workflow Editado')
+        self.assertEqual(edited_tipo.descricao, 'Descrição atualizada')
+        self.assertEqual(edited_tipo.cor, '#ffc107')
+        self.assertEqual(edited_tipo.ordem, 10)
+        self.assertFalse(edited_tipo.ativa)
+    
+    def test_form_boundary_values(self):
+        """Test form with boundary values"""
+        boundary_cases = [
+            # Minimum valid values
+            {'nome': 'A', 'cor': '#000000', 'ordem': 0, 'ativa': False},
+            # Maximum reasonable values
+            {'nome': 'A' * 100, 'cor': '#ffffff', 'ordem': 99999, 'ativa': True},
+        ]
+        
+        for i, test_data in enumerate(boundary_cases):
+            with self.subTest(case=i):
+                test_data['nome'] = f"{test_data['nome'][:95]}_{i}"  # Ensure uniqueness
+                form = TipoForm(data=test_data)
+                self.assertTrue(form.is_valid(), f"Boundary case {i} should be valid: {form.errors}")
+    
+    def test_form_error_messages_user_friendly(self):
+        """Test that form error messages are user-friendly"""
+        # Test nome uniqueness error
+        duplicate_data = self.valid_form_data.copy()
+        duplicate_data['nome'] = 'Tipo Existente'
+        duplicate_form = TipoForm(data=duplicate_data)
+        self.assertFalse(duplicate_form.is_valid())
+        if 'nome' in duplicate_form.errors:
+            error_message = str(duplicate_form.errors['nome'])
+            self.assertIn('já existe', error_message.lower())
+        
+        # Test color format error
+        invalid_color_data = self.valid_form_data.copy()
+        invalid_color_data['cor'] = 'invalid'  # Invalid but within max_length to trigger clean_cor
+        color_form = TipoForm(data=invalid_color_data)
+        self.assertFalse(color_form.is_valid())
+        cor_error = str(color_form.errors['cor'])
+        self.assertIn('hexadecimal', cor_error)
+        self.assertIn('#RRGGBB', cor_error)
+    
+    def test_form_performance_with_large_dataset(self):
+        """Test form performance doesn't degrade with existing data"""
+        # Create multiple tipos to test uniqueness performance
+        for i in range(50):
+            Tipo.objects.create(
+                nome=f'Performance Test {i}',
+                cor=f'#{i:06x}',
+                ordem=i,
+                ativa=True
+            )
+        
+        # Test that form validation still works efficiently
+        test_data = self.valid_form_data.copy()
+        test_data['nome'] = 'Performance Test New'
+        form = TipoForm(data=test_data)
+        self.assertTrue(form.is_valid())
+        
+        # Test uniqueness validation still works
+        duplicate_data = test_data.copy()
+        duplicate_data['nome'] = 'Performance Test 25'
+        duplicate_form = TipoForm(data=duplicate_data)
+        self.assertFalse(duplicate_form.is_valid())
+        self.assertIn('nome', duplicate_form.errors)
 
 

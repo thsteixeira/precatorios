@@ -6,7 +6,7 @@ from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.http import HttpResponseRedirect
 from .models import (
-    Precatorio, Cliente, Alvara, Requerimento, Fase, 
+    Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo,
     FaseHonorariosContratuais, TipoDiligencia, Diligencias
 )
 
@@ -51,18 +51,18 @@ class PrecatorioAdmin(admin.ModelAdmin):
     list_display = (
         'cnj', 'orcamento', 'origem_short', 'credito_principal', 
         'honorarios_contratuais', 'honorarios_sucumbenciais', 
-        'valor_de_face_formatted', 'clientes_count', 'alvaras_count', 'requerimentos_count'
+        'valor_de_face_formatted', 'tipo_colored', 'clientes_count', 'alvaras_count', 'requerimentos_count'
     )
     list_filter = (
         'orcamento', 'credito_principal', 'honorarios_contratuais', 
-        'honorarios_sucumbenciais'
+        'honorarios_sucumbenciais', 'tipo'
     )
     search_fields = ('cnj', 'origem', 'clientes__nome', 'clientes__cpf')
     ordering = ('-orcamento', 'cnj')
     
     fieldsets = (
         ('Identificação', {
-            'fields': ('cnj', 'orcamento', 'origem')
+            'fields': ('cnj', 'orcamento', 'origem', 'tipo')
         }),
         ('Status de Pagamento', {
             'fields': ('credito_principal', 'honorarios_contratuais', 'honorarios_sucumbenciais'),
@@ -93,6 +93,15 @@ class PrecatorioAdmin(admin.ModelAdmin):
     def valor_de_face_formatted(self, obj):
         return f'R$ {obj.valor_de_face:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
     valor_de_face_formatted.short_description = 'Valor de Face'
+    
+    def tipo_colored(self, obj):
+        if obj.tipo:
+            return format_html(
+                '<span style="background-color: {}; color: white; padding: 2px 6px; border-radius: 3px;">{}</span>',
+                obj.tipo.cor, obj.tipo.nome
+            )
+        return '-'
+    tipo_colored.short_description = 'Tipo'
     
     def clientes_count(self, obj):
         count = obj.clientes.count()
@@ -307,6 +316,40 @@ class FaseAdmin(admin.ModelAdmin):
         total = alvara_count + req_count
         return format_html('A:{} R:{} <strong>T:{}</strong>', alvara_count, req_count, total)
     usage_count.short_description = 'Uso (A:Alvarás, R:Reqs)'
+
+
+@admin.register(Tipo)
+class TipoAdmin(admin.ModelAdmin):
+    """Admin configuration for Tipo model"""
+    
+    list_display = ('nome', 'cor_preview', 'ordem', 'ativa', 'usage_count', 'criado_em')
+    list_filter = ('ativa',)
+    search_fields = ('nome', 'descricao')
+    ordering = ('ordem', 'nome')
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('nome', 'descricao')
+        }),
+        ('Aparência e Ordenação', {
+            'fields': ('cor', 'ordem')
+        }),
+        ('Status', {
+            'fields': ('ativa',)
+        }),
+    )
+    
+    def cor_preview(self, obj):
+        return format_html(
+            '<div style="width: 50px; height: 20px; background-color: {}; border: 1px solid #ccc; border-radius: 3px;"></div>',
+            obj.cor
+        )
+    cor_preview.short_description = 'Cor'
+    
+    def usage_count(self, obj):
+        count = obj.precatorio_set.count()
+        return format_html('<span style="color: blue;">{}</span>', count)
+    usage_count.short_description = 'Precatórios'
 
 
 @admin.register(FaseHonorariosContratuais)

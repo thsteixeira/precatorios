@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 import re
-from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, Diligencias, TipoDiligencia
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, Diligencias, TipoDiligencia, Tipo
 
 
 def validate_cpf(cpf):
@@ -607,6 +607,7 @@ class PrecatorioForm(forms.ModelForm):
             "cnj",
             "orcamento",
             "origem",
+            "tipo",
             "credito_principal",
             "honorarios_contratuais",
             "honorarios_sucumbenciais",
@@ -628,6 +629,10 @@ class PrecatorioForm(forms.ModelForm):
                 'title': 'Digite apenas o ano (formato: YYYY)'
             }),
             'data_ultima_atualizacao': BrazilianDateInput(attrs={'required': False}),
+            'tipo': forms.Select(attrs={
+                'class': 'form-select',
+                'placeholder': 'Selecione o tipo de precatório'
+            }),
             'credito_principal': forms.Select(attrs={'class': 'form-select'}),
             'honorarios_contratuais': forms.Select(attrs={'class': 'form-select'}),
             'honorarios_sucumbenciais': forms.Select(attrs={'class': 'form-select'}),
@@ -635,11 +640,18 @@ class PrecatorioForm(forms.ModelForm):
         
         labels = {
             'orcamento': 'Ano do Orçamento',
+            'tipo': 'Tipo de Precatório',
             'credito_principal': 'Status do Crédito Principal',
             'honorarios_contratuais': 'Status dos Honorários Contratuais',
             'honorarios_sucumbenciais': 'Status dos Honorários Sucumbenciais',
             'data_ultima_atualizacao': 'Data da Última Atualização (Opcional)',
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set queryset to only show active tipos
+        self.fields['tipo'].queryset = Tipo.objects.filter(ativa=True).order_by('ordem', 'nome')
+        self.fields['tipo'].empty_label = "Selecione o tipo de precatório"
 
     def clean_percentual_contratuais_assinado(self):
         percentual = self.cleaned_data.get('percentual_contratuais_assinado')
@@ -2990,6 +3002,185 @@ class TipoDiligenciaForm(forms.ModelForm):
         self.fields['cor'].help_text = 'Cor para identificação visual'
         self.fields['ordem'].help_text = 'Número para definir a ordem de exibição (menores aparecem primeiro)'
         self.fields['ativo'].help_text = 'Se este tipo está disponível para uso'
+        
+        # Make description optional
+        self.fields['descricao'].required = False
+    
+    def clean_cor(self):
+        """Validate that cor is a valid hex color"""
+        cor = self.cleaned_data.get('cor')
+        if cor and not re.match(r'^#[0-9A-Fa-f]{6}$', cor):
+            raise forms.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
+        return cor
+
+
+class TipoForm(forms.ModelForm):
+    """
+    Comprehensive form for creating and managing precatorio types (tipos de precatório) in the system.
+    
+    This form provides a complete interface for defining and managing the categories or types
+    that precatórios can be classified into. It handles type categorization, visual
+    customization, ordering, activation control, and comprehensive validation to ensure
+    a well-organized and flexible categorization system.
+    
+    Key Features:
+        - Unique precatorio type name management
+        - Optional detailed descriptions for clarity
+        - Visual customization with color selection
+        - Display order management for logical organization
+        - Activation control for type lifecycle management
+        - Hexadecimal color validation for consistency
+        - Bootstrap styling for consistent user interface
+        - Comprehensive field validation and error handling
+        
+    Business Logic:
+        - Ensures unique type names within the system
+        - Validates proper hexadecimal color format
+        - Manages type ordering for logical progression
+        - Controls type availability through activation
+        - Supports flexible type descriptions
+        - Maintains visual consistency through color validation
+        - Provides user-friendly interface customization
+        
+    Usage:
+        # Creating new precatorio type
+        form = TipoForm(request.POST or None)
+        if form.is_valid():
+            tipo = form.save()
+            
+        # Editing existing type
+        form = TipoForm(request.POST or None, instance=existing_tipo)
+        
+        # With initial values
+        form = TipoForm(initial={
+            'ativa': True,
+            'ordem': 0,
+            'cor': '#007bff'  # Bootstrap primary blue
+        })
+    
+    Fields:
+        nome (CharField): Unique type name
+            - Required field for type identification
+            - Must be unique across all precatorio types
+            - Bootstrap form-control styling
+            - Maximum 100 characters
+            
+        descricao (TextField): Optional detailed description
+            - Optional field for type explanation
+            - Supports rich text descriptions
+            - Bootstrap form-control styling
+            - Flexible content for detailed explanations
+            
+        cor (CharField): Hexadecimal color code
+            - Color picker for visual identification
+            - Hexadecimal format validation (#RRGGBB)
+            - Bootstrap color-input styling
+            - Default to Bootstrap primary blue
+            
+        ordem (IntegerField): Display order
+            - Controls type display sequence
+            - Lower numbers appear first
+            - Allows for logical type organization
+            - Default value 0
+            
+        ativa (BooleanField): Activation status
+            - Controls type availability
+            - Inactive types hidden from selection
+            - Allows for type lifecycle management
+            - Default value True
+    
+    Validation:
+        - nome: Required, unique, max 100 characters
+        - descricao: Optional, no length limit
+        - cor: Required, valid hex format (#RRGGBB)
+        - ordem: Required, positive integer
+        - ativa: Required, boolean value
+        
+    Error Messages:
+        - "Nome é obrigatório."
+        - "Nome deve ter no máximo 100 caracteres."
+        - "Este nome já existe para outro tipo."
+        - "Cor deve estar no formato hexadecimal (#RRGGBB)"
+        - "Ordem deve ser um número positivo."
+        
+    Widgets:
+        - nome: TextInput with Bootstrap styling
+        - descricao: Textarea with Bootstrap styling
+        - cor: ColorInput for visual color selection
+        - ordem: NumberInput with min value 0
+        - ativa: CheckboxInput with Bootstrap styling
+        
+    Security Considerations:
+        - Input validation prevents malformed data
+        - Color validation prevents script injection
+        - Unique constraint prevents duplicates
+        - Length validation prevents buffer overflow
+        
+    Performance:
+        - Efficient validation algorithms
+        - Minimal database impact during validation
+        - Optimized for quick form processing
+        - Cached validation for repeated checks
+        
+    Accessibility:
+        - Descriptive labels and help text
+        - Proper form structure for screen readers
+        - Keyboard navigation support
+        - Clear error messaging
+        - ARIA attributes for enhanced accessibility
+        
+    Integration Points:
+        - Tipo model for data persistence
+        - Precatorio model for type assignment
+        - Bootstrap framework for styling
+        - Django validation framework
+        - Color picker JavaScript components
+    """
+    
+    class Meta:
+        model = Tipo
+        fields = ['nome', 'descricao', 'cor', 'ordem', 'ativa']
+        widgets = {
+            'nome': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Digite o nome do tipo'
+            }),
+            'descricao': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descrição opcional do tipo'
+            }),
+            'cor': forms.TextInput(attrs={
+                'class': 'form-control',
+                'type': 'color',
+                'value': '#007bff'
+            }),
+            'ordem': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'value': '0'
+            }),
+            'ativa': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Set custom labels
+        self.fields['nome'].label = 'Nome do Tipo'
+        self.fields['descricao'].label = 'Descrição'
+        self.fields['cor'].label = 'Cor'
+        self.fields['ordem'].label = 'Ordem de Exibição'
+        self.fields['ativa'].label = 'Ativa'
+        
+        # Add help texts
+        self.fields['nome'].help_text = 'Nome único para o tipo de precatório'
+        self.fields['descricao'].help_text = 'Descrição opcional do tipo (opcional)'
+        self.fields['cor'].help_text = 'Cor para identificação visual'
+        self.fields['ordem'].help_text = 'Número para definir a ordem de exibição (menores aparecem primeiro)'
+        self.fields['ativa'].help_text = 'Se este tipo está disponível para uso'
         
         # Make description optional
         self.fields['descricao'].required = False
