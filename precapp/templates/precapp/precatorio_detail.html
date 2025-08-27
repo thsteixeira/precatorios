@@ -738,14 +738,14 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <div class="small">
+                                        <div class="text-muted" style="font-size: 0.7rem;">
                                             {% if requerimento.fase_ultima_alteracao %}
-                                                <div class="text-muted">
+                                                <div>
                                                     <i class="fas fa-clock me-1"></i>
-                                                    <strong>Fase:</strong> {{ requerimento.fase_ultima_alteracao|date:"d/m/Y H:i" }}
+                                                    <strong>Fase:</strong> {{ requerimento.fase_ultima_alteracao|date:"d/m/y" }}
                                                 </div>
                                                 {% if requerimento.fase_alterada_por %}
-                                                    <div class="text-muted">
+                                                    <div class="mt-1">
                                                         <i class="fas fa-user me-1"></i>
                                                         {{ requerimento.fase_alterada_por }}
                                                     </div>
@@ -754,7 +754,7 @@
                                             {% if requerimento.fase_honorarios_ultima_alteracao %}
                                                 <div class="text-muted mt-1">
                                                     <i class="fas fa-coins me-1"></i>
-                                                    <strong>Hon.:</strong> {{ requerimento.fase_honorarios_ultima_alteracao|date:"d/m/Y H:i" }}
+                                                    <strong>Hon.:</strong> {{ requerimento.fase_honorarios_ultima_alteracao|date:"d/m/y" }}
                                                 </div>
                                                 {% if requerimento.fase_honorarios_alterada_por %}
                                                     <div class="text-muted">
@@ -1180,14 +1180,14 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <div class="small">
+                                        <div class="text-muted" style="font-size: 0.7rem;">
                                             {% if alvara.fase_ultima_alteracao %}
-                                                <div class="text-muted">
+                                                <div>
                                                     <i class="fas fa-clock me-1"></i>
-                                                    <strong>Fase:</strong> {{ alvara.fase_ultima_alteracao|date:"d/m/Y H:i" }}
+                                                    <strong>Fase:</strong> {{ alvara.fase_ultima_alteracao|date:"d/m/y" }}
                                                 </div>
                                                 {% if alvara.fase_alterada_por %}
-                                                    <div class="text-muted">
+                                                    <div class="mt-1">
                                                         <i class="fas fa-user me-1"></i>
                                                         {{ alvara.fase_alterada_por }}
                                                     </div>
@@ -1196,7 +1196,7 @@
                                             {% if alvara.fase_honorarios_ultima_alteracao %}
                                                 <div class="text-muted mt-1">
                                                     <i class="fas fa-coins me-1"></i>
-                                                    <strong>Hon.:</strong> {{ alvara.fase_honorarios_ultima_alteracao|date:"d/m/Y H:i" }}
+                                                    <strong>Hon.:</strong> {{ alvara.fase_honorarios_ultima_alteracao|date:"d/m/y" }}
                                                 </div>
                                                 {% if alvara.fase_honorarios_alterada_por %}
                                                     <div class="text-muted">
