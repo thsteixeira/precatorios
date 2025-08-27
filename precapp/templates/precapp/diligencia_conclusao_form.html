@@ -88,6 +88,12 @@
                             <strong>Criada por:</strong><br>
                             <span class="text-muted">{{ diligencia.criado_por|default:"Não informado" }}</span>
                         </div>
+                        {% if diligencia.responsavel %}
+                        <div class="col-md-6 mt-2">
+                            <strong>Responsável:</strong><br>
+                            <span class="text-muted">{{ diligencia.responsavel.get_full_name|default:diligencia.responsavel.username }}</span>
+                        </div>
+                        {% endif %}
                         {% if diligencia.concluida and diligencia.concluido_por %}
                         <div class="col-md-6 mt-2">
                             <strong>Concluída por:</strong><br>
@@ -178,6 +184,24 @@
                                 {% if form.data_conclusao.errors %}
                                     <div class="invalid-feedback d-block">
                                         {% for error in form.data_conclusao.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Responsável Field -->
+                            <div class="col-md-6">
+                                <label for="{{ form.responsavel.id_for_label }}" class="form-label">
+                                    {{ form.responsavel.label }}
+                                </label>
+                                {{ form.responsavel }}
+                                {% if form.responsavel.help_text %}
+                                    <div class="form-text">{{ form.responsavel.help_text }}</div>
+                                {% endif %}
+                                {% if form.responsavel.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.responsavel.errors %}
                                             {{ error }}
                                         {% endfor %}
                                     </div>

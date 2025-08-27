@@ -104,7 +104,7 @@ def home_view(request):
     recent_precatorios = Precatorio.objects.prefetch_related('clientes').order_by('cnj')[:5]
     recent_alvaras = Alvara.objects.select_related('cliente', 'precatorio').order_by('-id')[:5]
     recent_requerimentos = Requerimento.objects.select_related('cliente', 'precatorio').order_by('-id')[:5]
-    recent_diligencias = Diligencias.objects.select_related('cliente', 'tipo').order_by('-data_criacao')[:5]
+    recent_diligencias = Diligencias.objects.select_related('cliente', 'tipo', 'responsavel').order_by('-data_criacao')[:5]
     
     context = {
         'total_precatorios': total_precatorios,
@@ -697,7 +697,7 @@ def cliente_detail_view(request, cpf):
     associated_precatorios = cliente.precatorios.all().order_by('cnj')
     
     # Get all diligencias for this client
-    diligencias = cliente.diligencias.all().select_related('tipo').order_by('-data_criacao')
+    diligencias = cliente.diligencias.all().select_related('tipo', 'responsavel').order_by('-data_criacao')
     diligencias_pendentes = diligencias.filter(concluida=False)
     diligencias_concluidas = diligencias.filter(concluida=True)
     
@@ -1852,12 +1852,13 @@ def marcar_diligencia_concluida_view(request, cpf, diligencia_id):
 @login_required
 def diligencias_list_view(request):
     """List all diligencias with filtering and search capabilities"""
-    diligencias = Diligencias.objects.select_related('cliente', 'tipo').order_by('-data_criacao')
+    diligencias = Diligencias.objects.select_related('cliente', 'tipo', 'responsavel').order_by('-data_criacao')
     
     # Filter parameters
     status_filter = request.GET.get('status', '')
     urgencia_filter = request.GET.get('urgencia', '')
     tipo_filter = request.GET.get('tipo', '')
+    responsavel_filter = request.GET.get('responsavel', '')
     search_query = request.GET.get('search', '')
     data_inicio_filter = request.GET.get('data_inicio', '')
     data_fim_filter = request.GET.get('data_fim', '')
@@ -1874,12 +1875,18 @@ def diligencias_list_view(request):
     if tipo_filter:
         diligencias = diligencias.filter(tipo_id=tipo_filter)
     
+    if responsavel_filter:
+        diligencias = diligencias.filter(responsavel_id=responsavel_filter)
+    
     if search_query:
         diligencias = diligencias.filter(
             Q(cliente__nome__icontains=search_query) |
             Q(cliente__cpf__icontains=search_query) |
             Q(tipo__nome__icontains=search_query) |
-            Q(descricao__icontains=search_query)
+            Q(descricao__icontains=search_query) |
+            Q(responsavel__username__icontains=search_query) |
+            Q(responsavel__first_name__icontains=search_query) |
+            Q(responsavel__last_name__icontains=search_query)
         )
     
     # Date range filter for data_final (due date)
@@ -1918,6 +1925,13 @@ def diligencias_list_view(request):
     tipos_diligencia = TipoDiligencia.get_ativos()
     urgencia_choices = Diligencias.URGENCIA_CHOICES
     
+    # Get users who are assigned as responsavel (active users who have diligencias assigned)
+    from django.contrib.auth.models import User
+    usuarios_responsaveis = User.objects.filter(
+        is_active=True,
+        diligencias_responsavel__isnull=False
+    ).distinct().order_by('first_name', 'last_name', 'username')
+    
     context = {
         'page_obj': page_obj,
         'diligencias': page_obj,
@@ -1927,9 +1941,11 @@ def diligencias_list_view(request):
         'atrasadas_diligencias': atrasadas_diligencias,
         'tipos_diligencia': tipos_diligencia,
         'urgencia_choices': urgencia_choices,
+        'usuarios_responsaveis': usuarios_responsaveis,
         'status_filter': status_filter,
         'urgencia_filter': urgencia_filter,
         'tipo_filter': tipo_filter,
+        'responsavel_filter': responsavel_filter,
         'search_query': search_query,
         'data_inicio_filter': data_inicio_filter,
         'data_fim_filter': data_fim_filter,

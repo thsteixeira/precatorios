@@ -637,6 +637,420 @@ class DiligenciasViewTest(TestCase):
         with self.assertRaises(Exception):
             response = self.client_app.get(reverse('diligencias_list'))
 
+    # ==================== RESPONSAVEL FIELD TESTS ====================
+    
+    def test_nova_diligencia_with_responsavel(self):
+        """Test creating new diligencia with responsavel field"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Create another user to assign as responsavel
+        responsavel_user = User.objects.create_user(
+            username='responsavel',
+            password='resppass123',
+            first_name='Responsavel',
+            last_name='User'
+        )
+        
+        form_data = {
+            'tipo': self.tipo_diligencia.id,
+            'data_final': (date.today() + timedelta(days=7)).strftime('%d/%m/%Y'),
+            'urgencia': 'alta',
+            'descricao': 'Nova diligência com responsável',
+            'responsavel': responsavel_user.id
+        }
+        
+        response = self.client_app.post(
+            reverse('nova_diligencia', args=[self.cliente.cpf]),
+            data=form_data
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('cliente_detail', args=[self.cliente.cpf]))
+        
+        # Verify diligencia was created with responsavel
+        new_diligencia = Diligencias.objects.get(descricao='Nova diligência com responsável')
+        self.assertEqual(new_diligencia.responsavel, responsavel_user)
+        self.assertEqual(new_diligencia.cliente, self.cliente)
+        self.assertEqual(new_diligencia.criado_por, 'Test User')
+    
+    def test_nova_diligencia_without_responsavel(self):
+        """Test creating new diligencia without responsavel field (optional)"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        form_data = {
+            'tipo': self.tipo_diligencia.id,
+            'data_final': (date.today() + timedelta(days=7)).strftime('%d/%m/%Y'),
+            'urgencia': 'media',
+            'descricao': 'Nova diligência sem responsável'
+            # responsavel field not included (optional)
+        }
+        
+        response = self.client_app.post(
+            reverse('nova_diligencia', args=[self.cliente.cpf]),
+            data=form_data
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('cliente_detail', args=[self.cliente.cpf]))
+        
+        # Verify diligencia was created without responsavel
+        new_diligencia = Diligencias.objects.get(descricao='Nova diligência sem responsável')
+        self.assertIsNone(new_diligencia.responsavel)
+        self.assertEqual(new_diligencia.cliente, self.cliente)
+    
+    def test_editar_diligencia_add_responsavel(self):
+        """Test editing diligencia to add responsavel"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Create responsavel user
+        responsavel_user = User.objects.create_user(
+            username='responsavel2',
+            password='resppass123',
+            first_name='Second',
+            last_name='Responsavel'
+        )
+        
+        # Verify initial state (no responsavel)
+        self.assertIsNone(self.diligencia_ativa.responsavel)
+        
+        form_data = {
+            'tipo': self.diligencia_ativa.tipo.id,
+            'data_final': self.diligencia_ativa.data_final.strftime('%d/%m/%Y'),
+            'urgencia': self.diligencia_ativa.urgencia,
+            'descricao': self.diligencia_ativa.descricao,
+            'responsavel': responsavel_user.id
+        }
+        
+        response = self.client_app.post(
+            reverse('editar_diligencia', args=[self.cliente.cpf, self.diligencia_ativa.id]),
+            data=form_data
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('cliente_detail', args=[self.cliente.cpf]))
+        
+        # Verify responsavel was added
+        self.diligencia_ativa.refresh_from_db()
+        self.assertEqual(self.diligencia_ativa.responsavel, responsavel_user)
+        
+        # Check success message
+        messages = list(get_messages(response.wsgi_request))
+        success_messages = [m for m in messages if m.tags == 'success']
+        self.assertEqual(len(success_messages), 1)
+        self.assertIn('atualizada', str(success_messages[0]))
+    
+    def test_editar_diligencia_change_responsavel(self):
+        """Test editing diligencia to change responsavel"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Create two responsavel users
+        responsavel1 = User.objects.create_user(
+            username='responsavel1',
+            password='resppass123',
+            first_name='First',
+            last_name='Responsavel'
+        )
+        responsavel2 = User.objects.create_user(
+            username='responsavel2',
+            password='resppass123',
+            first_name='Second', 
+            last_name='Responsavel'
+        )
+        
+        # Set initial responsavel
+        self.diligencia_ativa.responsavel = responsavel1
+        self.diligencia_ativa.save()
+        
+        form_data = {
+            'tipo': self.diligencia_ativa.tipo.id,
+            'data_final': self.diligencia_ativa.data_final.strftime('%d/%m/%Y'),
+            'urgencia': self.diligencia_ativa.urgencia,
+            'descricao': self.diligencia_ativa.descricao,
+            'responsavel': responsavel2.id
+        }
+        
+        response = self.client_app.post(
+            reverse('editar_diligencia', args=[self.cliente.cpf, self.diligencia_ativa.id]),
+            data=form_data
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify responsavel was changed
+        self.diligencia_ativa.refresh_from_db()
+        self.assertEqual(self.diligencia_ativa.responsavel, responsavel2)
+        self.assertNotEqual(self.diligencia_ativa.responsavel, responsavel1)
+    
+    def test_editar_diligencia_remove_responsavel(self):
+        """Test editing diligencia to remove responsavel"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Create and assign responsavel
+        responsavel_user = User.objects.create_user(
+            username='responsavel3',
+            password='resppass123',
+            first_name='Third',
+            last_name='Responsavel'
+        )
+        self.diligencia_ativa.responsavel = responsavel_user
+        self.diligencia_ativa.save()
+        
+        # Verify initial state
+        self.assertEqual(self.diligencia_ativa.responsavel, responsavel_user)
+        
+        form_data = {
+            'tipo': self.diligencia_ativa.tipo.id,
+            'data_final': self.diligencia_ativa.data_final.strftime('%d/%m/%Y'),
+            'urgencia': self.diligencia_ativa.urgencia,
+            'descricao': self.diligencia_ativa.descricao
+            # responsavel field not included (remove assignment)
+        }
+        
+        response = self.client_app.post(
+            reverse('editar_diligencia', args=[self.cliente.cpf, self.diligencia_ativa.id]),
+            data=form_data
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify responsavel was removed
+        self.diligencia_ativa.refresh_from_db()
+        self.assertIsNone(self.diligencia_ativa.responsavel)
+    
+    def test_diligencias_list_filter_by_responsavel(self):
+        """Test filtering diligencias by responsavel in list view"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Create responsavel users
+        responsavel1 = User.objects.create_user(
+            username='resp1',
+            password='resppass123',
+            first_name='Resp',
+            last_name='One'
+        )
+        responsavel2 = User.objects.create_user(
+            username='resp2', 
+            password='resppass123',
+            first_name='Resp',
+            last_name='Two'
+        )
+        
+        # Assign responsavel to existing diligencias
+        self.diligencia_ativa.responsavel = responsavel1
+        self.diligencia_ativa.save()
+        
+        self.diligencia_atrasada.responsavel = responsavel2
+        self.diligencia_atrasada.save()
+        
+        # Test filter by responsavel1
+        response = self.client_app.get(
+            reverse('diligencias_list') + f'?responsavel={responsavel1.id}'
+        )
+        
+        diligencias = response.context['diligencias']
+        self.assertEqual(len(diligencias), 1)
+        self.assertEqual(diligencias[0].responsavel, responsavel1)
+        
+        # Test filter by responsavel2
+        response = self.client_app.get(
+            reverse('diligencias_list') + f'?responsavel={responsavel2.id}'
+        )
+        
+        diligencias = response.context['diligencias']
+        self.assertEqual(len(diligencias), 1)
+        self.assertEqual(diligencias[0].responsavel, responsavel2)
+    
+    def test_diligencias_list_search_by_responsavel_name(self):
+        """Test searching diligencias by responsavel name"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Create responsavel user with distinctive name
+        responsavel_user = User.objects.create_user(
+            username='uniqueresp',
+            password='resppass123',
+            first_name='UniqueResp',
+            last_name='UserTest'
+        )
+        
+        # Assign responsavel to diligencia
+        self.diligencia_ativa.responsavel = responsavel_user
+        self.diligencia_ativa.save()
+        
+        # Search by responsavel first name
+        response = self.client_app.get(
+            reverse('diligencias_list') + '?search=UniqueResp'
+        )
+        
+        diligencias = response.context['diligencias']
+        self.assertEqual(len(diligencias), 1)
+        self.assertEqual(diligencias[0].responsavel, responsavel_user)
+        
+        # Search by responsavel last name
+        response = self.client_app.get(
+            reverse('diligencias_list') + '?search=UserTest'
+        )
+        
+        diligencias = response.context['diligencias']
+        self.assertEqual(len(diligencias), 1)
+        self.assertEqual(diligencias[0].responsavel, responsavel_user)
+    
+    def test_nova_diligencia_form_responsavel_queryset(self):
+        """Test that nova diligencia form shows all users in responsavel field"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Create additional users
+        User.objects.create_user(username='user1', password='pass123', first_name='User', last_name='One')
+        User.objects.create_user(username='user2', password='pass123', first_name='User', last_name='Two')
+        
+        response = self.client_app.get(reverse('nova_diligencia', args=[self.cliente.cpf]))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('form', response.context)
+        
+        # Check that responsavel field is in the form
+        form = response.context['form']
+        self.assertIn('responsavel', form.fields)
+        
+        # Check that all users are available in queryset
+        total_users = User.objects.count()
+        self.assertEqual(total_users, 3)  # testuser + user1 + user2
+    
+    def test_editar_diligencia_form_responsavel_current_value(self):
+        """Test that editar diligencia form shows current responsavel value"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Assign responsavel to diligencia
+        responsavel_user = User.objects.create_user(
+            username='currentresp',
+            password='resppass123',
+            first_name='Current',
+            last_name='Responsavel'
+        )
+        self.diligencia_ativa.responsavel = responsavel_user
+        self.diligencia_ativa.save()
+        
+        response = self.client_app.get(
+            reverse('editar_diligencia', args=[self.cliente.cpf, self.diligencia_ativa.id])
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('form', response.context)
+        
+        # Check that current responsavel is selected in form
+        form = response.context['form']
+        self.assertEqual(form.initial.get('responsavel'), responsavel_user.id)
+    
+    def test_responsavel_field_user_deletion_handling(self):
+        """Test handling when assigned responsavel user is deleted"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Create responsavel user and assign to diligencia
+        responsavel_user = User.objects.create_user(
+            username='todelete',
+            password='resppass123',
+            first_name='ToDelete',
+            last_name='User'
+        )
+        self.diligencia_ativa.responsavel = responsavel_user
+        self.diligencia_ativa.save()
+        
+        # Verify initial assignment
+        self.assertEqual(self.diligencia_ativa.responsavel, responsavel_user)
+        
+        # Delete the user (should trigger SET_NULL)
+        responsavel_user.delete()
+        
+        # Verify diligencia responsavel was set to NULL
+        self.diligencia_ativa.refresh_from_db()
+        self.assertIsNone(self.diligencia_ativa.responsavel)
+        
+        # Verify diligencia still exists and other fields intact
+        self.assertEqual(self.diligencia_ativa.cliente, self.cliente)
+        self.assertEqual(self.diligencia_ativa.tipo, self.tipo_diligencia)
+    
+    def test_marcar_diligencia_concluida_with_responsavel(self):
+        """Test marking diligencia as completed when it has responsavel"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Assign responsavel to diligencia
+        responsavel_user = User.objects.create_user(
+            username='conclusaoresp',
+            password='resppass123',
+            first_name='Conclusao',
+            last_name='Responsavel'
+        )
+        self.diligencia_ativa.responsavel = responsavel_user
+        self.diligencia_ativa.save()
+        
+        # Verify initial state
+        self.assertFalse(self.diligencia_ativa.concluida)
+        self.assertEqual(self.diligencia_ativa.responsavel, responsavel_user)
+        
+        form_data = {
+            'concluida': True,
+            'descricao': self.diligencia_ativa.descricao,
+            'responsavel': responsavel_user.id  # Include responsavel to preserve it
+        }
+        
+        response = self.client_app.post(
+            reverse('marcar_diligencia_concluida', args=[self.cliente.cpf, self.diligencia_ativa.id]),
+            data=form_data
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify diligencia was marked as completed and responsavel preserved
+        self.diligencia_ativa.refresh_from_db()
+        self.assertTrue(self.diligencia_ativa.concluida)
+        self.assertEqual(self.diligencia_ativa.responsavel, responsavel_user)  # Should be preserved
+        self.assertEqual(self.diligencia_ativa.concluido_por, 'Test User')
+    
+    def test_diligencias_list_combined_filters_with_responsavel(self):
+        """Test combining responsavel filter with other filters"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Create responsavel user
+        responsavel_user = User.objects.create_user(
+            username='combinedresp',
+            password='resppass123',
+            first_name='Combined',
+            last_name='Filter'
+        )
+        
+        # Assign responsavel to pending diligencia with specific urgencia
+        self.diligencia_ativa.responsavel = responsavel_user
+        self.diligencia_ativa.urgencia = 'alta'
+        self.diligencia_ativa.save()
+        
+        # Test combined filter: responsavel + status + urgencia
+        response = self.client_app.get(
+            reverse('diligencias_list') + 
+            f'?responsavel={responsavel_user.id}&status=pendente&urgencia=alta'
+        )
+        
+        diligencias = response.context['diligencias']
+        self.assertEqual(len(diligencias), 1)
+        diligencia = diligencias[0]
+        self.assertEqual(diligencia.responsavel, responsavel_user)
+        self.assertFalse(diligencia.concluida)  # pendente
+        self.assertEqual(diligencia.urgencia, 'alta')
+    
+    def test_responsavel_field_permissions_view_access(self):
+        """Test that responsavel field is visible and accessible in views"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Test nova diligencia view
+        response = self.client_app.get(reverse('nova_diligencia', args=[self.cliente.cpf]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'responsavel')  # Field should be in template
+        
+        # Test editar diligencia view
+        response = self.client_app.get(
+            reverse('editar_diligencia', args=[self.cliente.cpf, self.diligencia_ativa.id])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'responsavel')  # Field should be in template
+
 
 class TipoDiligenciaViewTest(TestCase):
     """Comprehensive test cases for TipoDiligencia views"""

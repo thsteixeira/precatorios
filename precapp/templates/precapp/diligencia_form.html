@@ -140,6 +140,24 @@
                                 {% endif %}
                             </div>
 
+                            <!-- Responsável Field -->
+                            <div class="col-md-6">
+                                <label for="{{ form.responsavel.id_for_label }}" class="form-label">
+                                    {{ form.responsavel.label }}
+                                </label>
+                                {{ form.responsavel }}
+                                {% if form.responsavel.help_text %}
+                                    <div class="form-text">{{ form.responsavel.help_text }}</div>
+                                {% endif %}
+                                {% if form.responsavel.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.responsavel.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
                             <!-- Auto-filled Creator Info (Display Only) -->
                             {% if action == 'edit' and diligencia %}
                                 <div class="col-md-6">
@@ -261,6 +279,15 @@
                             <p class="small text-muted">
                                 Configure a urgência adequada para priorizar 
                                 as diligências conforme necessário.
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-secondary">
+                                <i class="fas fa-user-check me-1"></i>Responsável
+                            </h6>
+                            <p class="small text-muted">
+                                Atribua um usuário responsável pela conclusão da diligência. 
+                                Este campo é opcional e não impede que outros usuários concluam a tarefa.
                             </p>
                         </div>
                         <div class="col-md-6">

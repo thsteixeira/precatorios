@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User
 from datetime import datetime
 
 # Create your models here.
@@ -638,6 +639,7 @@ class Diligencias(models.Model):
         data_final (DateField): Deadline for completing the diligence
         urgencia (CharField): Urgency level (baixa, media, alta)
         criado_por (CharField): Name of user who created the diligence (max 200 chars)
+        responsavel (ForeignKey): User assigned to complete the diligence (optional)
         descricao (TextField): Optional detailed description of the diligence
         concluida (BooleanField): Whether the diligence has been completed
         data_criacao (DateTimeField): Timestamp when diligence was created
@@ -674,6 +676,7 @@ class Diligencias(models.Model):
             data_final=date.today() + timedelta(days=7),
             urgencia='alta',
             criado_por='João Admin',
+            responsavel=user_instance,
             descricao='Solicitar certidão de nascimento atualizada'
         )
         
@@ -719,6 +722,14 @@ class Diligencias(models.Model):
     criado_por = models.CharField(
         max_length=200,
         help_text="Nome do usuário que criou a diligência"
+    )
+    responsavel = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='diligencias_responsavel',
+        help_text="Usuário responsável por concluir a diligência"
     )
     descricao = models.TextField(
         blank=True,

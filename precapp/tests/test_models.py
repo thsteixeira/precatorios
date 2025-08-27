@@ -34,6 +34,7 @@ Testing Patterns:
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.contrib.auth.models import User
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -2174,3 +2175,435 @@ class DiligenciasModelTest(TestCase):
         diligencia = Diligencias.objects.create(**self.diligencia_data)
         self.assertEqual(diligencia.tipo, self.tipo_diligencia)
         self.assertEqual(diligencia.tipo.nome, 'Documentação')
+    
+    def test_diligencia_responsavel_field_optional(self):
+        """Test that responsavel field is optional (null=True, blank=True)"""
+        # Create diligencia without responsavel (should be allowed)
+        diligencia = Diligencias.objects.create(**self.diligencia_data)
+        self.assertIsNone(diligencia.responsavel)
+        
+        # Verify the diligencia can be saved and retrieved
+        diligencia.save()
+        diligencia.refresh_from_db()
+        self.assertIsNone(diligencia.responsavel)
+    
+    def test_diligencia_responsavel_with_user(self):
+        """Test creating diligencia with responsavel User"""
+        from django.contrib.auth.models import User
+        
+        # Create a test user
+        user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123',
+            first_name='Test',
+            last_name='User'
+        )
+        
+        # Create diligencia with responsavel
+        data_with_responsavel = self.diligencia_data.copy()
+        data_with_responsavel['responsavel'] = user
+        
+        diligencia = Diligencias.objects.create(**data_with_responsavel)
+        
+        # Verify the relationship
+        self.assertEqual(diligencia.responsavel, user)
+        self.assertEqual(diligencia.responsavel.username, 'testuser')
+        self.assertEqual(diligencia.responsavel.first_name, 'Test')
+        self.assertEqual(diligencia.responsavel.last_name, 'User')
+        self.assertEqual(diligencia.responsavel.email, 'test@example.com')
+    
+    def test_diligencia_responsavel_set_null_behavior(self):
+        """Test SET_NULL behavior when User is deleted"""
+        from django.contrib.auth.models import User
+        
+        # Create a test user
+        user = User.objects.create_user(
+            username='tempuser',
+            email='temp@example.com',
+            password='temppass123'
+        )
+        
+        # Create diligencia with responsavel
+        data_with_responsavel = self.diligencia_data.copy()
+        data_with_responsavel['responsavel'] = user
+        diligencia = Diligencias.objects.create(**data_with_responsavel)
+        
+        # Verify user is assigned
+        self.assertEqual(diligencia.responsavel, user)
+        
+        # Delete the user
+        user_id = user.id
+        user.delete()
+        
+        # Refresh diligencia and verify responsavel is set to NULL
+        diligencia.refresh_from_db()
+        self.assertIsNone(diligencia.responsavel)
+        
+        # Verify diligencia still exists
+        self.assertTrue(Diligencias.objects.filter(id=diligencia.id).exists())
+    
+    def test_diligencia_responsavel_related_name(self):
+        """Test the related_name 'diligencias_responsavel' functionality"""
+        from django.contrib.auth.models import User
+        
+        # Create test users
+        user1 = User.objects.create_user(username='user1', password='pass123')
+        user2 = User.objects.create_user(username='user2', password='pass123')
+        
+        # Create another cliente for variety
+        cliente2 = Cliente.objects.create(
+            cpf='98765432100',
+            nome='Maria Santos',
+            nascimento=date(1990, 3, 20),
+            prioridade=True
+        )
+        
+        # Create diligencias with different responsaveis
+        data1 = self.diligencia_data.copy()
+        data1['responsavel'] = user1
+        diligencia1 = Diligencias.objects.create(**data1)
+        
+        data2 = self.diligencia_data.copy()
+        data2['cliente'] = cliente2
+        data2['responsavel'] = user1
+        data2['data_final'] = date.today() + timedelta(days=10)
+        diligencia2 = Diligencias.objects.create(**data2)
+        
+        data3 = self.diligencia_data.copy()
+        data3['cliente'] = cliente2
+        data3['responsavel'] = user2
+        data3['data_final'] = date.today() + timedelta(days=14)
+        diligencia3 = Diligencias.objects.create(**data3)
+        
+        # Test related_name access from user to diligencias
+        user1_diligencias = user1.diligencias_responsavel.all()
+        self.assertIn(diligencia1, user1_diligencias)
+        self.assertIn(diligencia2, user1_diligencias)
+        self.assertNotIn(diligencia3, user1_diligencias)
+        self.assertEqual(user1_diligencias.count(), 2)
+        
+        user2_diligencias = user2.diligencias_responsavel.all()
+        self.assertIn(diligencia3, user2_diligencias)
+        self.assertNotIn(diligencia1, user2_diligencias)
+        self.assertNotIn(diligencia2, user2_diligencias)
+        self.assertEqual(user2_diligencias.count(), 1)
+    
+    def test_diligencia_responsavel_filtering(self):
+        """Test filtering diligencias by responsavel User"""
+        from django.contrib.auth.models import User
+        
+        # Create test users
+        manager = User.objects.create_user(
+            username='manager',
+            first_name='Manager',
+            last_name='Silva',
+            email='manager@company.com',
+            password='managerpass123'
+        )
+        
+        analyst = User.objects.create_user(
+            username='analyst',
+            first_name='Analyst',
+            last_name='Santos',
+            email='analyst@company.com',
+            password='analystpass123'
+        )
+        
+        # Create diligencias with different responsaveis
+        manager_diligencia = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=date.today() + timedelta(days=5),
+            urgencia='alta',
+            criado_por='System',
+            responsavel=manager,
+            descricao='Manager task'
+        )
+        
+        analyst_diligencia = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=date.today() + timedelta(days=10),
+            urgencia='media',
+            criado_por='System',
+            responsavel=analyst,
+            descricao='Analyst task'
+        )
+        
+        unassigned_diligencia = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_diligencia,
+            data_final=date.today() + timedelta(days=15),
+            urgencia='baixa',
+            criado_por='System',
+            responsavel=None,
+            descricao='Unassigned task'
+        )
+        
+        # Test filtering by specific responsavel
+        manager_tasks = Diligencias.objects.filter(responsavel=manager)
+        self.assertIn(manager_diligencia, manager_tasks)
+        self.assertNotIn(analyst_diligencia, manager_tasks)
+        self.assertNotIn(unassigned_diligencia, manager_tasks)
+        self.assertEqual(manager_tasks.count(), 1)
+        
+        analyst_tasks = Diligencias.objects.filter(responsavel=analyst)
+        self.assertIn(analyst_diligencia, analyst_tasks)
+        self.assertNotIn(manager_diligencia, analyst_tasks)
+        self.assertNotIn(unassigned_diligencia, analyst_tasks)
+        self.assertEqual(analyst_tasks.count(), 1)
+        
+        # Test filtering by null responsavel (unassigned tasks)
+        unassigned_tasks = Diligencias.objects.filter(responsavel__isnull=True)
+        self.assertIn(unassigned_diligencia, unassigned_tasks)
+        self.assertNotIn(manager_diligencia, unassigned_tasks)
+        self.assertNotIn(analyst_diligencia, unassigned_tasks)
+        
+        # Test filtering by responsavel attributes
+        silva_tasks = Diligencias.objects.filter(responsavel__last_name='Silva')
+        self.assertIn(manager_diligencia, silva_tasks)
+        self.assertNotIn(analyst_diligencia, silva_tasks)
+        
+        # Test filtering by username
+        manager_by_username = Diligencias.objects.filter(responsavel__username='manager')
+        self.assertIn(manager_diligencia, manager_by_username)
+        self.assertEqual(manager_by_username.count(), 1)
+    
+    def test_diligencia_responsavel_model_validation(self):
+        """Test model validation with responsavel field"""
+        from django.contrib.auth.models import User
+        
+        # Create a test user
+        user = User.objects.create_user(
+            username='validator',
+            password='validpass123'
+        )
+        
+        # Test valid creation with responsavel
+        data_with_responsavel = self.diligencia_data.copy()
+        data_with_responsavel['responsavel'] = user
+        
+        diligencia = Diligencias(**data_with_responsavel)
+        diligencia.full_clean()  # Should not raise ValidationError
+        diligencia.save()
+        
+        # Verify the relationship
+        self.assertEqual(diligencia.responsavel, user)
+        
+        # Test valid creation without responsavel
+        diligencia_no_responsavel = Diligencias(**self.diligencia_data)
+        diligencia_no_responsavel.full_clean()  # Should not raise ValidationError
+        diligencia_no_responsavel.save()
+        
+        # Verify no responsavel
+        self.assertIsNone(diligencia_no_responsavel.responsavel)
+    
+    def test_diligencia_responsavel_str_representation_update(self):
+        """Test that __str__ method works correctly with responsavel field"""
+        from django.contrib.auth.models import User
+        
+        # Create test user
+        user = User.objects.create_user(
+            username='strtestuser',
+            first_name='String',
+            last_name='Test',
+            password='testpass123'
+        )
+        
+        # Test string representation without responsavel
+        diligencia_no_responsavel = Diligencias.objects.create(**self.diligencia_data)
+        expected_str_no_responsavel = f"{self.tipo_diligencia.nome} - {self.cliente.nome} (Pendente)"
+        self.assertEqual(str(diligencia_no_responsavel), expected_str_no_responsavel)
+        
+        # Test string representation with responsavel
+        data_with_responsavel = self.diligencia_data.copy()
+        data_with_responsavel['responsavel'] = user
+        data_with_responsavel['data_final'] = date.today() + timedelta(days=20)  # Different deadline
+        
+        diligencia_with_responsavel = Diligencias.objects.create(**data_with_responsavel)
+        expected_str_with_responsavel = f"{self.tipo_diligencia.nome} - {self.cliente.nome} (Pendente)"
+        self.assertEqual(str(diligencia_with_responsavel), expected_str_with_responsavel)
+        
+        # Test string representation with concluded diligencia and responsavel
+        diligencia_with_responsavel.concluida = True
+        diligencia_with_responsavel.save()
+        expected_str_concluded = f"{self.tipo_diligencia.nome} - {self.cliente.nome} (Concluída)"
+        self.assertEqual(str(diligencia_with_responsavel), expected_str_concluded)
+    
+    def test_diligencia_responsavel_select_related_optimization(self):
+        """Test that responsavel can be efficiently loaded with select_related"""
+        from django.contrib.auth.models import User
+        
+        # Create test users
+        users = []
+        for i in range(3):
+            user = User.objects.create_user(
+                username=f'selectuser{i}',
+                first_name=f'Select{i}',
+                last_name=f'User{i}',
+                password='selectpass123'
+            )
+            users.append(user)
+        
+        # Create diligencias with different responsaveis
+        diligencias = []
+        for i, user in enumerate(users):
+            data = self.diligencia_data.copy()
+            data['responsavel'] = user
+            data['data_final'] = date.today() + timedelta(days=5 + i)
+            data['descricao'] = f'Task {i} for {user.username}'
+            diligencia = Diligencias.objects.create(**data)
+            diligencias.append(diligencia)
+        
+        # Test select_related optimization
+        with self.assertNumQueries(1):  # Should be 1 query with select_related
+            diligencias_optimized = Diligencias.objects.select_related('responsavel').filter(
+                responsavel__isnull=False
+            )
+            
+            # Access responsavel fields (should not cause additional queries)
+            for diligencia in diligencias_optimized:
+                username = diligencia.responsavel.username
+                first_name = diligencia.responsavel.first_name
+                last_name = diligencia.responsavel.last_name
+                # These accesses should not trigger additional database queries
+                self.assertIsNotNone(username)
+                self.assertIsNotNone(first_name)
+                self.assertIsNotNone(last_name)
+    
+    def test_diligencia_responsavel_integration_scenarios(self):
+        """Test integration scenarios with responsavel field"""
+        from django.contrib.auth.models import User
+        
+        # Create multiple users for different roles
+        supervisor = User.objects.create_user(
+            username='supervisor',
+            first_name='Super',
+            last_name='Visor',
+            email='supervisor@company.com',
+            password='supervisorpass'
+        )
+        
+        coordinator = User.objects.create_user(
+            username='coordinator',
+            first_name='Coord',
+            last_name='Inator',
+            email='coordinator@company.com',
+            password='coordinatorpass'
+        )
+        
+        # Create multiple clientes
+        cliente2 = Cliente.objects.create(
+            cpf='11122233344',
+            nome='Ana Costa',
+            nascimento=date(1975, 8, 12),
+            prioridade=True
+        )
+        
+        # Create multiple tipo_diligencias
+        tipo_contato = TipoDiligencia.objects.create(
+            nome='Contato Cliente',
+            cor='#28a745'
+        )
+        
+        tipo_analise = TipoDiligencia.objects.create(
+            nome='Análise Processual',
+            cor='#ffc107'
+        )
+        
+        # Create various diligencias simulating real-world scenarios
+        scenarios = [
+            # High priority task assigned to supervisor
+            {
+                'cliente': self.cliente,
+                'tipo': self.tipo_diligencia,
+                'responsavel': supervisor,
+                'urgencia': 'alta',
+                'data_final': date.today() + timedelta(days=2),
+                'descricao': 'Urgent document review'
+            },
+            # Medium priority task assigned to coordinator  
+            {
+                'cliente': cliente2,
+                'tipo': tipo_contato,
+                'responsavel': coordinator,
+                'urgencia': 'media',
+                'data_final': date.today() + timedelta(days=7),
+                'descricao': 'Client contact for information'
+            },
+            # Unassigned task
+            {
+                'cliente': cliente2,
+                'tipo': tipo_analise,
+                'responsavel': None,
+                'urgencia': 'baixa',
+                'data_final': date.today() + timedelta(days=14),
+                'descricao': 'Process analysis pending assignment'
+            },
+            # Overdue task assigned to supervisor
+            {
+                'cliente': self.cliente,
+                'tipo': tipo_analise,
+                'responsavel': supervisor,
+                'urgencia': 'media',
+                'data_final': date.today() - timedelta(days=3),
+                'descricao': 'Overdue analysis task'
+            }
+        ]
+        
+        created_diligencias = []
+        for scenario in scenarios:
+            scenario['criado_por'] = 'Test System'
+            diligencia = Diligencias.objects.create(**scenario)
+            created_diligencias.append(diligencia)
+        
+        # Test various filtering scenarios
+        
+        # 1. Get all tasks assigned to supervisor
+        supervisor_tasks = Diligencias.objects.filter(responsavel=supervisor)
+        self.assertEqual(supervisor_tasks.count(), 2)
+        
+        # 2. Get unassigned tasks
+        unassigned_tasks = Diligencias.objects.filter(responsavel__isnull=True)
+        self.assertEqual(unassigned_tasks.count(), 1)
+        
+        # 3. Get high priority tasks with assigned responsavel
+        high_priority_assigned = Diligencias.objects.filter(
+            urgencia='alta',
+            responsavel__isnull=False
+        )
+        self.assertEqual(high_priority_assigned.count(), 1)
+        
+        # 4. Get overdue tasks by responsavel
+        overdue_tasks = Diligencias.objects.filter(
+            data_final__lt=date.today(),
+            concluida=False,
+            responsavel=supervisor
+        )
+        self.assertEqual(overdue_tasks.count(), 1)
+        
+        # 5. Get tasks by user email domain
+        company_tasks = Diligencias.objects.filter(
+            responsavel__email__endswith='@company.com'
+        )
+        self.assertEqual(company_tasks.count(), 3)  # supervisor + coordinator tasks
+        
+        # 6. Test workload distribution
+        supervisor_workload = supervisor.diligencias_responsavel.filter(concluida=False).count()
+        coordinator_workload = coordinator.diligencias_responsavel.filter(concluida=False).count()
+        
+        self.assertEqual(supervisor_workload, 2)
+        self.assertEqual(coordinator_workload, 1)
+        
+        # 7. Test reassignment scenario
+        unassigned_task = unassigned_tasks.first()
+        unassigned_task.responsavel = coordinator
+        unassigned_task.save()
+        
+        # Verify reassignment
+        coordinator_new_workload = coordinator.diligencias_responsavel.filter(concluida=False).count()
+        self.assertEqual(coordinator_new_workload, 2)
+        
+        final_unassigned = Diligencias.objects.filter(responsavel__isnull=True).count()
+        self.assertEqual(final_unassigned, 0)

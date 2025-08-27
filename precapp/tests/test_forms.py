@@ -2243,87 +2243,6 @@ class RequerimentoFormComprehensiveTest(TestCase):
             self.assertNotIn('encoding', error_msg.lower())
 
 
-# Keep the original test class for backward compatibility
-class RequerimentoFormTest(RequerimentoFormComprehensiveTest):
-    """Legacy test class - inherits all tests from comprehensive version"""
-    pass
-
-
-class PrecatorioFormTest(TestCase):
-    """
-    Comprehensive test suite for PrecatorioForm functionality and validation.
-    
-    This test class provides thorough coverage of the PrecatorioForm, which is
-    the core form for creating and managing precatorio records in the system.
-    The tests validate CNJ format validation, financial calculations, percentage
-    validations, date handling, and comprehensive business rule enforcement.
-    
-    Test Coverage:
-        - CNJ number format validation and uniqueness
-        - Financial value formatting and validation
-        - Percentage field validation and constraints
-        - Date field handling and validation
-        - Enum field choices and validation
-        - Form initialization and field configuration
-        - Error handling and validation messages
-        - Data persistence and model integration
-        - Edge cases and boundary conditions
-        
-    Key Test Areas:
-        - CNJ Validation: Tests CNJ format compliance and uniqueness
-        - Financial Fields: Tests currency formatting for all monetary fields
-        - Percentage Validation: Tests percentage constraints and formatting
-        - Date Handling: Tests Brazilian date format compliance
-        - Enum Validation: Tests status choices for various fields
-        - Business Rules: Tests complex validation logic
-        - Error Scenarios: Tests validation failures and error messages
-        
-    Business Logic Testing:
-        - CNJ must follow Brazilian court number format standards
-        - Financial values must be positive and properly formatted
-        - Percentages must be within valid ranges (0-100%)
-        - Dates must be in Brazilian format and valid
-        - Status fields must use predefined enum values
-        - Duplicate CNJ numbers must be prevented
-        
-    Setup Dependencies:
-        - Valid CNJ number following Brazilian format
-        - Proper financial value formatting
-        - Valid percentage values within constraints
-        - Brazilian date format compliance
-        - Predefined enum values for status fields
-    """
-    
-    def setUp(self):
-        """Set up test form data"""
-        self.valid_form_data = {
-            'cnj': '1234567-89.2023.8.26.0100',
-            'orcamento': '2023',
-            'origem': '1234567-89.2022.8.26.0001',
-            'valor_de_face': '100000.00',
-            'ultima_atualizacao': '100000.00',
-            'data_ultima_atualizacao': '2023-01-01',
-            'percentual_contratuais_assinado': '10.0',
-            'percentual_contratuais_apartado': '5.0',
-            'percentual_sucumbenciais': '20.0',
-            'credito_principal': 'pendente',
-            'honorarios_contratuais': 'pendente',
-            'honorarios_sucumbenciais': 'pendente'
-        }
-    
-    def test_valid_form(self):
-        """Test form with all valid data"""
-        form = PrecatorioForm(data=self.valid_form_data)
-        self.assertTrue(form.is_valid())
-    
-    def test_form_save(self):
-        """Test form saving creates the object correctly"""
-        form = PrecatorioForm(data=self.valid_form_data)
-        self.assertTrue(form.is_valid())
-        precatorio = form.save()
-        self.assertEqual(precatorio.cnj, '1234567-89.2023.8.26.0100')
-
-
 class PrecatorioFormComprehensiveTest(TestCase):
     """
     Comprehensive test suite for PrecatorioForm class.
@@ -3324,6 +3243,237 @@ class DiligenciasFormTest(TestCase):
         data.pop('descricao')
         form = DiligenciasForm(data=data)
         self.assertTrue(form.is_valid())
+    
+    def test_form_responsavel_field_optional(self):
+        """Test that responsavel field is optional"""
+        # Test form without responsavel (should be valid)
+        form = DiligenciasForm(data=self.valid_form_data)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        # Save and verify responsavel is None
+        diligencia = form.save(commit=False)
+        diligencia.cliente = self.cliente
+        diligencia.criado_por = 'Test User'
+        diligencia.save()
+        self.assertIsNone(diligencia.responsavel)
+    
+    def test_form_responsavel_with_user(self):
+        """Test that responsavel field accepts User instances"""
+        from django.contrib.auth.models import User
+        
+        # Create test user
+        user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123',
+            first_name='Test',
+            last_name='User'
+        )
+        
+        # Add responsavel to form data
+        data_with_responsavel = self.valid_form_data.copy()
+        data_with_responsavel['responsavel'] = user.id
+        
+        form = DiligenciasForm(data=data_with_responsavel)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        # Save and verify responsavel assignment
+        diligencia = form.save(commit=False)
+        diligencia.cliente = self.cliente
+        diligencia.criado_por = 'Test User'
+        diligencia.save()
+        
+        self.assertEqual(diligencia.responsavel, user)
+        self.assertEqual(diligencia.responsavel.username, 'testuser')
+    
+    def test_form_responsavel_field_configuration(self):
+        """Test responsavel field widget and configuration"""
+        form = DiligenciasForm()
+        responsavel_field = form.fields['responsavel']
+        
+        # Check field properties
+        self.assertFalse(responsavel_field.required)  # Should be optional
+        self.assertEqual(responsavel_field.label, 'Responsável')
+        
+        # Check widget is Select
+        self.assertEqual(responsavel_field.widget.__class__.__name__, 'Select')
+        
+        # Check widget attributes
+        widget_attrs = responsavel_field.widget.attrs
+        self.assertEqual(widget_attrs['class'], 'form-control')
+        
+        # Check empty label
+        self.assertEqual(responsavel_field.empty_label, 'Selecione o responsável (opcional)')
+    
+    def test_form_responsavel_queryset_active_users(self):
+        """Test that responsavel field shows only active users"""
+        from django.contrib.auth.models import User
+        
+        # Create active and inactive users
+        active_user = User.objects.create_user(
+            username='activeuser',
+            email='active@test.com',
+            password='activepass123',
+            is_active=True
+        )
+        
+        inactive_user = User.objects.create_user(
+            username='inactiveuser',
+            email='inactive@test.com',
+            password='inactivepass123',
+            is_active=False
+        )
+        
+        form = DiligenciasForm()
+        responsavel_queryset = form.fields['responsavel'].queryset
+        
+        # Check that only active users are in queryset
+        self.assertIn(active_user, responsavel_queryset)
+        self.assertNotIn(inactive_user, responsavel_queryset)
+    
+    def test_form_responsavel_ordering(self):
+        """Test that responsavel field users are ordered by first_name, username"""
+        from django.contrib.auth.models import User
+        
+        # Create users with different names
+        user_z = User.objects.create_user(username='zuser', first_name='Zed', is_active=True)
+        user_a = User.objects.create_user(username='auser', first_name='Alice', is_active=True)
+        user_b = User.objects.create_user(username='buser', first_name='Bob', is_active=True)
+        user_no_name = User.objects.create_user(username='noname', first_name='', is_active=True)
+        
+        form = DiligenciasForm()
+        responsavel_queryset = list(form.fields['responsavel'].queryset)
+        
+        # Find positions of our test users
+        positions = {}
+        for i, user in enumerate(responsavel_queryset):
+            if user in [user_a, user_b, user_z, user_no_name]:
+                positions[user] = i
+        
+        # Users with first names should be ordered alphabetically by first_name
+        if user_a in positions and user_b in positions:
+            self.assertLess(positions[user_a], positions[user_b])
+        
+        if user_b in positions and user_z in positions:
+            self.assertLess(positions[user_b], positions[user_z])
+    
+    def test_form_responsavel_invalid_user_id(self):
+        """Test form with invalid user ID for responsavel"""
+        data_invalid_responsavel = self.valid_form_data.copy()
+        data_invalid_responsavel['responsavel'] = 99999  # Non-existent user ID
+        
+        form = DiligenciasForm(data=data_invalid_responsavel)
+        self.assertFalse(form.is_valid())
+        self.assertIn('responsavel', form.errors)
+    
+    def test_form_responsavel_empty_string(self):
+        """Test form with empty string for responsavel (should be treated as None)"""
+        data_empty_responsavel = self.valid_form_data.copy()
+        data_empty_responsavel['responsavel'] = ''
+        
+        form = DiligenciasForm(data=data_empty_responsavel)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        # Save and verify responsavel is None
+        diligencia = form.save(commit=False)
+        diligencia.cliente = self.cliente
+        diligencia.criado_por = 'Test User'
+        diligencia.save()
+        self.assertIsNone(diligencia.responsavel)
+    
+    def test_form_responsavel_help_text(self):
+        """Test responsavel field help text"""
+        form = DiligenciasForm()
+        responsavel_field = form.fields['responsavel']
+        
+        self.assertIn('usuário responsável', responsavel_field.help_text.lower())
+        self.assertIn('opcional', responsavel_field.help_text.lower())
+    
+    def test_form_responsavel_integration_with_save(self):
+        """Test complete form save workflow with responsavel"""
+        from django.contrib.auth.models import User
+        
+        # Create multiple users
+        manager = User.objects.create_user(
+            username='manager',
+            first_name='Manager',
+            last_name='Silva',
+            email='manager@company.com',
+            is_active=True
+        )
+        
+        # Test form save with responsavel
+        data_with_responsavel = self.valid_form_data.copy()
+        data_with_responsavel['responsavel'] = manager.id
+        
+        form = DiligenciasForm(data=data_with_responsavel)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        diligencia = form.save(commit=False)
+        diligencia.cliente = self.cliente
+        diligencia.criado_por = 'Test User'
+        diligencia.save()
+        
+        # Verify all fields including responsavel
+        self.assertEqual(diligencia.responsavel, manager)
+        self.assertEqual(diligencia.tipo, self.tipo_ativo)
+        self.assertEqual(diligencia.cliente, self.cliente)
+        self.assertEqual(diligencia.urgencia, 'media')
+        self.assertEqual(diligencia.criado_por, 'Test User')
+        
+        # Verify through model relationship
+        manager_diligencias = manager.diligencias_responsavel.all()
+        self.assertIn(diligencia, manager_diligencias)
+    
+    def test_form_responsavel_update_scenario(self):
+        """Test updating responsavel in existing diligencia"""
+        from django.contrib.auth.models import User
+        
+        # Create users
+        user1 = User.objects.create_user(username='user1', is_active=True)
+        user2 = User.objects.create_user(username='user2', is_active=True)
+        
+        # Create initial diligencia without responsavel
+        diligencia = Diligencias.objects.create(
+            cliente=self.cliente,
+            tipo=self.tipo_ativo,
+            data_final=date.today() + timedelta(days=5),
+            urgencia='media',
+            criado_por='Test User',
+            responsavel=None
+        )
+        
+        # Update with responsavel using form
+        update_data = {
+            'tipo': self.tipo_ativo.id,
+            'data_final': (date.today() + timedelta(days=10)).strftime('%d/%m/%Y'),
+            'urgencia': 'alta',
+            'responsavel': user1.id,
+            'descricao': 'Updated with responsavel'
+        }
+        
+        form = DiligenciasForm(data=update_data, instance=diligencia)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        updated_diligencia = form.save()
+        self.assertEqual(updated_diligencia.responsavel, user1)
+        self.assertEqual(updated_diligencia.urgencia, 'alta')
+        
+        # Update again with different responsavel
+        update_data['responsavel'] = user2.id
+        form = DiligenciasForm(data=update_data, instance=updated_diligencia)
+        self.assertTrue(form.is_valid())
+        
+        updated_diligencia = form.save()
+        self.assertEqual(updated_diligencia.responsavel, user2)
+        
+        # Update to remove responsavel
+        update_data['responsavel'] = ''
+        form = DiligenciasForm(data=update_data, instance=updated_diligencia)
+        self.assertTrue(form.is_valid())
+        
+        updated_diligencia = form.save()
+        self.assertIsNone(updated_diligencia.responsavel)
 
 
 class DiligenciasUpdateFormTest(TestCase):
@@ -3443,6 +3593,129 @@ class DiligenciasUpdateFormTest(TestCase):
         form = DiligenciasUpdateForm()
         data_conclusao_widget = form.fields['data_conclusao'].widget
         self.assertEqual(data_conclusao_widget.__class__.__name__, 'BrazilianDateTimeInput')
+    
+    def test_form_responsavel_field_inclusion(self):
+        """Test that DiligenciasUpdateForm includes responsavel field"""
+        form = DiligenciasUpdateForm()
+        self.assertIn('responsavel', form.fields)
+        
+        responsavel_field = form.fields['responsavel']
+        self.assertFalse(responsavel_field.required)  # Should be optional
+        self.assertEqual(responsavel_field.label, 'Responsável')
+    
+    def test_form_update_responsavel_assignment(self):
+        """Test updating responsavel field through update form"""
+        from django.contrib.auth.models import User
+        
+        # Create test user
+        user = User.objects.create_user(
+            username='updateuser',
+            first_name='Update',
+            last_name='User',
+            email='update@test.com',
+            is_active=True
+        )
+        
+        # Update form data with responsavel
+        form_data = {
+            'concluida': False,
+            'responsavel': user.id,
+            'descricao': 'Updated with new responsavel'
+        }
+        
+        form = DiligenciasUpdateForm(data=form_data, instance=self.diligencia)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        updated_diligencia = form.save()
+        self.assertEqual(updated_diligencia.responsavel, user)
+        self.assertFalse(updated_diligencia.concluida)
+    
+    def test_form_update_responsavel_and_completion(self):
+        """Test updating both responsavel and completion status"""
+        from django.contrib.auth.models import User
+        
+        # Create test user
+        user = User.objects.create_user(
+            username='completeuser',
+            first_name='Complete',
+            last_name='User',
+            is_active=True
+        )
+        
+        # Update with both responsavel and completion
+        form_data = {
+            'concluida': True,
+            'responsavel': user.id,
+            'descricao': 'Completed by assigned user'
+        }
+        
+        form = DiligenciasUpdateForm(data=form_data, instance=self.diligencia)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        updated_diligencia = form.save()
+        self.assertEqual(updated_diligencia.responsavel, user)
+        self.assertTrue(updated_diligencia.concluida)
+        self.assertIsNotNone(updated_diligencia.data_conclusao)
+    
+    def test_form_update_remove_responsavel(self):
+        """Test removing responsavel assignment"""
+        from django.contrib.auth.models import User
+        
+        # First assign a responsavel
+        user = User.objects.create_user(username='tempuser', is_active=True)
+        self.diligencia.responsavel = user
+        self.diligencia.save()
+        
+        # Remove responsavel through form
+        form_data = {
+            'concluida': False,
+            'responsavel': '',  # Empty to remove assignment
+            'descricao': 'Responsavel removed'
+        }
+        
+        form = DiligenciasUpdateForm(data=form_data, instance=self.diligencia)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        updated_diligencia = form.save()
+        self.assertIsNone(updated_diligencia.responsavel)
+    
+    def test_form_update_responsavel_widget_configuration(self):
+        """Test responsavel field widget configuration in update form"""
+        form = DiligenciasUpdateForm()
+        responsavel_field = form.fields['responsavel']
+        
+        # Check widget class and attributes
+        self.assertEqual(responsavel_field.widget.__class__.__name__, 'Select')
+        self.assertEqual(responsavel_field.widget.attrs['class'], 'form-control')
+        self.assertEqual(responsavel_field.empty_label, 'Selecione o responsável (opcional)')
+    
+    def test_form_update_with_existing_responsavel(self):
+        """Test update form with diligencia that already has responsavel"""
+        from django.contrib.auth.models import User
+        
+        # Create and assign initial responsavel
+        initial_user = User.objects.create_user(username='initialuser', is_active=True)
+        self.diligencia.responsavel = initial_user
+        self.diligencia.save()
+        
+        # Load form with existing data
+        form = DiligenciasUpdateForm(instance=self.diligencia)
+        self.assertEqual(form.initial['responsavel'], initial_user.id)
+        
+        # Update to different responsavel
+        new_user = User.objects.create_user(username='newuser', is_active=True)
+        form_data = {
+            'concluida': False,
+            'responsavel': new_user.id,
+            'descricao': 'Changed responsavel'
+        }
+        
+        form = DiligenciasUpdateForm(data=form_data, instance=self.diligencia)
+        self.assertTrue(form.is_valid())
+        
+        updated_diligencia = form.save()
+        self.assertEqual(updated_diligencia.responsavel, new_user)
+        self.assertNotEqual(updated_diligencia.responsavel, initial_user)
 
 
 class ClienteSimpleFormComprehensiveTest(TestCase):

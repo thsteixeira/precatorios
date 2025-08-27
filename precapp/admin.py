@@ -40,7 +40,7 @@ class DiligenciasInline(admin.TabularInline):
     """Inline for managing diligencias within cliente admin"""
     model = Diligencias
     extra = 0
-    fields = ('tipo', 'data_final', 'urgencia', 'concluida', 'descricao')
+    fields = ('tipo', 'data_final', 'urgencia', 'responsavel', 'concluida', 'descricao')
     readonly_fields = ('data_criacao',)
 
 
@@ -454,10 +454,10 @@ class DiligenciasAdmin(admin.ModelAdmin):
     
     list_display = (
         'id', 'cliente_nome', 'tipo_colored', 'data_final', 'urgencia_colored', 
-        'status_colored', 'days_remaining', 'criado_por', 'data_criacao'
+        'responsavel_display', 'status_colored', 'days_remaining', 'criado_por', 'data_criacao'
     )
-    list_filter = ('urgencia', 'concluida', 'tipo', 'data_final')
-    search_fields = ('cliente__nome', 'cliente__cpf', 'tipo__nome', 'criado_por', 'descricao')
+    list_filter = ('urgencia', 'concluida', 'tipo', 'data_final', 'responsavel')
+    search_fields = ('cliente__nome', 'cliente__cpf', 'tipo__nome', 'criado_por', 'responsavel__username', 'responsavel__first_name', 'responsavel__last_name', 'descricao')
     date_hierarchy = 'data_criacao'
     
     fieldsets = (
@@ -465,7 +465,7 @@ class DiligenciasAdmin(admin.ModelAdmin):
             'fields': ('cliente', 'tipo')
         }),
         ('Detalhes da Diligência', {
-            'fields': ('data_final', 'urgencia', 'descricao')
+            'fields': ('data_final', 'urgencia', 'responsavel', 'descricao')
         }),
         ('Status e Controle', {
             'fields': ('concluida', 'criado_por'),
@@ -499,6 +499,14 @@ class DiligenciasAdmin(admin.ModelAdmin):
             color, obj.get_urgencia_display()
         )
     urgencia_colored.short_description = 'Urgência'
+    
+    def responsavel_display(self, obj):
+        if obj.responsavel:
+            # Show full name if available, otherwise username
+            display_name = obj.responsavel.get_full_name() or obj.responsavel.username
+            return format_html('<span style="color: #007bff;"><i class="fas fa-user"></i> {}</span>', display_name)
+        return format_html('<span style="color: #6c757d;">-</span>')
+    responsavel_display.short_description = 'Responsável'
     
     def status_colored(self, obj):
         if obj.concluida:

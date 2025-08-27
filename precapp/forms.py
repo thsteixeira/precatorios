@@ -1,5 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User
 import re
 from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, Diligencias, TipoDiligencia, Tipo, PedidoRequerimento
 
@@ -2502,6 +2503,13 @@ class DiligenciasForm(forms.ModelForm):
             - Label: 'Urgência'
             - Supports priority-based task management
             
+        responsavel (ModelChoiceField): Assigned user for task completion
+            - Optional field for responsibility assignment
+            - Dropdown selection of active users only
+            - Label: 'Responsável'
+            - Ordered by first_name, last_name, username
+            - Empty label option for no assignment
+            
         descricao (TextField): Detailed task description
             - Optional field for additional details
             - Textarea widget with 3 rows
@@ -2585,12 +2593,13 @@ class DiligenciasForm(forms.ModelForm):
     
     class Meta:
         model = Diligencias
-        fields = ['tipo', 'data_final', 'urgencia', 'descricao']
+        fields = ['tipo', 'data_final', 'urgencia', 'responsavel', 'descricao']
         widgets = {
             'data_final': BrazilianDateInput(),
             'descricao': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'tipo': forms.Select(attrs={'class': 'form-control'}),
             'urgencia': forms.Select(attrs={'class': 'form-control'}),
+            'responsavel': forms.Select(attrs={'class': 'form-control'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -2599,17 +2608,24 @@ class DiligenciasForm(forms.ModelForm):
         # Filter tipo field to show only active tipos
         self.fields['tipo'].queryset = TipoDiligencia.get_ativos()
         
+        # Set up responsavel field with active users
+        self.fields['responsavel'].queryset = User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username')
+        self.fields['responsavel'].empty_label = "Selecione o responsável (opcional)"
+        
         # Customize field labels
         self.fields['tipo'].label = 'Tipo de Diligência'
         self.fields['data_final'].label = 'Data Final'
         self.fields['urgencia'].label = 'Urgência'
+        self.fields['responsavel'].label = 'Responsável'
         self.fields['descricao'].label = 'Descrição'
         
         # Add help texts
         self.fields['data_final'].help_text = 'Data limite para conclusão da diligência'
+        self.fields['responsavel'].help_text = 'Usuário responsável por concluir a diligência (opcional)'
         self.fields['descricao'].help_text = 'Descrição detalhada da diligência (opcional)'
         
-        # Make all fields required except description
+        # Make optional fields
+        self.fields['responsavel'].required = False
         self.fields['descricao'].required = False
         
     def clean_data_final(self):
@@ -2682,6 +2698,13 @@ class DiligenciasUpdateForm(forms.ModelForm):
             - Uses BrazilianDateTimeInput widget
             - Label: 'Data de conclusão'
             - Automatically set when task completed
+            
+        responsavel (ModelChoiceField): Assigned user for task completion
+            - Optional field for responsibility assignment
+            - Dropdown selection of active users only
+            - Label: 'Responsável'
+            - Ordered by first_name, last_name, username
+            - Can be updated during task lifecycle
             
         descricao (TextField): Completion observations
             - Optional field for additional context
@@ -2777,23 +2800,35 @@ class DiligenciasUpdateForm(forms.ModelForm):
     
     class Meta:
         model = Diligencias
-        fields = ['concluida', 'data_conclusao', 'descricao']
+        fields = ['concluida', 'data_conclusao', 'responsavel', 'descricao']
         widgets = {
             'data_conclusao': BrazilianDateTimeInput(),
             'descricao': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'concluida': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'responsavel': forms.Select(attrs={
+                'class': 'form-control'
+            }),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
+        # Configure responsavel field with User queryset
+        self.fields['responsavel'].queryset = User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username')
+        self.fields['responsavel'].empty_label = "Selecione o responsável (opcional)"
+        
         # Customize field labels
         self.fields['concluida'].label = 'Marcar como concluída'
         self.fields['data_conclusao'].label = 'Data de conclusão'
+        self.fields['responsavel'].label = 'Responsável'
         self.fields['descricao'].label = 'Observações'
+        
+        # Add help text for responsavel field
+        self.fields['responsavel'].help_text = 'Selecione o usuário responsável por concluir a diligência (opcional)'
         
         # Make fields optional
         self.fields['data_conclusao'].required = False
+        self.fields['responsavel'].required = False
         self.fields['descricao'].required = False
         
     def clean(self):

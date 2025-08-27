@@ -113,12 +113,23 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="tipo" class="form-label">Tipo</label>
                     <select class="form-select" id="tipo" name="tipo">
                         <option value="">Todos</option>
                         {% for tipo in tipos_diligencia %}
                             <option value="{{ tipo.id }}" {% if tipo_filter == tipo.id|stringformat:"s" %}selected{% endif %}>{{ tipo.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="responsavel" class="form-label">Responsável</label>
+                    <select class="form-select" id="responsavel" name="responsavel">
+                        <option value="">Todos</option>
+                        {% for user in usuarios_responsaveis %}
+                            <option value="{{ user.id }}" {% if responsavel_filter == user.id|stringformat:"s" %}selected{% endif %}>
+                                {{ user.get_full_name|default:user.username }}
+                            </option>
                         {% endfor %}
                     </select>
                 </div>
@@ -168,6 +179,7 @@
                                 <th>Tipo</th>
                                 <th>Data Final</th>
                                 <th>Urgência</th>
+                                <th>Responsável</th>
                                 <th>Status</th>
                                 <th>Criado em</th>
                                 <th>Concluído em</th>
@@ -206,6 +218,14 @@
                                         <span class="badge bg-{{ diligencia.get_urgencia_color }}">
                                             {{ diligencia.get_urgencia_display }}
                                         </span>
+                                    </td>
+                                    <td>
+                                        {% if diligencia.responsavel %}
+                                            <i class="fas fa-user-check text-primary me-1"></i>
+                                            {{ diligencia.responsavel.get_full_name|default:diligencia.responsavel.username }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         {% if diligencia.concluida %}
@@ -250,10 +270,10 @@
                             <ul class="pagination pagination-sm justify-content-center mb-0">
                                 {% if page_obj.has_previous %}
                                     <li class="page-item">
-                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}page=1">Primeira</a>
+                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if data_inicio_filter %}data_inicio={{ data_inicio_filter }}&{% endif %}{% if data_fim_filter %}data_fim={{ data_fim_filter }}&{% endif %}page=1">Primeira</a>
                                     </li>
                                     <li class="page-item">
-                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if data_inicio_filter %}data_inicio={{ data_inicio_filter }}&{% endif %}{% if data_fim_filter %}data_fim={{ data_fim_filter }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
                                     </li>
                                 {% endif %}
 
@@ -265,10 +285,10 @@
 
                                 {% if page_obj.has_next %}
                                     <li class="page-item">
-                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima</a>
+                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if data_inicio_filter %}data_inicio={{ data_inicio_filter }}&{% endif %}{% if data_fim_filter %}data_fim={{ data_fim_filter }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima</a>
                                     </li>
                                     <li class="page-item">
-                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última</a>
+                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if data_inicio_filter %}data_inicio={{ data_inicio_filter }}&{% endif %}{% if data_fim_filter %}data_fim={{ data_fim_filter }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última</a>
                                     </li>
                                 {% endif %}
                             </ul>
