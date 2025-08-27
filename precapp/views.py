@@ -306,10 +306,14 @@ def precatorio_detalhe_view(request, precatorio_cnj):
     associated_clientes = precatorio.clientes.all().order_by('nome')
     
     # Get all alvarás associated with this precatorio
-    alvaras = Alvara.objects.filter(precatorio=precatorio).select_related('cliente').order_by('-id')
+    alvaras = Alvara.objects.filter(precatorio=precatorio).select_related(
+        'cliente', 'fase', 'fase_honorarios_contratuais'
+    ).order_by('-id')
     
     # Get all requerimentos associated with this precatorio
-    requerimentos = Requerimento.objects.filter(precatorio=precatorio).select_related('cliente').order_by('-id')
+    requerimentos = Requerimento.objects.filter(precatorio=precatorio).select_related(
+        'cliente', 'fase', 'pedido'
+    ).order_by('-id')
     
     # Initialize forms
     precatorio_form = None
@@ -886,7 +890,9 @@ def update_priority_by_age(request):
 @login_required
 def alvaras_view(request):
     """View to display all alvarás with filtering support"""
-    alvaras = Alvara.objects.all().select_related('precatorio', 'cliente', 'fase', 'fase_honorarios_contratuais').order_by('-id')
+    alvaras = Alvara.objects.all().select_related(
+        'precatorio', 'cliente', 'fase', 'fase_honorarios_contratuais'
+    ).order_by('-id')
     
     # Get available fases for alvara
     available_fases = Fase.get_fases_for_alvara()
@@ -975,7 +981,9 @@ def delete_alvara_view(request, alvara_id):
 @login_required
 def requerimento_list_view(request):
     """View to list all requerimentos with filtering"""
-    requerimentos = Requerimento.objects.all().select_related('cliente', 'precatorio', 'fase', 'pedido').order_by('-id')
+    requerimentos = Requerimento.objects.all().select_related(
+        'cliente', 'precatorio', 'fase', 'pedido'
+    ).order_by('-id')
     
     # Get filter parameters
     cliente_filter = request.GET.get('cliente', '').strip()

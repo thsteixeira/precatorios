@@ -693,6 +693,7 @@
                                     <th>Valor</th>
                                     <th>Deságio</th>
                                     <th>Fase Principal</th>
+                                    <th>Última Alteração</th>
                                     <th><i class="fas fa-cog me-1"></i>Ações</th>
                                 </tr>
                             </thead>
@@ -737,6 +738,37 @@
                                         {% endif %}
                                     </td>
                                     <td>
+                                        <div class="small">
+                                            {% if requerimento.fase_ultima_alteracao %}
+                                                <div class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    <strong>Fase:</strong> {{ requerimento.fase_ultima_alteracao|date:"d/m/Y H:i" }}
+                                                </div>
+                                                {% if requerimento.fase_alterada_por %}
+                                                    <div class="text-muted">
+                                                        <i class="fas fa-user me-1"></i>
+                                                        {{ requerimento.fase_alterada_por }}
+                                                    </div>
+                                                {% endif %}
+                                            {% endif %}
+                                            {% if requerimento.fase_honorarios_ultima_alteracao %}
+                                                <div class="text-muted mt-1">
+                                                    <i class="fas fa-coins me-1"></i>
+                                                    <strong>Hon.:</strong> {{ requerimento.fase_honorarios_ultima_alteracao|date:"d/m/Y H:i" }}
+                                                </div>
+                                                {% if requerimento.fase_honorarios_alterada_por %}
+                                                    <div class="text-muted">
+                                                        <i class="fas fa-user me-1"></i>
+                                                        {{ requerimento.fase_honorarios_alterada_por }}
+                                                    </div>
+                                                {% endif %}
+                                            {% endif %}
+                                            {% if not requerimento.fase_ultima_alteracao and not requerimento.fase_honorarios_ultima_alteracao %}
+                                                <span class="text-muted">Nenhuma alteração registrada</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div class="btn-group" role="group">
                                             <button type="button" class="btn btn-outline-primary" 
                                                     data-bs-toggle="collapse" 
@@ -751,7 +783,7 @@
                                 
                                 <!-- Dropdown Edit Form for this Requerimento -->
                                 <tr>
-                                    <td colspan="6" class="p-0">
+                                    <td colspan="7" class="p-0">
                                         <div class="collapse" id="editRequerimentoForm-{{ requerimento.id }}">
                                             <div class="card card-body m-2 bg-light">
                                                 <form method="post" action="{% url 'precatorio_detalhe' precatorio.cnj %}">
@@ -1081,6 +1113,7 @@
                                     <th><i class="fas fa-tags me-1"></i>Tipo</th>
                                     <th><i class="fas fa-layer-group me-1"></i>Fase Principal</th>
                                     <th><i class="fas fa-coins me-1"></i>Fase Hon. Contratuais</th>
+                                    <th><i class="fas fa-history me-1"></i>Última Alteração</th>
                                     <th><i class="fas fa-cog me-1"></i>Ações</th>
                                 </tr>
                             </thead>
@@ -1147,6 +1180,37 @@
                                         {% endif %}
                                     </td>
                                     <td>
+                                        <div class="small">
+                                            {% if alvara.fase_ultima_alteracao %}
+                                                <div class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    <strong>Fase:</strong> {{ alvara.fase_ultima_alteracao|date:"d/m/Y H:i" }}
+                                                </div>
+                                                {% if alvara.fase_alterada_por %}
+                                                    <div class="text-muted">
+                                                        <i class="fas fa-user me-1"></i>
+                                                        {{ alvara.fase_alterada_por }}
+                                                    </div>
+                                                {% endif %}
+                                            {% endif %}
+                                            {% if alvara.fase_honorarios_ultima_alteracao %}
+                                                <div class="text-muted mt-1">
+                                                    <i class="fas fa-coins me-1"></i>
+                                                    <strong>Hon.:</strong> {{ alvara.fase_honorarios_ultima_alteracao|date:"d/m/Y H:i" }}
+                                                </div>
+                                                {% if alvara.fase_honorarios_alterada_por %}
+                                                    <div class="text-muted">
+                                                        <i class="fas fa-user me-1"></i>
+                                                        {{ alvara.fase_honorarios_alterada_por }}
+                                                    </div>
+                                                {% endif %}
+                                            {% endif %}
+                                            {% if not alvara.fase_ultima_alteracao and not alvara.fase_honorarios_ultima_alteracao %}
+                                                <span class="text-muted">Nenhuma alteração registrada</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div class="btn-group" role="group">
                                             <button type="button" class="btn btn-outline-primary" 
                                                     data-bs-toggle="collapse" 
@@ -1161,7 +1225,7 @@
                                 
                                 <!-- Dropdown Edit Form for this Alvará -->
                                 <tr>
-                                    <td colspan="8" class="p-0">
+                                    <td colspan="9" class="p-0">
                                         <div class="collapse" id="editAlvaraForm-{{ alvara.id }}">
                                             <div class="card card-body m-2 bg-light">
                                                 <form method="post" action="{% url 'precatorio_detalhe' precatorio.cnj %}">

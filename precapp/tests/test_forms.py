@@ -1746,6 +1746,18 @@ class AlvaraSimpleFormComprehensiveTest(TestCase):
         for field in expected_fields:
             self.assertIn(field, form.fields)
     
+    def test_form_excludes_audit_fields(self):
+        """Test that form excludes audit tracking fields"""
+        form = AlvaraSimpleForm()
+        audit_fields = [
+            'fase_ultima_alteracao', 'fase_alterada_por',
+            'fase_honorarios_ultima_alteracao', 'fase_honorarios_alterada_por'
+        ]
+        
+        for audit_field in audit_fields:
+            self.assertNotIn(audit_field, form.fields, 
+                           f"Audit field '{audit_field}' should be excluded from form fields")
+    
     def test_form_includes_honorarios_fields(self):
         """Test that form includes both honorários fields"""
         form = AlvaraSimpleForm()
@@ -1936,6 +1948,15 @@ class RequerimentoFormComprehensiveTest(TestCase):
         fase_field = form.fields['fase']
         self.assertFalse(fase_field.required)
         self.assertEqual(fase_field.empty_label, 'Selecione a fase')
+    
+    def test_form_excludes_audit_fields(self):
+        """Test that form excludes audit tracking fields"""
+        form = RequerimentoForm(precatorio=self.precatorio)
+        audit_fields = ['fase_ultima_alteracao', 'fase_alterada_por']
+        
+        for audit_field in audit_fields:
+            self.assertNotIn(audit_field, form.fields, 
+                           f"Audit field '{audit_field}' should be excluded from form fields")
 
     # ============ PHASE FILTERING TESTS ============
     

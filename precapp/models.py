@@ -3,6 +3,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from datetime import datetime
+import threading
+from django.utils import timezone
 
 # Create your models here.
 
@@ -916,6 +918,32 @@ class Alvara(models.Model):
         help_text="Fase específica para honorários contratuais",
         verbose_name="Fase Honorários Contratuais"
     )
+    
+    # Audit fields for tracking fase changes
+    fase_ultima_alteracao = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="Data e hora da última alteração da fase principal"
+    )
+    fase_alterada_por = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text="Usuário que fez a última alteração da fase principal"
+    )
+    
+    # Audit fields for tracking fase_honorarios_contratuais changes
+    fase_honorarios_ultima_alteracao = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="Data e hora da última alteração da fase de honorários contratuais"
+    )
+    fase_honorarios_alterada_por = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text="Usuário que fez a última alteração da fase de honorários contratuais"
+    )
 
     def clean(self):
         """
@@ -951,11 +979,62 @@ class Alvara(models.Model):
     
     def save(self, *args, **kwargs):
         """
-        Override save to call clean validation.
+        Override save to call clean validation and track fase changes.
         
         Ensures that validation rules are always enforced when saving,
-        regardless of how the save is triggered.
+        and tracks when fase or fase_honorarios_contratuais fields are modified.
         """
+        # Check if this is an update (not a new instance)
+        if self.pk:
+            try:
+                # Get the old instance from database
+                old_instance = Alvara.objects.get(pk=self.pk)
+                old_fase = old_instance.fase
+                old_fase_honorarios = old_instance.fase_honorarios_contratuais
+                new_fase = self.fase
+                new_fase_honorarios = self.fase_honorarios_contratuais
+                
+                # Try to get current user from thread-local storage
+                current_user = getattr(threading.current_thread(), 'user', None)
+                if current_user and hasattr(current_user, 'get_full_name'):
+                    user_name = current_user.get_full_name() or current_user.username
+                else:
+                    # Fallback if no user available
+                    user_name = "System"
+                
+                # Check if main fase has changed
+                if old_fase != new_fase:
+                    self.fase_ultima_alteracao = timezone.now()
+                    self.fase_alterada_por = user_name
+                
+                # Check if honorarios fase has changed
+                if old_fase_honorarios != new_fase_honorarios:
+                    self.fase_honorarios_ultima_alteracao = timezone.now()
+                    self.fase_honorarios_alterada_por = user_name
+                        
+            except Alvara.DoesNotExist:
+                # This shouldn't happen, but handle gracefully
+                pass
+        else:
+            # This is a new instance - set initial audit values
+            # Try to get current user from thread-local storage
+            current_user = getattr(threading.current_thread(), 'user', None)
+            if current_user and hasattr(current_user, 'get_full_name'):
+                user_name = current_user.get_full_name() or current_user.username
+            else:
+                # Fallback if no user available
+                user_name = "System"
+            
+            # Set initial fase audit values if fase is provided
+            if self.fase:
+                self.fase_ultima_alteracao = timezone.now()
+                self.fase_alterada_por = user_name
+            
+            # Set initial honorarios fase audit values if fase_honorarios_contratuais is provided
+            if self.fase_honorarios_contratuais:
+                self.fase_honorarios_ultima_alteracao = timezone.now()
+                self.fase_honorarios_alterada_por = user_name
+        
         self.full_clean()
         super().save(*args, **kwargs)
 
@@ -1035,6 +1114,19 @@ class Requerimento(models.Model):
         blank=True,
         help_text="Fase principal atual do requerimento"
     )
+    
+    # Audit fields for tracking fase changes
+    fase_ultima_alteracao = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="Data e hora da última alteração da fase"
+    )
+    fase_alterada_por = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text="Usuário que fez a última alteração da fase"
+    )
 
     def clean(self):
         """
@@ -1070,11 +1162,49 @@ class Requerimento(models.Model):
     
     def save(self, *args, **kwargs):
         """
-        Override save to call clean validation.
+        Override save to call clean validation and track fase changes.
         
         Ensures that validation rules are always enforced when saving,
-        regardless of how the save is triggered.
+        and tracks when the fase field is modified.
         """
+        # Check if this is an update (not a new instance)
+        if self.pk:
+            try:
+                # Get the old instance from database
+                old_instance = Requerimento.objects.get(pk=self.pk)
+                old_fase = old_instance.fase
+                new_fase = self.fase
+                
+                # Check if fase has changed
+                if old_fase != new_fase:
+                    self.fase_ultima_alteracao = timezone.now()
+                    
+                    # Try to get current user from thread-local storage
+                    current_user = getattr(threading.current_thread(), 'user', None)
+                    if current_user and hasattr(current_user, 'get_full_name'):
+                        user_name = current_user.get_full_name() or current_user.username
+                        self.fase_alterada_por = user_name
+                    else:
+                        # Fallback if no user available
+                        self.fase_alterada_por = "System"
+                        
+            except Requerimento.DoesNotExist:
+                # This shouldn't happen, but handle gracefully
+                pass
+        else:
+            # This is a new instance - set initial audit values if fase is provided
+            if self.fase:
+                self.fase_ultima_alteracao = timezone.now()
+                
+                # Try to get current user from thread-local storage
+                current_user = getattr(threading.current_thread(), 'user', None)
+                if current_user and hasattr(current_user, 'get_full_name'):
+                    user_name = current_user.get_full_name() or current_user.username
+                    self.fase_alterada_por = user_name
+                else:
+                    # Fallback if no user available
+                    self.fase_alterada_por = "System"
+        
         self.full_clean()
         super().save(*args, **kwargs)
 

@@ -24,16 +24,16 @@ class AlvaraInline(admin.TabularInline):
     """Inline for managing alvaras within precatorio admin"""
     model = Alvara
     extra = 0
-    fields = ('cliente', 'valor_principal', 'tipo', 'fase', 'fase_honorarios_contratuais')
-    readonly_fields = ()
+    fields = ('cliente', 'valor_principal', 'tipo', 'fase', 'fase_honorarios_contratuais', 'fase_alterada_por')
+    readonly_fields = ('fase_alterada_por', 'fase_honorarios_alterada_por')
 
 
 class RequerimentoInline(admin.TabularInline):
     """Inline for managing requerimentos within precatorio admin"""
     model = Requerimento
     extra = 0
-    fields = ('cliente', 'pedido', 'valor', 'desagio', 'fase')
-    readonly_fields = ()
+    fields = ('cliente', 'pedido', 'valor', 'desagio', 'fase', 'fase_alterada_por')
+    readonly_fields = ('fase_alterada_por',)
 
 
 class DiligenciasInline(admin.TabularInline):
@@ -178,9 +178,18 @@ class AlvaraAdmin(admin.ModelAdmin):
         ('Classificação e Status', {
             'fields': ('tipo', 'fase', 'fase_honorarios_contratuais')
         }),
+        ('Auditoria de Alterações', {
+            'fields': (
+                ('fase_ultima_alteracao', 'fase_alterada_por'),
+                ('fase_honorarios_ultima_alteracao', 'fase_honorarios_alterada_por')
+            ),
+            'classes': ('collapse',),
+            'description': 'Informações de rastreamento das últimas alterações nas fases'
+        }),
     )
     
     autocomplete_fields = ['precatorio', 'cliente']
+    readonly_fields = ('fase_ultima_alteracao', 'fase_alterada_por', 'fase_honorarios_ultima_alteracao', 'fase_honorarios_alterada_por')
     
     def cliente_nome(self, obj):
         return obj.cliente.nome
@@ -212,6 +221,32 @@ class AlvaraAdmin(admin.ModelAdmin):
         total = obj.valor_principal + (obj.honorarios_contratuais or 0) + (obj.honorarios_sucumbenciais or 0)
         return f'R$ {total:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
     total_valor.short_description = 'Valor Total'
+    
+    def fase_ultima_alteracao_display(self, obj):
+        """Display formatted fase last modification info"""
+        if obj.fase_ultima_alteracao:
+            from django.utils.timezone import localtime
+            local_time = localtime(obj.fase_ultima_alteracao)
+            return format_html(
+                '<span style="color: #666;">{}<br><small>por: {}</small></span>',
+                local_time.strftime('%d/%m/%Y %H:%M'),
+                obj.fase_alterada_por or 'Sistema'
+            )
+        return '-'
+    fase_ultima_alteracao_display.short_description = 'Última Alt. Fase'
+    
+    def fase_honorarios_ultima_alteracao_display(self, obj):
+        """Display formatted fase honorarios last modification info"""
+        if obj.fase_honorarios_ultima_alteracao:
+            from django.utils.timezone import localtime
+            local_time = localtime(obj.fase_honorarios_ultima_alteracao)
+            return format_html(
+                '<span style="color: #666;">{}<br><small>por: {}</small></span>',
+                local_time.strftime('%d/%m/%Y %H:%M'),
+                obj.fase_honorarios_alterada_por or 'Sistema'
+            )
+        return '-'
+    fase_honorarios_ultima_alteracao_display.short_description = 'Última Alt. Honorários'
 
 
 @admin.register(Requerimento)
@@ -232,9 +267,17 @@ class RequerimentoAdmin(admin.ModelAdmin):
         ('Detalhes do Requerimento', {
             'fields': ('pedido', 'valor', 'desagio', 'fase')
         }),
+        ('Auditoria de Alterações', {
+            'fields': (
+                ('fase_ultima_alteracao', 'fase_alterada_por'),
+            ),
+            'classes': ('collapse',),
+            'description': 'Informações de rastreamento das últimas alterações na fase'
+        }),
     )
     
     autocomplete_fields = ['precatorio', 'cliente']
+    readonly_fields = ('fase_ultima_alteracao', 'fase_alterada_por')
     
     def cliente_nome(self, obj):
         return obj.cliente.nome
@@ -265,6 +308,19 @@ class RequerimentoAdmin(admin.ModelAdmin):
             )
         return '-'
     fase_colored.short_description = 'Fase'
+    
+    def fase_ultima_alteracao_display(self, obj):
+        """Display formatted fase last modification info"""
+        if obj.fase_ultima_alteracao:
+            from django.utils.timezone import localtime
+            local_time = localtime(obj.fase_ultima_alteracao)
+            return format_html(
+                '<span style="color: #666;">{}<br><small>por: {}</small></span>',
+                local_time.strftime('%d/%m/%Y %H:%M'),
+                obj.fase_alterada_por or 'Sistema'
+            )
+        return '-'
+    fase_ultima_alteracao_display.short_description = 'Última Alt. Fase'
 
 
 @admin.register(Fase)

@@ -1551,6 +1551,14 @@ class RequerimentoForm(forms.ModelForm):
             'pedido': 'Tipo de Pedido',
             'fase': 'Fase Principal',
         }
+        
+        # Exclude audit tracking fields - these are automatically managed by the model
+        exclude = [
+            'fase_ultima_alteracao', 
+            'fase_alterada_por',
+            'fase_honorarios_ultima_alteracao',
+            'fase_honorarios_alterada_por'
+        ]
 
 
 class AlvaraSimpleForm(forms.ModelForm):
@@ -1884,6 +1892,14 @@ class AlvaraSimpleForm(forms.ModelForm):
             'honorarios_contratuais': 'Honorários Contratuais',
             'honorarios_sucumbenciais': 'Honorários Sucumbenciais',
         }
+        
+        # Exclude audit tracking fields - these are automatically managed by the model
+        exclude = [
+            'fase_ultima_alteracao', 
+            'fase_alterada_por',
+            'fase_honorarios_ultima_alteracao',
+            'fase_honorarios_alterada_por'
+        ]
 
 
 class FaseForm(forms.ModelForm):

@@ -1523,6 +1523,65 @@ class AlvaraModelTest(TestCase):
         alvara = Alvara.objects.create(**self.alvara_data)
         self.assertEqual(alvara.fase.nome, 'Aguardando Depósito')
         self.assertEqual(alvara.fase.tipo, 'alvara')
+    
+    def test_alvara_audit_fields_initial(self):
+        """Test that audit fields are populated on initial creation"""
+        alvara = Alvara.objects.create(**self.alvara_data)
+        
+        # Check that fase audit fields are populated on creation
+        self.assertIsNotNone(alvara.fase_ultima_alteracao)
+        self.assertEqual(alvara.fase_alterada_por, 'System')
+        
+        # Check that timestamps are recent (within last minute)
+        from datetime import datetime, timezone, timedelta
+        now = datetime.now(timezone.utc)
+        time_diff = now - alvara.fase_ultima_alteracao
+        self.assertLess(time_diff, timedelta(minutes=1))
+    
+    def test_alvara_audit_fields_fase_change(self):
+        """Test that audit fields are updated when fase changes"""
+        # Create initial alvara
+        alvara = Alvara.objects.create(**self.alvara_data)
+        initial_timestamp = alvara.fase_ultima_alteracao
+        initial_user = alvara.fase_alterada_por
+        
+        # Wait a moment to ensure timestamp difference
+        import time
+        time.sleep(0.1)
+        
+        # Create new fase and change
+        new_fase = Fase.objects.create(
+            nome='Pago',
+            tipo='alvara',
+            cor='#28a745',
+            ativa=True
+        )
+        
+        alvara.fase = new_fase
+        alvara.save()
+        
+        # Check that audit fields were updated
+        self.assertGreater(alvara.fase_ultima_alteracao, initial_timestamp)
+        self.assertEqual(alvara.fase_alterada_por, 'System')
+    
+    def test_alvara_audit_fields_no_change_when_fase_same(self):
+        """Test that audit fields are NOT updated when fase doesn't change"""
+        # Create initial alvara
+        alvara = Alvara.objects.create(**self.alvara_data)
+        initial_timestamp = alvara.fase_ultima_alteracao
+        initial_user = alvara.fase_alterada_por
+        
+        # Wait a moment to ensure timestamp difference would be visible
+        import time
+        time.sleep(0.1)
+        
+        # Save without changing fase
+        alvara.valor_principal = 60000.00  # Change a different field
+        alvara.save()
+        
+        # Check that audit fields were NOT updated
+        self.assertEqual(alvara.fase_ultima_alteracao, initial_timestamp)
+        self.assertEqual(alvara.fase_alterada_por, initial_user)
 
 
 class AlvaraModelWithHonorariosTest(TestCase):
@@ -1650,6 +1709,135 @@ class AlvaraModelWithHonorariosTest(TestCase):
         from django.db import IntegrityError
         with self.assertRaises(IntegrityError):
             self.fase_honorarios.delete()
+    
+    def test_alvara_honorarios_audit_fields_initial(self):
+        """Test that honorarios audit fields are populated on initial creation"""
+        alvara = Alvara.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            valor_principal=50000.00,
+            honorarios_contratuais=10000.00,
+            honorarios_sucumbenciais=5000.00,
+            tipo='prioridade',
+            fase=self.fase_alvara,
+            fase_honorarios_contratuais=self.fase_honorarios
+        )
+        
+        # Check that fase_honorarios audit fields are populated on creation
+        self.assertIsNotNone(alvara.fase_honorarios_ultima_alteracao)
+        self.assertEqual(alvara.fase_honorarios_alterada_por, 'System')
+        
+        # Check that timestamps are recent (within last minute)
+        from datetime import datetime, timezone, timedelta
+        now = datetime.now(timezone.utc)
+        time_diff = now - alvara.fase_honorarios_ultima_alteracao
+        self.assertLess(time_diff, timedelta(minutes=1))
+    
+    def test_alvara_honorarios_audit_fields_change(self):
+        """Test that honorarios audit fields are updated when fase_honorarios changes"""
+        # Create initial alvara with honorarios fase
+        alvara = Alvara.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            valor_principal=50000.00,
+            honorarios_contratuais=10000.00,
+            honorarios_sucumbenciais=5000.00,
+            tipo='prioridade',
+            fase=self.fase_alvara,
+            fase_honorarios_contratuais=self.fase_honorarios
+        )
+        
+        initial_timestamp = alvara.fase_honorarios_ultima_alteracao
+        initial_user = alvara.fase_honorarios_alterada_por
+        
+        # Wait a moment to ensure timestamp difference
+        import time
+        time.sleep(0.1)
+        
+        # Create new honorarios fase and change
+        new_fase_honorarios = FaseHonorariosContratuais.objects.create(
+            nome='Pago',
+            cor='#28a745',
+            ativa=True
+        )
+        
+        alvara.fase_honorarios_contratuais = new_fase_honorarios
+        alvara.save()
+        
+        # Check that audit fields were updated
+        self.assertGreater(alvara.fase_honorarios_ultima_alteracao, initial_timestamp)
+        self.assertEqual(alvara.fase_honorarios_alterada_por, 'System')
+    
+    def test_alvara_honorarios_audit_fields_no_change_when_same(self):
+        """Test that honorarios audit fields are NOT updated when fase_honorarios doesn't change"""
+        # Create initial alvara with honorarios fase
+        alvara = Alvara.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            valor_principal=50000.00,
+            honorarios_contratuais=10000.00,
+            honorarios_sucumbenciais=5000.00,
+            tipo='prioridade',
+            fase=self.fase_alvara,
+            fase_honorarios_contratuais=self.fase_honorarios
+        )
+        
+        initial_timestamp = alvara.fase_honorarios_ultima_alteracao
+        initial_user = alvara.fase_honorarios_alterada_por
+        
+        # Wait a moment to ensure timestamp difference would be visible
+        import time
+        time.sleep(0.1)
+        
+        # Save without changing fase_honorarios
+        alvara.valor_principal = 60000.00  # Change a different field
+        alvara.save()
+        
+        # Check that audit fields were NOT updated
+        self.assertEqual(alvara.fase_honorarios_ultima_alteracao, initial_timestamp)
+        self.assertEqual(alvara.fase_honorarios_alterada_por, initial_user)
+    
+    def test_alvara_honorarios_audit_fields_none_initially(self):
+        """Test that honorarios audit fields are empty when no fase_honorarios is set"""
+        alvara = Alvara.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            valor_principal=50000.00,
+            honorarios_contratuais=10000.00,
+            honorarios_sucumbenciais=5000.00,
+            tipo='prioridade',
+            fase=self.fase_alvara
+            # No fase_honorarios_contratuais set
+        )
+        
+        # Check that fase_honorarios audit fields are empty
+        self.assertIsNone(alvara.fase_honorarios_ultima_alteracao)
+        self.assertIsNone(alvara.fase_honorarios_alterada_por)
+    
+    def test_alvara_honorarios_audit_fields_set_later(self):
+        """Test that honorarios audit fields are populated when fase_honorarios is set later"""
+        # Create initial alvara without honorarios fase
+        alvara = Alvara.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            valor_principal=50000.00,
+            honorarios_contratuais=10000.00,
+            honorarios_sucumbenciais=5000.00,
+            tipo='prioridade',
+            fase=self.fase_alvara
+        )
+        
+        # Confirm audit fields are empty initially
+        self.assertIsNone(alvara.fase_honorarios_ultima_alteracao)
+        self.assertIsNone(alvara.fase_honorarios_alterada_por)
+        
+        # Set fase_honorarios later
+        alvara.fase_honorarios_contratuais = self.fase_honorarios
+        alvara.save()
+        
+        # Check that audit fields are now populated
+        self.assertIsNotNone(alvara.fase_honorarios_ultima_alteracao)
+        self.assertEqual(alvara.fase_honorarios_alterada_por, 'System')
 
 
 class RequerimentoModelTest(TestCase):
@@ -1862,6 +2050,92 @@ class RequerimentoModelTest(TestCase):
         requerimento = Requerimento.objects.create(**self.requerimento_data)
         self.assertEqual(requerimento.fase.nome, 'Em Andamento')
         self.assertEqual(requerimento.fase.tipo, 'requerimento')
+    
+    def test_requerimento_audit_fields_initial(self):
+        """Test that audit fields are populated on initial creation"""
+        requerimento = Requerimento.objects.create(**self.requerimento_data)
+        
+        # Check that fase audit fields are populated on creation
+        self.assertIsNotNone(requerimento.fase_ultima_alteracao)
+        self.assertEqual(requerimento.fase_alterada_por, 'System')
+        
+        # Check that timestamps are recent (within last minute)
+        from datetime import datetime, timezone, timedelta
+        now = datetime.now(timezone.utc)
+        time_diff = now - requerimento.fase_ultima_alteracao
+        self.assertLess(time_diff, timedelta(minutes=1))
+    
+    def test_requerimento_audit_fields_fase_change(self):
+        """Test that audit fields are updated when fase changes"""
+        # Create initial requerimento
+        requerimento = Requerimento.objects.create(**self.requerimento_data)
+        initial_timestamp = requerimento.fase_ultima_alteracao
+        initial_user = requerimento.fase_alterada_por
+        
+        # Wait a moment to ensure timestamp difference
+        import time
+        time.sleep(0.1)
+        
+        # Create new fase and change
+        new_fase = Fase.objects.create(
+            nome='Concluído',
+            tipo='requerimento',
+            cor='#28a745',
+            ativa=True
+        )
+        
+        requerimento.fase = new_fase
+        requerimento.save()
+        
+        # Check that audit fields were updated
+        self.assertGreater(requerimento.fase_ultima_alteracao, initial_timestamp)
+        self.assertEqual(requerimento.fase_alterada_por, 'System')
+    
+    def test_requerimento_audit_fields_no_change_when_fase_same(self):
+        """Test that audit fields are NOT updated when fase doesn't change"""
+        # Create initial requerimento
+        requerimento = Requerimento.objects.create(**self.requerimento_data)
+        initial_timestamp = requerimento.fase_ultima_alteracao
+        initial_user = requerimento.fase_alterada_por
+        
+        # Wait a moment to ensure timestamp difference would be visible
+        import time
+        time.sleep(0.1)
+        
+        # Save without changing fase
+        requerimento.valor = 30000.00  # Change a different field
+        requerimento.save()
+        
+        # Check that audit fields were NOT updated
+        self.assertEqual(requerimento.fase_ultima_alteracao, initial_timestamp)
+        self.assertEqual(requerimento.fase_alterada_por, initial_user)
+    
+    def test_requerimento_audit_fields_with_user_context(self):
+        """Test audit fields with simulated user context"""
+        from django.contrib.auth.models import User
+        import threading
+        
+        # Create a test user
+        test_user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        
+        # Set the user on the current thread (simulating middleware)
+        threading.current_thread().user = test_user
+        
+        try:
+            # Create requerimento with user context
+            requerimento = Requerimento.objects.create(**self.requerimento_data)
+            
+            # Audit fields should reflect the user
+            self.assertEqual(requerimento.fase_alterada_por, 'testuser')
+            
+        finally:
+            # Clean up thread local
+            if hasattr(threading.current_thread(), 'user'):
+                delattr(threading.current_thread(), 'user')
 
 
 class TipoDiligenciaModelTest(TestCase):
