@@ -9,15 +9,14 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1><i class="fas fa-users"></i> Lista de Clientes</h1>
                 <div class="btn-group" role="group">
-                    <form method="post" action="{% url 'update_priority_by_age' %}" style="display: inline-block;" 
-                          onsubmit="return confirm('Tem certeza de que deseja atualizar todos os clientes com mais de 60 anos para status prioritário?')">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-primary" title="Atualizar todos os clientes com mais de 60 anos para status prioritário">
-                            <i class="fas fa-star me-1"></i>Atualizar Prioritários
-                        </button>
-                    </form>
                     <a href="{% url 'novo_cliente' %}" class="btn btn-success">
                         <i class="fas fa-user-plus me-1"></i>Novo Cliente
+                    </a>
+                    <button type="button" class="btn btn-primary" onclick="updatePriority()" title="Atualizar todos os clientes com mais de 60 anos para status prioritário">
+                        <i class="fas fa-star me-1"></i>Atualizar Prioritários
+                    </button>
+                    <a href="{% url 'export_clientes_excel' %}" class="btn btn-info" title="Exportar lista completa de clientes em Excel">
+                        <i class="fas fa-file-export me-1"></i>Exportar Excel
                     </a>
                 </div>
             </div>
@@ -203,6 +202,12 @@
         </div>
     </div>
 </div>
+
+<!-- Hidden form for updating priority -->
+<form id="updatePriorityForm" method="post" action="{% url 'update_priority_by_age' %}" style="display: none;">
+    {% csrf_token %}
+</form>
+
 {% endblock %}
 
 {% block extra_css %}
@@ -233,4 +238,14 @@
         font-size: 2.5em;
     }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updatePriority() {
+    if (confirm('Tem certeza de que deseja atualizar todos os clientes com mais de 60 anos para status prioritário?')) {
+        document.getElementById('updatePriorityForm').submit();
+    }
+}
+</script>
 {% endblock %}

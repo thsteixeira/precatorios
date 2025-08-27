@@ -265,6 +265,40 @@
     </div>
 </div>
 
+<!-- Export and Reports Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-download me-2"></i>Relatórios e Exportação
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Gere relatórios completos em Excel com todos os dados do sistema organizados em planilhas separadas.</p>
+                <div class="row justify-content-center">
+                    <div class="col-md-5">
+                        <a href="{% url 'export_precatorios_excel' %}" class="btn btn-info btn-lg w-100 mb-2" title="Exportar relatório completo em Excel">
+                            <i class="fas fa-file-excel me-2"></i>Relatório Completo
+                        </a>
+                        <small class="text-muted d-block text-center">
+                            <strong>Inclui:</strong> Precatórios, Clientes, Requerimentos, Alvarás, Diligências e Estatísticas
+                        </small>
+                    </div>
+                    <div class="col-md-5">
+                        <a href="{% url 'export_clientes_excel' %}" class="btn btn-success btn-lg w-100 mb-2" title="Exportar relatório detalhado de clientes">
+                            <i class="fas fa-users me-2"></i>Relatório de Clientes
+                        </a>
+                        <small class="text-muted d-block text-center">
+                            <strong>Inclui:</strong> Dados detalhados dos clientes, precatórios e diligências
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Legacy Phase Management Section (keeping for compatibility) -->
 <div class="row mb-4" style="display: none;">
     <div class="col-md-12">

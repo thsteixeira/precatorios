@@ -5,7 +5,7 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.views.decorators.http import require_http_methods
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.utils import timezone
 from django.core.management import call_command
 import tempfile
@@ -2061,3 +2061,847 @@ def import_excel_view(request):
     
     # For GET requests, redirect to precatorios list
     return redirect('precatorios')
+
+
+# ===============================
+# EXCEL EXPORT FUNCTIONALITY
+# ===============================
+
+@login_required
+def export_precatorios_excel(request):
+    """
+    Export comprehensive precatorios and related data to Excel format.
+    
+    Creates a detailed Excel report with multiple sheets containing:
+    - Complete precatorios data with client information
+    - Client summary with associated precatorios count
+    - Diligencias (legal tasks) data with status tracking
+    - Requerimentos (legal requests) with financial data
+    - Alvarás (payment authorizations) with multiple fee types
+    - Statistical summary with comprehensive metrics
+    
+    Features:
+    - Multiple worksheets for organized data presentation
+    - Professional formatting with headers and color coding
+    - Conditional formatting for status visualization
+    - Brazilian date and currency formatting
+    - Comprehensive relationship data
+    - Business intelligence analytics
+    
+    Worksheets included:
+    1. Precatórios: Main documents with client associations
+    2. Clientes: Client summaries with aggregated data
+    3. Diligências: Legal tasks with completion tracking
+    4. Requerimentos: Legal requests with financial analysis
+    5. Alvarás: Payment authorizations with fee breakdown
+    6. Estatísticas: System-wide statistics and report metadata
+    
+    Returns:
+        HttpResponse: Excel file download response with comprehensive data
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from django.utils import timezone
+    import io
+    
+    # Create workbook
+    wb = Workbook()
+    
+    # ==================== PRECATORIOS SHEET ====================
+    ws_precatorios = wb.active
+    ws_precatorios.title = "Precatórios"
+    
+    # Headers for precatorios sheet
+    precatorio_headers = [
+        'CNJ', 'Origem', 'Valor de Face', 'Última Atualização', 'Data Última Atualização',
+        'Crédito Principal', 'Honorários Contratuais', 'Honorários Sucumbenciais',
+        'Cliente Nome', 'Cliente CPF', 'Cliente Nascimento', 'Cliente Prioritário',
+        'Tipo Precatório', 'Orçamento'
+    ]
+    
+    # Write headers
+    for col, header in enumerate(precatorio_headers, 1):
+        cell = ws_precatorios.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+    
+    # Get precatorios data with related information
+    precatorios = Precatorio.objects.prefetch_related('clientes').select_related('tipo').all().order_by('cnj')
+    
+    # Write precatorios data
+    for row, precatorio in enumerate(precatorios, 2):
+        # Get the first client (since it's many-to-many, we'll take the first one for display)
+        primeiro_cliente = precatorio.clientes.first()
+        
+        data = [
+            precatorio.cnj,
+            precatorio.origem,
+            precatorio.valor_de_face,
+            precatorio.ultima_atualizacao,
+            precatorio.data_ultima_atualizacao.strftime('%d/%m/%Y') if precatorio.data_ultima_atualizacao else '',
+            precatorio.get_credito_principal_display(),
+            precatorio.get_honorarios_contratuais_display(),
+            precatorio.get_honorarios_sucumbenciais_display(),
+            primeiro_cliente.nome if primeiro_cliente else 'Não vinculado',
+            primeiro_cliente.cpf if primeiro_cliente else '',
+            primeiro_cliente.nascimento.strftime('%d/%m/%Y') if primeiro_cliente and primeiro_cliente.nascimento else '',
+            'Sim' if primeiro_cliente and primeiro_cliente.prioridade else 'Não',
+            precatorio.tipo.nome if precatorio.tipo else 'Não especificado',
+            precatorio.orcamento
+        ]
+        
+        for col, value in enumerate(data, 1):
+            cell = ws_precatorios.cell(row=row, column=col, value=value)
+            cell.border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin')
+            )
+            
+            # Format currency columns
+            if col in [3, 4]:  # Valor de Face, Última Atualização
+                if value is not None:
+                    cell.number_format = 'R$ #,##0.00'
+    
+    # Auto-adjust column widths
+    for col in range(1, len(precatorio_headers) + 1):
+        ws_precatorios.column_dimensions[get_column_letter(col)].width = 15
+    
+    # ==================== CLIENTES SHEET ====================
+    ws_clientes = wb.create_sheet(title="Clientes")
+    
+    # Headers for clientes sheet
+    cliente_headers = [
+        'Nome', 'CPF', 'Data Nascimento', 'Prioritário',
+        'Total Precatórios', 'Valor Total Precatórios', 'Total Diligências',
+        'Diligências Pendentes', 'Diligências Concluídas'
+    ]
+    
+    # Write headers
+    for col, header in enumerate(cliente_headers, 1):
+        cell = ws_clientes.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="2E7D32", end_color="2E7D32", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+    
+    # Get clientes data with aggregated information
+    clientes = Cliente.objects.prefetch_related('precatorios', 'diligencias').all().order_by('nome')
+    
+    # Write clientes data
+    for row, cliente in enumerate(clientes, 2):
+        # Calculate aggregated data
+        precatorios_count = cliente.precatorios.count()
+        total_valor = sum(p.ultima_atualizacao or 0 for p in cliente.precatorios.all())
+        diligencias_count = cliente.diligencias.count()
+        diligencias_pendentes = cliente.diligencias.filter(concluida=False).count()
+        diligencias_concluidas = cliente.diligencias.filter(concluida=True).count()
+        
+        data = [
+            cliente.nome,
+            cliente.cpf,
+            cliente.nascimento.strftime('%d/%m/%Y') if cliente.nascimento else '',
+            'Sim' if cliente.prioridade else 'Não',
+            precatorios_count,
+            total_valor,
+            diligencias_count,
+            diligencias_pendentes,
+            diligencias_concluidas
+        ]
+        
+        for col, value in enumerate(data, 1):
+            cell = ws_clientes.cell(row=row, column=col, value=value)
+            cell.border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin')
+            )
+            
+            # Format currency column
+            if col == 6:  # Valor Total Precatórios
+                cell.number_format = 'R$ #,##0.00'
+            
+            # Color code priority clients
+            if col == 4 and value == 'Sim':
+                cell.fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+    
+    # Auto-adjust column widths
+    for col in range(1, len(cliente_headers) + 1):
+        ws_clientes.column_dimensions[get_column_letter(col)].width = 18
+    
+    # ==================== DILIGENCIAS SHEET ====================
+    ws_diligencias = wb.create_sheet(title="Diligências")
+    
+    # Headers for diligencias sheet
+    diligencia_headers = [
+        'Cliente Nome', 'Cliente CPF', 'Tipo Diligência', 'Descrição',
+        'Data Final', 'Urgência', 'Status', 'Data Conclusão',
+        'Responsável', 'Criado Por', 'Concluído Por', 'Data Criação'
+    ]
+    
+    # Write headers
+    for col, header in enumerate(diligencia_headers, 1):
+        cell = ws_diligencias.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="D32F2F", end_color="D32F2F", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+    
+    # Get diligencias data with related information
+    diligencias = Diligencias.objects.select_related(
+        'cliente', 'tipo', 'responsavel'
+    ).all().order_by('cliente__nome', 'data_final')
+    
+    # Write diligencias data
+    for row, diligencia in enumerate(diligencias, 2):
+        data = [
+            diligencia.cliente.nome,
+            diligencia.cliente.cpf,
+            diligencia.tipo.nome,
+            diligencia.descricao[:100] + '...' if len(diligencia.descricao or '') > 100 else diligencia.descricao,
+            diligencia.data_final.strftime('%d/%m/%Y') if diligencia.data_final else '',
+            diligencia.get_urgencia_display(),
+            'Concluída' if diligencia.concluida else 'Pendente',
+            diligencia.data_conclusao.strftime('%d/%m/%Y %H:%M') if diligencia.data_conclusao else '',
+            diligencia.responsavel.get_full_name() if diligencia.responsavel else 'Não atribuído',
+            diligencia.criado_por or '',
+            diligencia.concluido_por or '',
+            diligencia.criado_em.strftime('%d/%m/%Y %H:%M') if diligencia.criado_em else ''
+        ]
+        
+        for col, value in enumerate(data, 1):
+            cell = ws_diligencias.cell(row=row, column=col, value=value)
+            cell.border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin')
+            )
+            
+            # Color code status
+            if col == 7:  # Status column
+                if value == 'Concluída':
+                    cell.fill = PatternFill(start_color="D4EDDA", end_color="D4EDDA", fill_type="solid")
+                elif value == 'Pendente':
+                    cell.fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+            
+            # Color code urgency
+            if col == 6:  # Urgência column
+                if value == 'Alta':
+                    cell.fill = PatternFill(start_color="F8D7DA", end_color="F8D7DA", fill_type="solid")
+                elif value == 'Média':
+                    cell.fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+    
+    # Auto-adjust column widths
+    for col in range(1, len(diligencia_headers) + 1):
+        ws_diligencias.column_dimensions[get_column_letter(col)].width = 20
+    
+    # ==================== REQUERIMENTOS SHEET ====================
+    ws_requerimentos = wb.create_sheet(title="Requerimentos")
+    
+    # Headers for requerimentos sheet
+    requerimento_headers = [
+        'Cliente Nome', 'Cliente CPF', 'Precatório CNJ', 'Tipo Pedido',
+        'Valor', 'Deságio (%)', 'Fase Atual', 'Data Criação',
+        'Status da Fase', 'Valor com Deságio'
+    ]
+    
+    # Write headers
+    for col, header in enumerate(requerimento_headers, 1):
+        cell = ws_requerimentos.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="FF6F00", end_color="FF6F00", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+    
+    # Get requerimentos data with related information
+    requerimentos = Requerimento.objects.select_related(
+        'cliente', 'precatorio', 'pedido', 'fase'
+    ).all().order_by('cliente__nome', 'precatorio__cnj')
+    
+    # Write requerimentos data
+    for row, requerimento in enumerate(requerimentos, 2):
+        # Calculate valor com deságio - ensure safe calculation
+        try:
+            if requerimento.valor and requerimento.desagio:
+                valor_com_desagio = requerimento.valor * (1 - requerimento.desagio / 100)
+            else:
+                valor_com_desagio = requerimento.valor or 0
+        except (TypeError, ZeroDivisionError):
+            valor_com_desagio = requerimento.valor or 0
+        
+        data = [
+            requerimento.cliente.nome if requerimento.cliente else 'Não vinculado',
+            requerimento.cliente.cpf if requerimento.cliente else '',
+            requerimento.precatorio.cnj if requerimento.precatorio else '',
+            requerimento.pedido.nome if requerimento.pedido else 'Não especificado',
+            requerimento.valor or 0,
+            requerimento.desagio or 0,
+            requerimento.fase.nome if requerimento.fase else 'Sem fase',
+            requerimento.precatorio.data_ultima_atualizacao.strftime('%d/%m/%Y') if requerimento.precatorio and requerimento.precatorio.data_ultima_atualizacao else '',
+            'Ativa' if requerimento.fase and requerimento.fase.ativa else 'Inativa' if requerimento.fase else 'N/A',
+            valor_com_desagio
+        ]
+        
+        for col, value in enumerate(data, 1):
+            cell = ws_requerimentos.cell(row=row, column=col, value=value)
+            cell.border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin')
+            )
+            
+            # Format currency columns
+            if col in [5, 10]:  # Valor and Valor com Deságio
+                if value is not None and value != 0:
+                    cell.number_format = 'R$ #,##0.00'
+            
+            # Format percentage column - simplified approach
+            if col == 6:  # Deságio
+                if value is not None and value != 0:
+                    cell.number_format = '0.00'  # Just show as number with 2 decimals
+                    # Add % symbol manually to the value display
+                    cell.value = f"{value}%"
+            
+            # Color code status
+            if col == 9:  # Status da Fase
+                if value == 'Ativa':
+                    cell.fill = PatternFill(start_color="D4EDDA", end_color="D4EDDA", fill_type="solid")
+                elif value == 'Inativa':
+                    cell.fill = PatternFill(start_color="F8D7DA", end_color="F8D7DA", fill_type="solid")
+    
+    # Auto-adjust column widths
+    for col in range(1, len(requerimento_headers) + 1):
+        ws_requerimentos.column_dimensions[get_column_letter(col)].width = 18
+    
+    # ==================== ALVARÁS SHEET ====================
+    ws_alvaras = wb.create_sheet(title="Alvarás")
+    
+    # Headers for alvarás sheet
+    alvara_headers = [
+        'Cliente Nome', 'Cliente CPF', 'Precatório CNJ', 'Valor Principal',
+        'Honorários Contratuais', 'Honorários Sucumbenciais', 'Valor Total',
+        'Tipo Alvará', 'Fase Principal', 'Fase Honorários', 'Status Geral'
+    ]
+    
+    # Write headers
+    for col, header in enumerate(alvara_headers, 1):
+        cell = ws_alvaras.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="7B1FA2", end_color="7B1FA2", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+    
+    # Get alvarás data with related information
+    alvaras = Alvara.objects.select_related(
+        'cliente', 'precatorio', 'fase', 'fase_honorarios_contratuais'
+    ).all().order_by('cliente__nome', 'precatorio__cnj')
+    
+    # Write alvarás data
+    for row, alvara in enumerate(alvaras, 2):
+        # Calculate total value
+        valor_total = (alvara.valor_principal or 0) + (alvara.honorarios_contratuais or 0) + (alvara.honorarios_sucumbenciais or 0)
+        
+        # Determine overall status
+        status_geral = 'N/A'
+        if alvara.fase and alvara.fase_honorarios_contratuais:
+            if alvara.fase.ativa and alvara.fase_honorarios_contratuais.ativa:
+                status_geral = 'Ambas Ativas'
+            elif not alvara.fase.ativa and not alvara.fase_honorarios_contratuais.ativa:
+                status_geral = 'Ambas Inativas'
+            else:
+                status_geral = 'Misto'
+        elif alvara.fase:
+            status_geral = 'Ativa' if alvara.fase.ativa else 'Inativa'
+        elif alvara.fase_honorarios_contratuais:
+            status_geral = 'Hon. Ativa' if alvara.fase_honorarios_contratuais.ativa else 'Hon. Inativa'
+        
+        data = [
+            alvara.cliente.nome,
+            alvara.cliente.cpf,
+            alvara.precatorio.cnj,
+            alvara.valor_principal,
+            alvara.honorarios_contratuais,
+            alvara.honorarios_sucumbenciais,
+            valor_total,
+            alvara.tipo,
+            alvara.fase.nome if alvara.fase else 'Sem fase',
+            alvara.fase_honorarios_contratuais.nome if alvara.fase_honorarios_contratuais else 'Sem fase',
+            status_geral
+        ]
+        
+        for col, value in enumerate(data, 1):
+            cell = ws_alvaras.cell(row=row, column=col, value=value)
+            cell.border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin')
+            )
+            
+            # Format currency columns
+            if col in [4, 5, 6, 7]:  # All monetary values
+                if value is not None:
+                    cell.number_format = 'R$ #,##0.00'
+            
+            # Color code status
+            if col == 11:  # Status Geral
+                if 'Ativa' in value and 'Inativa' not in value:
+                    cell.fill = PatternFill(start_color="D4EDDA", end_color="D4EDDA", fill_type="solid")
+                elif 'Inativa' in value and 'Ativa' not in value:
+                    cell.fill = PatternFill(start_color="F8D7DA", end_color="F8D7DA", fill_type="solid")
+                elif 'Misto' in value:
+                    cell.fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+    
+    # Auto-adjust column widths
+    for col in range(1, len(alvara_headers) + 1):
+        ws_alvaras.column_dimensions[get_column_letter(col)].width = 18
+    
+    # ==================== STATISTICS SHEET ====================
+    ws_stats = wb.create_sheet(title="Estatísticas")
+    
+    # Calculate statistics
+    total_precatorios = Precatorio.objects.count()
+    total_clientes = Cliente.objects.count()
+    total_diligencias = Diligencias.objects.count()
+    total_requerimentos = Requerimento.objects.count()
+    total_alvaras = Alvara.objects.count()
+    clientes_prioritarios = Cliente.objects.filter(prioridade=True).count()
+    diligencias_pendentes = Diligencias.objects.filter(concluida=False).count()
+    diligencias_concluidas = Diligencias.objects.filter(concluida=True).count()
+    valor_total_precatorios = sum(p.ultima_atualizacao or 0 for p in Precatorio.objects.all())
+    valor_total_requerimentos = sum(r.valor or 0 for r in Requerimento.objects.all())
+    valor_total_alvaras = sum((a.valor_principal or 0) + (a.honorarios_contratuais or 0) + (a.honorarios_sucumbenciais or 0) for a in Alvara.objects.all())
+    
+    # Requerimentos by status
+    requerimentos_com_fase = Requerimento.objects.exclude(fase__isnull=True).count()
+    requerimentos_sem_fase = total_requerimentos - requerimentos_com_fase
+    
+    # Alvarás by type
+    alvaras_aguardando_deposito = Alvara.objects.filter(tipo__icontains='aguardando').count()
+    alvaras_deposito_judicial = Alvara.objects.filter(tipo__icontains='depósito').count()
+    alvaras_recebido_cliente = Alvara.objects.filter(tipo__icontains='recebido').count()
+    
+    # Statistics data
+    stats_data = [
+        ['Estatística', 'Valor'],
+        ['', ''],
+        ['### DOCUMENTOS ###', ''],
+        ['Total de Precatórios', total_precatorios],
+        ['Total de Requerimentos', total_requerimentos],
+        ['Total de Alvarás', total_alvaras],
+        ['', ''],
+        ['### CLIENTES ###', ''],
+        ['Total de Clientes', total_clientes],
+        ['Clientes Prioritários', clientes_prioritarios],
+        ['', ''],
+        ['### DILIGÊNCIAS ###', ''],
+        ['Total de Diligências', total_diligencias],
+        ['Diligências Pendentes', diligencias_pendentes],
+        ['Diligências Concluídas', diligencias_concluidas],
+        ['', ''],
+        ['### REQUERIMENTOS ###', ''],
+        ['Requerimentos com Fase', requerimentos_com_fase],
+        ['Requerimentos sem Fase', requerimentos_sem_fase],
+        ['', ''],
+        ['### ALVARÁS ###', ''],
+        ['Alvarás - Aguardando Depósito', alvaras_aguardando_deposito],
+        ['Alvarás - Depósito Judicial', alvaras_deposito_judicial],
+        ['Alvarás - Recebido pelo Cliente', alvaras_recebido_cliente],
+        ['', ''],
+        ['### VALORES FINANCEIROS ###', ''],
+        ['Valor Total dos Precatórios', valor_total_precatorios],
+        ['Valor Total dos Requerimentos', valor_total_requerimentos],
+        ['Valor Total dos Alvarás', valor_total_alvaras],
+        ['', ''],
+        ['### RELATÓRIO ###', ''],
+        ['Data do Relatório', timezone.now().strftime('%d/%m/%Y %H:%M')],
+        ['Gerado por', request.user.get_full_name() or request.user.username]
+    ]
+    
+    # Write statistics
+    for row, (label, value) in enumerate(stats_data, 1):
+        # Ensure values are safe for Excel
+        safe_label = str(label) if label is not None else ''
+        safe_value = value if value is not None else ''
+        
+        # Label column
+        cell_label = ws_stats.cell(row=row, column=1, value=safe_label)
+        cell_label.font = Font(bold=True)
+        cell_label.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+        
+        # Value column
+        cell_value = ws_stats.cell(row=row, column=2, value=safe_value)
+        cell_value.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+        
+        # Format currency rows
+        if 'Valor Total' in safe_label and isinstance(safe_value, (int, float)) and safe_value > 0:
+            cell_value.number_format = 'R$ #,##0.00'
+        
+        # Header row formatting
+        if row == 1:
+            cell_label.fill = PatternFill(start_color="4A90E2", end_color="4A90E2", fill_type="solid")
+            cell_label.font = Font(bold=True, color="FFFFFF")
+            cell_value.fill = PatternFill(start_color="4A90E2", end_color="4A90E2", fill_type="solid")
+            cell_value.font = Font(bold=True, color="FFFFFF")
+        
+        # Section header formatting (labels that start with ###)
+        if isinstance(safe_label, str) and safe_label.startswith('###'):
+            cell_label.fill = PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")
+            cell_label.font = Font(bold=True, color="000000")
+            cell_value.fill = PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")
+    
+    # Auto-adjust column widths
+    ws_stats.column_dimensions['A'].width = 25
+    ws_stats.column_dimensions['B'].width = 20
+    
+    # ==================== PREPARE RESPONSE ====================
+    
+    # Create response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    
+    # Generate filename with timestamp
+    timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'relatorio_completo_sistema_{timestamp}.xlsx'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    # Save workbook to response
+    wb.save(response)
+    
+    return response
+
+
+@login_required
+def export_clientes_excel(request):
+    """
+    Export comprehensive clientes data to Excel format.
+    
+    Creates a detailed Excel report focused on client information with:
+    - Complete client data with associated precatorios
+    - Client diligencias summary
+    - Statistical analysis by priority status
+    - Financial summary per client
+    
+    Features:
+    - Professional formatting with headers and borders
+    - Brazilian date and currency formatting
+    - Color coding for priority clients
+    - Comprehensive relationship data
+    - Client-focused statistics
+    
+    Returns:
+        HttpResponse: Excel file download response
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from django.utils import timezone
+    from datetime import date, timedelta
+    import io
+    
+    # Create workbook
+    wb = Workbook()
+    
+    # ==================== CLIENTES DETALHADO SHEET ====================
+    ws_clientes = wb.active
+    ws_clientes.title = "Clientes Detalhado"
+    
+    # Headers for detailed clients sheet
+    cliente_headers = [
+        'CPF/CNPJ', 'Nome Completo', 'Data Nascimento', 'Idade', 'Cliente Prioritário',
+        'Total Precatórios', 'CNJ Precatórios', 'Valor Total Precatórios',
+        'Total Diligências', 'Diligências Pendentes', 'Diligências Concluídas',
+        'Diligências Atrasadas', 'Última Diligência', 'Próximo Vencimento'
+    ]
+    
+    # Write headers
+    for col, header in enumerate(cliente_headers, 1):
+        cell = ws_clientes.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="2E7D32", end_color="2E7D32", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+    
+    # Get clientes data with all related information
+    clientes = Cliente.objects.prefetch_related(
+        'precatorios', 'diligencias', 'diligencias__tipo'
+    ).all().order_by('nome')
+    
+    # Write clientes data
+    for row, cliente in enumerate(clientes, 2):
+        from datetime import date, timedelta
+        
+        # Calculate client data
+        precatorios_list = list(cliente.precatorios.all())
+        precatorios_count = len(precatorios_list)
+        cnj_list = ', '.join([p.cnj for p in precatorios_list[:3]])  # Show first 3 CNJs
+        if len(precatorios_list) > 3:
+            cnj_list += f' (e mais {len(precatorios_list) - 3})'
+        
+        total_valor = sum(p.ultima_atualizacao or p.valor_de_face or 0 for p in precatorios_list)
+        
+        # Diligencias calculations
+        diligencias_all = list(cliente.diligencias.all())
+        diligencias_count = len(diligencias_all)
+        diligencias_pendentes = len([d for d in diligencias_all if not d.concluida])
+        diligencias_concluidas = len([d for d in diligencias_all if d.concluida])
+        
+        # Calculate overdue diligencias
+        today = date.today()
+        diligencias_atrasadas = len([
+            d for d in diligencias_all 
+            if not d.concluida and d.data_final and d.data_final < today
+        ])
+        
+        # Get last diligencia and next due date
+        ultima_diligencia = ''
+        proximo_vencimento = ''
+        
+        if diligencias_all:
+            # Sort by creation date (most recent first)
+            diligencias_ordenadas = sorted(
+                diligencias_all, 
+                key=lambda x: x.criado_em if hasattr(x, 'criado_em') and x.criado_em else date.min,
+                reverse=True
+            )
+            if diligencias_ordenadas:
+                ultima = diligencias_ordenadas[0]
+                ultima_diligencia = f"{ultima.tipo.nome} - {ultima.descricao[:30]}..."
+        
+        # Find next due date from pending diligencias
+        diligencias_pendentes_com_data = [
+            d for d in diligencias_all 
+            if not d.concluida and d.data_final and d.data_final >= today
+        ]
+        if diligencias_pendentes_com_data:
+            proxima = min(diligencias_pendentes_com_data, key=lambda x: x.data_final)
+            proximo_vencimento = proxima.data_final.strftime('%d/%m/%Y')
+        
+        # Calculate age if birth date is available
+        idade = ''
+        if cliente.nascimento:
+            idade_anos = (date.today() - cliente.nascimento).days // 365
+            idade = f"{idade_anos} anos"
+        
+        data = [
+            cliente.cpf,
+            cliente.nome,
+            cliente.nascimento.strftime('%d/%m/%Y') if cliente.nascimento else '',
+            idade,
+            'Sim' if cliente.prioridade else 'Não',
+            precatorios_count,
+            cnj_list if cnj_list else 'Nenhum',
+            total_valor,
+            diligencias_count,
+            diligencias_pendentes,
+            diligencias_concluidas,
+            diligencias_atrasadas,
+            ultima_diligencia if ultima_diligencia else 'Nenhuma',
+            proximo_vencimento if proximo_vencimento else 'Nenhum'
+        ]
+        
+        for col, value in enumerate(data, 1):
+            cell = ws_clientes.cell(row=row, column=col, value=value)
+            cell.border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin')
+            )
+            
+            # Format currency column
+            if col == 8:  # Valor Total Precatórios
+                if isinstance(value, (int, float)):
+                    cell.number_format = 'R$ #,##0.00'
+            
+            # Color code priority clients (entire row)
+            if col == 5 and value == 'Sim':  # Priority column
+                for c in range(1, len(cliente_headers) + 1):
+                    ws_clientes.cell(row=row, column=c).fill = PatternFill(
+                        start_color="FFF3CD", end_color="FFF3CD", fill_type="solid"
+                    )
+            
+            # Color code overdue diligencias
+            if col == 12 and isinstance(value, int) and value > 0:  # Diligências Atrasadas
+                cell.fill = PatternFill(start_color="F8D7DA", end_color="F8D7DA", fill_type="solid")
+    
+    # Auto-adjust column widths
+    for col in range(1, len(cliente_headers) + 1):
+        ws_clientes.column_dimensions[get_column_letter(col)].width = 20
+    
+    # ==================== RESUMO POR PRIORIDADE SHEET ====================
+    ws_resumo = wb.create_sheet(title="Resumo por Prioridade")
+    
+    # Calculate priority statistics
+    clientes_prioritarios = clientes.filter(prioridade=True)
+    clientes_normais = clientes.filter(prioridade=False)
+    
+    total_clientes = clientes.count()
+    total_prioritarios = clientes_prioritarios.count()
+    total_normais = clientes_normais.count()
+    
+    # Calculate financial data
+    valor_prioritarios = sum(
+        sum(p.ultima_atualizacao or p.valor_de_face or 0 for p in c.precatorios.all())
+        for c in clientes_prioritarios
+    )
+    valor_normais = sum(
+        sum(p.ultima_atualizacao or p.valor_de_face or 0 for p in c.precatorios.all())
+        for c in clientes_normais
+    )
+    
+    # Summary data
+    resumo_data = [
+        ['Categoria', 'Quantidade Clientes', 'Percentual', 'Valor Total Precatórios', 'Valor Médio por Cliente'],
+        ['Clientes Prioritários', total_prioritarios, f"{(total_prioritarios/total_clientes*100):.1f}%" if total_clientes > 0 else "0%", valor_prioritarios, valor_prioritarios/total_prioritarios if total_prioritarios > 0 else 0],
+        ['Clientes Normais', total_normais, f"{(total_normais/total_clientes*100):.1f}%" if total_clientes > 0 else "0%", valor_normais, valor_normais/total_normais if total_normais > 0 else 0],
+        ['', '', '', '', ''],
+        ['TOTAL GERAL', total_clientes, '100%', valor_prioritarios + valor_normais, (valor_prioritarios + valor_normais)/total_clientes if total_clientes > 0 else 0]
+    ]
+    
+    # Write summary data
+    for row, data_row in enumerate(resumo_data, 1):
+        for col, value in enumerate(data_row, 1):
+            cell = ws_resumo.cell(row=row, column=col, value=value)
+            cell.border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin')
+            )
+            
+            # Header row formatting
+            if row == 1:
+                cell.font = Font(bold=True, color="FFFFFF")
+                cell.fill = PatternFill(start_color="4A90E2", end_color="4A90E2", fill_type="solid")
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+            
+            # Total row formatting
+            elif row == 5:
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="E9ECEF", end_color="E9ECEF", fill_type="solid")
+            
+            # Priority clients row
+            elif row == 2:
+                cell.fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+            
+            # Format currency columns
+            if col in [4, 5] and row > 1 and isinstance(value, (int, float)):
+                cell.number_format = 'R$ #,##0.00'
+    
+    # Auto-adjust column widths
+    for col in range(1, 6):
+        ws_resumo.column_dimensions[get_column_letter(col)].width = 25
+    
+    # ==================== ESTATÍSTICAS DETALHADAS SHEET ====================
+    ws_stats = wb.create_sheet(title="Estatísticas Detalhadas")
+    
+    # Calculate detailed statistics
+    total_diligencias_sistema = Diligencias.objects.count()
+    diligencias_pendentes_sistema = Diligencias.objects.filter(concluida=False).count()
+    diligencias_concluidas_sistema = Diligencias.objects.filter(concluida=True).count()
+    diligencias_atrasadas_sistema = Diligencias.objects.filter(
+        concluida=False, data_final__lt=date.today()
+    ).count()
+    
+    total_precatorios_sistema = Precatorio.objects.count()
+    valor_total_sistema = sum(p.ultima_atualizacao or p.valor_de_face or 0 for p in Precatorio.objects.all())
+    
+    # Statistics data
+    stats_data = [
+        ['Estatística', 'Valor'],
+        ['### CLIENTES ###', ''],
+        ['Total de Clientes', total_clientes],
+        ['Clientes Prioritários', total_prioritarios],
+        ['Clientes Normais', total_normais],
+        ['Percentual Prioritários', f"{(total_prioritarios/total_clientes*100):.1f}%" if total_clientes > 0 else "0%"],
+        ['', ''],
+        ['### PRECATÓRIOS ###', ''],
+        ['Total de Precatórios no Sistema', total_precatorios_sistema],
+        ['Valor Total dos Precatórios', valor_total_sistema],
+        ['Valor Médio por Precatório', valor_total_sistema/total_precatorios_sistema if total_precatorios_sistema > 0 else 0],
+        ['', ''],
+        ['### DILIGÊNCIAS ###', ''],
+        ['Total de Diligências no Sistema', total_diligencias_sistema],
+        ['Diligências Pendentes', diligencias_pendentes_sistema],
+        ['Diligências Concluídas', diligencias_concluidas_sistema],
+        ['Diligências Atrasadas', diligencias_atrasadas_sistema],
+        ['Taxa de Conclusão', f"{(diligencias_concluidas_sistema/total_diligencias_sistema*100):.1f}%" if total_diligencias_sistema > 0 else "0%"],
+        ['', ''],
+        ['### RELATÓRIO ###', ''],
+        ['Data do Relatório', timezone.now().strftime('%d/%m/%Y %H:%M')],
+        ['Gerado por', request.user.get_full_name() or request.user.username],
+        ['Tipo de Relatório', 'Exportação de Clientes']
+    ]
+    
+    # Write statistics
+    for row, (label, value) in enumerate(stats_data, 1):
+        # Label column
+        cell_label = ws_stats.cell(row=row, column=1, value=label)
+        cell_label.font = Font(bold=True if '===' in str(label) else False)
+        cell_label.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+        
+        # Value column
+        cell_value = ws_stats.cell(row=row, column=2, value=value)
+        cell_value.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+        
+        # Format currency rows
+        if 'Valor' in str(label) and 'Valor' != str(label) and isinstance(value, (int, float)):
+            cell_value.number_format = 'R$ #,##0.00'
+        
+        # Header row formatting
+        if row == 1:
+            cell_label.fill = PatternFill(start_color="4A90E2", end_color="4A90E2", fill_type="solid")
+            cell_label.font = Font(bold=True, color="FFFFFF")
+            cell_value.fill = PatternFill(start_color="4A90E2", end_color="4A90E2", fill_type="solid")
+            cell_value.font = Font(bold=True, color="FFFFFF")
+        
+        # Section headers
+        elif '===' in str(label):
+            cell_label.fill = PatternFill(start_color="E9ECEF", end_color="E9ECEF", fill_type="solid")
+            cell_value.fill = PatternFill(start_color="E9ECEF", end_color="E9ECEF", fill_type="solid")
+    
+    # Auto-adjust column widths
+    ws_stats.column_dimensions['A'].width = 30
+    ws_stats.column_dimensions['B'].width = 25
+    
+    # ==================== PREPARE RESPONSE ====================
+    
+    # Create response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    
+    # Generate filename with timestamp
+    timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'relatorio_clientes_{timestamp}.xlsx'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    # Save workbook to response
+    wb.save(response)
+    
+    return response
