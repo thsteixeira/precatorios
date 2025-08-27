@@ -423,18 +423,29 @@
                                             </div>
                                             
                                             <div class="row text-center mb-2">
-                                                <div class="col-4">
+                                                <div class="col-3">
                                                     <small class="text-muted">Data Final:</small><br>
                                                     <small class="fw-bold">{{ diligencia.data_final|date:"d/m/Y" }}</small>
                                                     {% if diligencia.is_overdue %}
                                                         <br><span class="badge bg-danger" style="font-size: 0.6em;">Atrasada</span>
                                                     {% endif %}
                                                 </div>
-                                                <div class="col-4">
+                                                <div class="col-3">
                                                     <small class="text-muted">Urgência:</small><br>
                                                     <span class="badge bg-{{ diligencia.get_urgencia_color }}" style="font-size: 0.7em;">{{ diligencia.get_urgencia_display }}</span>
                                                 </div>
-                                                <div class="col-4">
+                                                <div class="col-3">
+                                                    <small class="text-muted">Responsável:</small><br>
+                                                    <small class="text-info">
+                                                        <i class="fas fa-user-tie me-1"></i>
+                                                        {% if diligencia.responsavel %}
+                                                            {{ diligencia.responsavel.get_full_name|default:diligencia.responsavel.username }}
+                                                        {% else %}
+                                                            <span class="text-muted">Não atribuído</span>
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                                <div class="col-3">
                                                     <small class="text-muted">Criado:</small><br>
                                                     <small>{{ diligencia.criado_em|date:"d/m/Y" }}</small><br>
                                                     <small class="text-primary">
@@ -496,16 +507,27 @@
                                             </div>
                                             
                                             <div class="row text-center mb-2">
-                                                <div class="col-3">
+                                                <div class="col-2">
                                                     <small class="text-muted">Concluída:</small><br>
                                                     <small class="fw-bold text-success">{{ diligencia.data_conclusao|date:"d/m/Y" }}</small><br>
                                                     <small class="text-success">
                                                         <i class="fas fa-user-check me-1"></i>{{ diligencia.concluido_por|default:"N/A" }}
                                                     </small>
                                                 </div>
-                                                <div class="col-3">
+                                                <div class="col-2">
                                                     <small class="text-muted">Urgência:</small><br>
                                                     <span class="badge bg-{{ diligencia.get_urgencia_color }}" style="font-size: 0.7em;">{{ diligencia.get_urgencia_display }}</span>
+                                                </div>
+                                                <div class="col-3">
+                                                    <small class="text-muted">Responsável:</small><br>
+                                                    <small class="text-info">
+                                                        <i class="fas fa-user-tie me-1"></i>
+                                                        {% if diligencia.responsavel %}
+                                                            {{ diligencia.responsavel.get_full_name|default:diligencia.responsavel.username }}
+                                                        {% else %}
+                                                            <span class="text-muted">Não atribuído</span>
+                                                        {% endif %}
+                                                    </small>
                                                 </div>
                                                 <div class="col-3">
                                                     <small class="text-muted">Criado:</small><br>
@@ -514,7 +536,7 @@
                                                         <i class="fas fa-user-plus me-1"></i>{{ diligencia.criado_por|default:"N/A" }}
                                                     </small>
                                                 </div>
-                                                <div class="col-3">
+                                                <div class="col-2">
                                                     <small class="text-muted">Status:</small><br>
                                                     <span class="badge bg-success" style="font-size: 0.7em;">Concluída</span>
                                                 </div>
