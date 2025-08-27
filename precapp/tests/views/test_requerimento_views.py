@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.contrib.messages import get_messages
 from datetime import date
 from precapp.models import (
-    Requerimento, Precatorio, Cliente, Fase
+    Requerimento, Precatorio, Cliente, Fase, PedidoRequerimento
 )
 
 
@@ -38,7 +38,7 @@ class RequerimentoListViewTest(TestCase):
     Filter Types Tested:
     - cliente: Partial name matching (icontains)
     - precatorio: CNJ partial matching (icontains)
-    - pedido: Exact matching of request type
+    - pedido: Exact ID matching of PedidoRequerimento instance
     - fase: Exact matching of phase name
     
     Financial Calculations:
@@ -137,13 +137,38 @@ class RequerimentoListViewTest(TestCase):
             ativa=True
         )
         
+        # Create test PedidoRequerimento types
+        self.pedido_doenca = PedidoRequerimento.objects.create(
+            nome='Prioridade por Doença',
+            descricao='Pedido de prioridade por motivo de doença',
+            cor='#dc3545',
+            ordem=1,
+            ativo=True
+        )
+        
+        self.pedido_acordo = PedidoRequerimento.objects.create(
+            nome='Acordo Principal',
+            descricao='Pedido referente ao acordo principal',
+            cor='#28a745',
+            ordem=2,
+            ativo=True
+        )
+        
+        self.pedido_idade = PedidoRequerimento.objects.create(
+            nome='Prioridade por Idade',
+            descricao='Pedido de prioridade por idade avançada',
+            cor='#ffc107',
+            ordem=3,
+            ativo=True
+        )
+        
         # Create test requerimentos
         self.requerimento1 = Requerimento.objects.create(
             precatorio=self.precatorio1,
             cliente=self.cliente1,
             valor=25000.00,
             desagio=10.5,
-            pedido='prioridade doença',
+            pedido=self.pedido_doenca,
             fase=self.fase_deferido
         )
         
@@ -152,7 +177,7 @@ class RequerimentoListViewTest(TestCase):
             cliente=self.cliente2,
             valor=30000.00,
             desagio=15.0,
-            pedido='acordo principal',
+            pedido=self.pedido_acordo,
             fase=self.fase_em_andamento
         )
         
@@ -161,7 +186,7 @@ class RequerimentoListViewTest(TestCase):
             cliente=self.cliente1,
             valor=20000.00,
             desagio=8.5,
-            pedido='prioridade idade',
+            pedido=self.pedido_idade,
             fase=self.fase_indeferido
         )
         
@@ -251,19 +276,19 @@ class RequerimentoListViewTest(TestCase):
         self.client.force_login(self.user)
         
         # Test exact matching for priority illness
-        response = self.client.get(self.requerimentos_url, {'pedido': 'prioridade doença'})
+        response = self.client.get(self.requerimentos_url, {'pedido': str(self.pedido_doenca.id)})
         requerimentos = response.context['requerimentos']
         self.assertEqual(requerimentos.count(), 1)
-        self.assertEqual(requerimentos[0].pedido, 'prioridade doença')
+        self.assertEqual(requerimentos[0].pedido, self.pedido_doenca)
         
         # Test exact matching for agreement
-        response = self.client.get(self.requerimentos_url, {'pedido': 'acordo principal'})
+        response = self.client.get(self.requerimentos_url, {'pedido': str(self.pedido_acordo.id)})
         requerimentos = response.context['requerimentos']
         self.assertEqual(requerimentos.count(), 1)
-        self.assertEqual(requerimentos[0].pedido, 'acordo principal')
+        self.assertEqual(requerimentos[0].pedido, self.pedido_acordo)
         
         # Test no matches for non-existent pedido
-        response = self.client.get(self.requerimentos_url, {'pedido': 'inexistente'})
+        response = self.client.get(self.requerimentos_url, {'pedido': '9999'})
         requerimentos = response.context['requerimentos']
         self.assertEqual(requerimentos.count(), 0)
     
@@ -304,18 +329,18 @@ class RequerimentoListViewTest(TestCase):
         
         # Test pedido + fase filters
         response = self.client.get(self.requerimentos_url, {
-            'pedido': 'prioridade idade',
+            'pedido': str(self.pedido_idade.id),
             'fase': 'Indeferido'
         })
         requerimentos = response.context['requerimentos']
         self.assertEqual(requerimentos.count(), 1)
-        self.assertEqual(requerimentos[0].pedido, 'prioridade idade')
+        self.assertEqual(requerimentos[0].pedido, self.pedido_idade)
         self.assertEqual(requerimentos[0].fase.nome, 'Indeferido')
         
         # Test filters that should return no results
         response = self.client.get(self.requerimentos_url, {
             'cliente': 'João',
-            'pedido': 'acordo principal'  # Maria's request, not João's
+            'pedido': str(self.pedido_acordo.id)  # Maria's request, not João's
         })
         requerimentos = response.context['requerimentos']
         self.assertEqual(requerimentos.count(), 0)
@@ -364,7 +389,7 @@ class RequerimentoListViewTest(TestCase):
         response = self.client.get(self.requerimentos_url, {
             'cliente': 'João',
             'precatorio': '0000001',
-            'pedido': 'prioridade doença',
+            'pedido': str(self.pedido_doenca.id),
             'fase': 'Deferido'
         })
         
@@ -377,7 +402,7 @@ class RequerimentoListViewTest(TestCase):
         # Verify filter values are preserved for form persistence
         self.assertEqual(response.context['current_cliente'], 'João')
         self.assertEqual(response.context['current_precatorio'], '0000001')
-        self.assertEqual(response.context['current_pedido'], 'prioridade doença')
+        self.assertEqual(response.context['current_pedido'], str(self.pedido_doenca.id))
         self.assertEqual(response.context['current_fase'], 'Deferido')
         
         # Verify available_fases contains requerimento phases

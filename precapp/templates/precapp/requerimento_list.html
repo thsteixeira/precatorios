@@ -37,11 +37,9 @@
                             <label for="pedido" class="form-label">Tipo de Pedido</label>
                             <select class="form-control" id="pedido" name="pedido">
                                 <option value="">Todos</option>
-                                <option value="prioridade doença" {% if current_pedido == 'prioridade doença' %}selected{% endif %}>Prioridade por doença</option>
-                                <option value="prioridade idade" {% if current_pedido == 'prioridade idade' %}selected{% endif %}>Prioridade por idade</option>
-                                <option value="acordo principal" {% if current_pedido == 'acordo principal' %}selected{% endif %}>Acordo sobre o valor Principal</option>
-                                <option value="acordo honorários contratuais" {% if current_pedido == 'acordo honorários contratuais' %}selected{% endif %}>Acordo sobre os Honorários Contratuais</option>
-                                <option value="acordo honorários sucumbenciais" {% if current_pedido == 'acordo honorários sucumbenciais' %}selected{% endif %}>Acordo sobre os Honorários Sucumbenciais</option>
+                                {% for pedido in available_pedidos %}
+                                    <option value="{{ pedido.id }}" {% if current_pedido == pedido.id|stringformat:"s" %}selected{% endif %}>{{ pedido.nome }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -135,9 +133,15 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="badge bg-info text-white">
-                                                {{ requerimento.get_pedido_display }}
-                                            </span>
+                                            {% if requerimento.pedido %}
+                                                <span class="badge text-white" style="background-color: {{ requerimento.pedido.cor }};">
+                                                    {{ requerimento.pedido.nome }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">
+                                                    Não informado
+                                                </span>
+                                            {% endif %}
                                         </td>
                                         <td class="text-end">
                                             <div class="fw-bold text-success">

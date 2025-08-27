@@ -10,6 +10,8 @@ from .views import (
     deletar_fase_honorarios_view, ativar_fase_honorarios_view, customizacao_view,
     tipos_precatorio_view, novo_tipo_precatorio_view, editar_tipo_precatorio_view,
     deletar_tipo_precatorio_view, ativar_tipo_precatorio_view,
+    tipos_pedido_requerimento_view, novo_tipo_pedido_requerimento_view, editar_tipo_pedido_requerimento_view,
+    deletar_tipo_pedido_requerimento_view, ativar_tipo_pedido_requerimento_view,
     tipos_diligencia_view, novo_tipo_diligencia_view, editar_tipo_diligencia_view,
     deletar_tipo_diligencia_view, ativar_tipo_diligencia_view,
     nova_diligencia_view, editar_diligencia_view, deletar_diligencia_view, marcar_diligencia_concluida_view,
@@ -61,6 +63,13 @@ urlpatterns = [
     path('tipos-precatorio/<int:tipo_id>/editar/', editar_tipo_precatorio_view, name='editar_tipo_precatorio'),
     path('tipos-precatorio/<int:tipo_id>/deletar/', deletar_tipo_precatorio_view, name='deletar_tipo_precatorio'),
     path('tipos-precatorio/<int:tipo_id>/ativar/', ativar_tipo_precatorio_view, name='ativar_tipo_precatorio'),
+    
+    # Tipo Pedido Requerimento Management URLs
+    path('tipos-pedido-requerimento/', tipos_pedido_requerimento_view, name='tipos_pedido_requerimento'),
+    path('tipos-pedido-requerimento/novo/', novo_tipo_pedido_requerimento_view, name='novo_tipo_pedido_requerimento'),
+    path('tipos-pedido-requerimento/<int:tipo_id>/editar/', editar_tipo_pedido_requerimento_view, name='editar_tipo_pedido_requerimento'),
+    path('tipos-pedido-requerimento/<int:tipo_id>/deletar/', deletar_tipo_pedido_requerimento_view, name='deletar_tipo_pedido_requerimento'),
+    path('tipos-pedido-requerimento/<int:tipo_id>/ativar/', ativar_tipo_pedido_requerimento_view, name='ativar_tipo_pedido_requerimento'),
     
     # Tipo Diligencia Management URLs
     path('tipos-diligencia/', tipos_diligencia_view, name='tipos_diligencia'),

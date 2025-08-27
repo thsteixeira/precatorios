@@ -17,7 +17,7 @@ from datetime import date, timedelta
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 from precapp.models import (
-    Cliente, Precatorio, Requerimento, Fase, TipoDiligencia, Diligencias
+    Cliente, Precatorio, Requerimento, Fase, TipoDiligencia, Diligencias, PedidoRequerimento
 )
 from precapp.forms import ClienteForm, PrecatorioSearchForm
 
@@ -132,13 +132,30 @@ class ClientesViewTest(TestCase):
         self.precatorio1.clientes.add(self.cliente1, self.cliente2)
         self.precatorio2.clientes.add(self.cliente3, self.cliente4)
         
+        # Create test PedidoRequerimento
+        self.pedido_prioridade = PedidoRequerimento.objects.create(
+            nome='Prioridade por idade',
+            descricao='Pedido de prioridade por idade',
+            cor='#ffc107',
+            ordem=1,
+            ativo=True
+        )
+        
+        self.pedido_acordo = PedidoRequerimento.objects.create(
+            nome='Acordo no Principal',
+            descricao='Pedido de acordo principal',
+            cor='#28a745',
+            ordem=2,
+            ativo=True
+        )
+        
         # Create requerimentos for testing priority filters
         self.requerimento_deferido = Requerimento.objects.create(
             cliente=self.cliente1,
             precatorio=self.precatorio1,
             valor=50000.00,
             desagio=10.0,
-            pedido='prioridade idade',
+            pedido=self.pedido_prioridade,
             fase=self.fase_deferido
         )
         
@@ -147,7 +164,7 @@ class ClientesViewTest(TestCase):
             precatorio=self.precatorio1,
             valor=30000.00,
             desagio=5.0,
-            pedido='prioridade doença',
+            pedido=self.pedido_prioridade,  # Use same pedido for simplicity
             fase=self.fase_indeferido
         )
         
@@ -156,7 +173,7 @@ class ClientesViewTest(TestCase):
             precatorio=self.precatorio2,
             valor=75000.00,
             desagio=8.0,
-            pedido='acordo principal',
+            pedido=self.pedido_acordo,
             fase=self.fase_deferido
         )
         
@@ -449,7 +466,7 @@ class ClientesViewTest(TestCase):
         self.client.login(username='testuser', password='testpass123')
         
         # Monitor database queries to ensure optimization
-        with self.assertNumQueries(15):  # Expected queries include auth, counts, main query, and prefetched data
+        with self.assertNumQueries(18):  # Expected queries include auth, counts, main query, and prefetched data
             response = self.client.get(self.clientes_url)
         
         self.assertEqual(response.status_code, 200)
@@ -1732,6 +1749,15 @@ class DeleteClienteViewTest(TestCase):
             honorarios_sucumbenciais='pendente'
         )
         
+        # Create PedidoRequerimento for this test
+        pedido_acordo = PedidoRequerimento.objects.create(
+            nome='Acordo no Principal',
+            descricao='Pedido de acordo principal',
+            cor='#28a745',
+            ordem=1,
+            ativo=True
+        )
+        
         # Link client to precatorio and then create requerimento
         separate_precatorio.clientes.add(self.cliente_with_associations)
         requerimento = Requerimento.objects.create(
@@ -1739,7 +1765,7 @@ class DeleteClienteViewTest(TestCase):
             precatorio=separate_precatorio,
             valor=25000.00,
             desagio=5.0,
-            pedido='acordo principal',
+            pedido=pedido_acordo,
             fase=self.fase
         )
         
@@ -1782,13 +1808,22 @@ class DeleteClienteViewTest(TestCase):
             tipo='aguardando depósito'
         )
         
+        # Create PedidoRequerimento for this test
+        pedido_acordo = PedidoRequerimento.objects.create(
+            nome='Acordo no Principal',
+            descricao='Pedido de acordo principal',
+            cor='#28a745',
+            ordem=1,
+            ativo=True
+        )
+        
         # Create requerimento
         Requerimento.objects.create(
             cliente=self.cliente_with_associations,
             precatorio=self.precatorio,
             valor=25000.00,
             desagio=5.0,
-            pedido='acordo principal'
+            pedido=pedido_acordo
         )
         
         self.client.login(username='testuser', password='testpass123')
@@ -1905,12 +1940,21 @@ class DeleteClienteViewTest(TestCase):
             tipo='aguardando depósito'
         )
         
+        # Create PedidoRequerimento for this test
+        pedido_acordo = PedidoRequerimento.objects.create(
+            nome='Acordo no Principal',
+            descricao='Pedido de acordo principal',
+            cor='#28a745',
+            ordem=1,
+            ativo=True
+        )
+        
         Requerimento.objects.create(
             cliente=self.cliente_with_associations,
             precatorio=self.precatorio,
             valor=25000.00,
             desagio=5.0,
-            pedido='acordo principal'
+            pedido=pedido_acordo
         )
         
         self.client.login(username='testuser', password='testpass123')

@@ -15,7 +15,7 @@ from django.utils import timezone
 from datetime import timedelta
 from precapp.models import (
     Precatorio, Cliente, Alvara, Requerimento, Fase, 
-    FaseHonorariosContratuais, TipoDiligencia, Diligencias
+    FaseHonorariosContratuais, TipoDiligencia, Diligencias, PedidoRequerimento
 )
 
 
@@ -130,13 +130,30 @@ class HomeViewTest(TestCase):
             fase=self.fase_alvara
         )
         
+        # Create test PedidoRequerimento instances
+        self.pedido_acordo = PedidoRequerimento.objects.create(
+            nome='Acordo no Principal',
+            descricao='Pedido de acordo principal',
+            cor='#28a745',
+            ordem=1,
+            ativo=True
+        )
+        
+        self.pedido_prioridade = PedidoRequerimento.objects.create(
+            nome='Prioridade por idade',
+            descricao='Pedido de prioridade por idade',
+            cor='#ffc107',
+            ordem=2,
+            ativo=True
+        )
+        
         # Create test requerimentos with financial values
         self.requerimento1 = Requerimento.objects.create(
             precatorio=self.precatorio1,
             cliente=self.cliente1,
             valor=80000.00,
             desagio=10.5,
-            pedido='acordo principal',
+            pedido=self.pedido_acordo,
             fase=self.fase_requerimento
         )
         self.requerimento2 = Requerimento.objects.create(
@@ -144,7 +161,7 @@ class HomeViewTest(TestCase):
             cliente=self.cliente2,
             valor=120000.00,
             desagio=8.0,
-            pedido='prioridade idade'
+            pedido=self.pedido_prioridade
         )
         
         # Create test diligencias with different statuses and urgency
@@ -288,7 +305,7 @@ class HomeViewTest(TestCase):
         self.client_app.login(username='testuser', password='testpass123')
         
         # Monitor database queries
-        with self.assertNumQueries(20):  # Updated expected number based on actual queries
+        with self.assertNumQueries(22):  # Updated expected number based on actual queries including PedidoRequerimento
             response = self.client_app.get(self.home_url)
         
         self.assertEqual(response.status_code, 200)
@@ -360,7 +377,7 @@ class HomeViewTest(TestCase):
             cliente=self.cliente1,
             valor=0.0,  # Use 0 instead of None
             desagio=0.0,  # Add required field
-            pedido='acordo principal'  # Use valid choice
+            pedido=self.pedido_acordo  # Use existing PedidoRequerimento instance
         )
         
         self.client_app.login(username='testuser', password='testpass123')

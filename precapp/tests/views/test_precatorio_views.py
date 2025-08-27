@@ -18,7 +18,7 @@ from django.contrib.messages import get_messages
 from datetime import date
 from precapp.models import (
     Precatorio, Cliente, Alvara, Requerimento, Fase, 
-    FaseHonorariosContratuais, TipoDiligencia, Diligencias
+    FaseHonorariosContratuais, TipoDiligencia, Diligencias, PedidoRequerimento
 )
 from precapp.forms import (
     PrecatorioForm, ClienteSearchForm, RequerimentoForm, 
@@ -505,13 +505,22 @@ class PrecatorioDetalheViewTest(TestCase):
             fase_honorarios_contratuais=self.fase_honorarios
         )
         
+        # Create test PedidoRequerimento
+        self.pedido_idade = PedidoRequerimento.objects.create(
+            nome='Prioridade por idade',  # Match view expectation (lowercase 'por')
+            descricao='Pedido de prioridade por idade avançada',
+            cor='#ffc107',
+            ordem=1,
+            ativo=True
+        )
+        
         # Create test requerimento
         self.requerimento = Requerimento.objects.create(
             precatorio=self.precatorio,
             cliente=self.cliente1,
             valor=25000.00,
             desagio=5.0,
-            pedido='prioridade idade',
+            pedido=self.pedido_idade,
             fase=self.fase_requerimento
         )
 
@@ -831,7 +840,7 @@ class PrecatorioDetalheViewTest(TestCase):
             'cliente_cpf': '123.456.789-09',  # cliente2's CPF
             'valor': 30000.00,
             'desagio': 7.5,
-            'pedido': 'acordo principal',
+            'pedido': self.pedido_idade.id,  # Use PedidoRequerimento ID
             'fase': self.fase_requerimento.id
         }
         
@@ -846,7 +855,7 @@ class PrecatorioDetalheViewTest(TestCase):
         # Verify requerimento was created
         new_requerimento = Requerimento.objects.get(cliente=self.cliente2, precatorio=self.precatorio)
         self.assertEqual(new_requerimento.valor, 30000.00)
-        self.assertEqual(new_requerimento.pedido, 'acordo principal')
+        self.assertEqual(new_requerimento.pedido, self.pedido_idade)
     
     def test_create_requerimento_nonexistent_cliente(self):
         """Test creating requerimento with non-existent client"""
@@ -884,7 +893,7 @@ class PrecatorioDetalheViewTest(TestCase):
             'requerimento_id': self.requerimento.id,
             'valor': 35000.00,
             'desagio': 8.0,
-            'pedido': 'acordo principal',
+            'pedido': self.pedido_idade.id,  # Use PedidoRequerimento ID
             'fase': self.fase_ambos.id
         }
         
@@ -899,7 +908,7 @@ class PrecatorioDetalheViewTest(TestCase):
         # Verify requerimento was updated
         updated_requerimento = Requerimento.objects.get(id=self.requerimento.id)
         self.assertEqual(updated_requerimento.valor, 35000.00)
-        self.assertEqual(updated_requerimento.pedido, 'acordo principal')
+        self.assertEqual(updated_requerimento.pedido, self.pedido_idade)
         self.assertEqual(updated_requerimento.fase.id, self.fase_ambos.id)
     
     def test_update_requerimento_invalid_data(self):
@@ -1348,13 +1357,46 @@ class PrecatorioViewTest(TestCase):
         self.precatorio3.clientes.add(self.cliente1, self.cliente2)
         self.precatorio4.clientes.add(self.cliente1)
         
+        # Create test PedidoRequerimento types
+        self.pedido_acordo = PedidoRequerimento.objects.create(
+            nome='Acordo no Principal',  # Match view expectation
+            descricao='Pedido referente ao acordo principal',
+            cor='#28a745',
+            ordem=1,
+            ativo=True
+        )
+        
+        self.pedido_acordo_honorarios = PedidoRequerimento.objects.create(
+            nome='Acordo nos Hon. Contratuais',  # Match view expectation
+            descricao='Pedido referente ao acordo de honorários contratuais',
+            cor='#17a2b8',
+            ordem=2,
+            ativo=True
+        )
+        
+        self.pedido_prioridade_idade = PedidoRequerimento.objects.create(
+            nome='Prioridade por idade',  # Match view expectation (lowercase 'por')
+            descricao='Pedido de prioridade por idade avançada',
+            cor='#ffc107',
+            ordem=3,
+            ativo=True
+        )
+        
+        self.pedido_prioridade_doenca = PedidoRequerimento.objects.create(
+            nome='Prioridade por doença',  # Match view expectation (lowercase 'por')
+            descricao='Pedido de prioridade por motivo de doença',
+            cor='#dc3545',
+            ordem=4,
+            ativo=True
+        )
+        
         # Create test requerimentos for complex filtering logic
         self.requerimento_acordo_deferido = Requerimento.objects.create(
             precatorio=self.precatorio1,
             cliente=self.cliente1,
             valor=5000.00,
             desagio=10.0,
-            pedido='acordo principal',
+            pedido=self.pedido_acordo,
             fase=self.fase_deferido
         )
         
@@ -1363,7 +1405,7 @@ class PrecatorioViewTest(TestCase):
             cliente=self.cliente2,
             valor=8000.00,
             desagio=12.0,
-            pedido='acordo honorários contratuais',
+            pedido=self.pedido_acordo_honorarios,
             fase=self.fase_indeferido
         )
         
@@ -1372,7 +1414,7 @@ class PrecatorioViewTest(TestCase):
             cliente=self.cliente1,
             valor=7000.00,
             desagio=8.0,
-            pedido='prioridade idade',
+            pedido=self.pedido_prioridade_idade,
             fase=self.fase_deferido
         )
         
@@ -1381,7 +1423,7 @@ class PrecatorioViewTest(TestCase):
             cliente=self.cliente1,
             valor=12000.00,
             desagio=15.0,
-            pedido='prioridade doença',
+            pedido=self.pedido_prioridade_doenca,
             fase=self.fase_indeferido
         )
         
@@ -1390,7 +1432,7 @@ class PrecatorioViewTest(TestCase):
             cliente=self.cliente2,
             valor=6000.00,
             desagio=9.0,
-            pedido='acordo honorários contratuais'
+            pedido=self.pedido_acordo_honorarios
         )
         
         # Test URLs
@@ -1795,8 +1837,8 @@ class PrecatorioViewTest(TestCase):
         self.client_app.login(username='testuser', password='testpass123')
         
         # The view makes several queries for statistics calculation
-        # We expect: session, user, statistics (5 counts), tipos, main query, prefetch requerimentos, prefetch fases
-        with self.assertNumQueries(12):  # Adjusted for actual query count including statistics and tipos
+        # We expect: session, user, statistics (5 counts), tipos, main query, prefetch requerimentos, prefetch fases, pedido queries
+        with self.assertNumQueries(17):  # Adjusted for actual query count including individual PedidoRequerimento queries
             response = self.client_app.get(self.precatorios_url)
             precatorios = list(response.context['precatorios'])
             
@@ -1840,7 +1882,7 @@ class PrecatorioViewTest(TestCase):
         
         self.client_app.login(username='testuser', password='testpass123')
         
-        with self.assertNumQueries(12):  # Should remain efficient including statistics and tipos
+        with self.assertNumQueries(17):  # Should remain efficient including statistics and tipos
             response = self.client_app.get(self.precatorios_url)
             # Should handle 54 total precatorios efficiently
             self.assertEqual(len(response.context['precatorios']), 54)
@@ -2005,12 +2047,22 @@ class DeletePrecatorioViewTest(TestCase):
         
         # Precatorio with requerimentos only (need to link client first)
         self.precatorio_with_requerimentos.clientes.add(self.cliente1)
+        
+        # Create test PedidoRequerimento
+        self.pedido_idade = PedidoRequerimento.objects.create(
+            nome='Prioridade por idade',  # Match view expectation (lowercase 'por')
+            descricao='Pedido de prioridade por idade avançada',
+            cor='#ffc107',
+            ordem=1,
+            ativo=True
+        )
+        
         self.requerimento = Requerimento.objects.create(
             precatorio=self.precatorio_with_requerimentos,
             cliente=self.cliente1,
             valor=20000.00,
             desagio=5.0,
-            pedido='prioridade idade',
+            pedido=self.pedido_idade,
             fase=self.fase_requerimento
         )
         # Remove client to test requerimento association specifically
@@ -2273,12 +2325,21 @@ class DeletePrecatorioViewTest(TestCase):
             tipo='prioridade'
         )
         
+        # Create test PedidoRequerimento for precatorio_with_everything
+        self.pedido_acordo = PedidoRequerimento.objects.create(
+            nome='Acordo Principal',
+            descricao='Pedido referente ao acordo principal',
+            cor='#28a745',
+            ordem=1,
+            ativo=True
+        )
+        
         Requerimento.objects.create(
             precatorio=self.precatorio_with_everything,
             cliente=self.cliente2,
             valor=30000.00,
             desagio=10.0,
-            pedido='acordo principal'
+            pedido=self.pedido_acordo
         )
         
         # Verify precatorio has all types of associations

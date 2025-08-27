@@ -12,13 +12,13 @@ from datetime import date, timedelta
 
 from precapp.models import (
     Fase, FaseHonorariosContratuais, Precatorio, Cliente, 
-    Alvara, Requerimento, TipoDiligencia, Diligencias, Tipo
+    Alvara, Requerimento, TipoDiligencia, Diligencias, Tipo, PedidoRequerimento
 )
 from precapp.forms import (
     FaseForm, FaseHonorariosContratuaisForm, AlvaraSimpleForm, 
     RequerimentoForm, PrecatorioForm, ClienteForm, ClienteSimpleForm,
     TipoDiligenciaForm, DiligenciasForm, DiligenciasUpdateForm,
-    PrecatorioSearchForm, ClienteSearchForm, TipoForm,
+    PrecatorioSearchForm, ClienteSearchForm, TipoForm, PedidoRequerimentoForm,
     validate_cnj, validate_currency, BrazilianDateInput, BrazilianDateTimeInput
 )
 
@@ -1855,16 +1855,41 @@ class RequerimentoFormComprehensiveTest(TestCase):
             ordem=4
         )
         
+        # Create PedidoRequerimento instances for testing
+        self.pedido_doenca = PedidoRequerimento.objects.create(
+            nome='Prioridade por Doença',
+            descricao='Requerimento de prioridade devido a doença grave',
+            cor='#dc3545',
+            ordem=1,
+            ativo=True
+        )
+        
+        self.pedido_idade = PedidoRequerimento.objects.create(
+            nome='Prioridade por Idade',
+            descricao='Requerimento de prioridade devido à idade avançada',
+            cor='#ffc107',
+            ordem=2,
+            ativo=True
+        )
+        
+        self.pedido_ordem = PedidoRequerimento.objects.create(
+            nome='Ordem Cronológica',
+            descricao='Seguimento da ordem cronológica normal',
+            cor='#28a745',
+            ordem=3,
+            ativo=True
+        )
+        
         self.valid_form_data_cpf = {
             'cliente_cpf': '123.456.789-09',
-            'pedido': 'prioridade doença',
+            'pedido': self.pedido_doenca.id,
             'valor': '25000.00',
             'desagio': '15.5',
             'fase': self.fase_requerimento.id
         }
         self.valid_form_data_cnpj = {
             'cliente_cpf': '12.345.678/0001-95',
-            'pedido': 'prioridade idade',
+            'pedido': self.pedido_idade.id,
             'valor': '40000.00',
             'desagio': '10.0',
             'fase': self.fase_requerimento.id
@@ -1952,7 +1977,7 @@ class RequerimentoFormComprehensiveTest(TestCase):
         """Test form with only required fields"""
         minimal_data = {
             'cliente_cpf': '123.456.789-09',
-            'pedido': 'prioridade doença',
+            'pedido': self.pedido_doenca.id,
             'valor': '1000.00',
             'desagio': '0.00',
         }
@@ -2157,19 +2182,15 @@ class RequerimentoFormComprehensiveTest(TestCase):
     
     def test_form_with_different_pedido_choices(self):
         """Test form with different pedido choice values"""
-        # This would test against the actual choices defined in the model
-        # For now, we test with the values used in test data
-        pedido_choices = ['prioridade doença', 'prioridade idade', 'ordem cronológica']
+        # Test with actual PedidoRequerimento instances
+        pedido_choices = [self.pedido_doenca.id, self.pedido_idade.id, self.pedido_ordem.id]
         
-        for pedido in pedido_choices:
-            with self.subTest(pedido=pedido):
+        for pedido_id in pedido_choices:
+            with self.subTest(pedido_id=pedido_id):
                 test_data = self.valid_form_data_cpf.copy()
-                test_data['pedido'] = pedido
+                test_data['pedido'] = pedido_id
                 form = RequerimentoForm(data=test_data, precatorio=self.precatorio)
-                if not form.is_valid() and 'pedido' in form.errors:
-                    # This might fail if the choice is not valid in the model
-                    # but that's a model configuration issue, not form logic
-                    pass
+                self.assertTrue(form.is_valid(), f"Form should be valid with pedido {pedido_id}: {form.errors}")
 
     # ============ ERROR MESSAGE TESTS ============
     
@@ -5157,6 +5178,856 @@ class TipoFormComprehensiveTest(TestCase):
         duplicate_data = test_data.copy()
         duplicate_data['nome'] = 'Performance Test 25'
         duplicate_form = TipoForm(data=duplicate_data)
+        self.assertFalse(duplicate_form.is_valid())
+
+
+class PedidoRequerimentoFormTest(TestCase):
+    """
+    Comprehensive test suite for PedidoRequerimentoForm functionality and validation.
+    
+    The PedidoRequerimentoForm manages customizable request types that can be created
+    for Requerimentos, replacing the old hardcoded choice system. This test class
+    provides thorough coverage of form behavior, field validation, business logic,
+    and integration with the broader precatorio system.
+    
+    Test Coverage:
+        - Form initialization and field configuration
+        - Required and optional field validation
+        - Unique constraint enforcement for nome field
+        - Color field hexadecimal validation
+        - Order field numeric validation and constraints
+        - Active/inactive status management
+        - Form submission and data persistence
+        - Error handling and validation messages
+        - Widget configuration and Bootstrap styling
+        - Edge cases and boundary conditions
+        - Integration with PedidoRequerimento model
+        - Business logic enforcement
+        
+    Key Test Areas:
+        - Nome Field: Required, unique, max length validation
+        - Descricao Field: Optional field handling and content validation
+        - Cor Field: Hexadecimal color format validation (#RRGGBB)
+        - Ordem Field: Positive integer validation and ordering logic
+        - Ativo Field: Boolean value handling and lifecycle management
+        - Form Meta: Widget configuration and Bootstrap integration
+        - Validation Logic: Business rules and constraint enforcement
+        - Error Messages: User-friendly validation feedback
+        
+    Business Logic Testing:
+        - Validates unique request type names across the system
+        - Tests proper hexadecimal color format enforcement
+        - Verifies ordering system for logical type organization
+        - Ensures activation control for type lifecycle management
+        - Tests optional description field flexibility
+        - Validates proper Bootstrap styling integration
+        - Tests form integration with PedidoRequerimento model
+        
+    Form Features Tested:
+        - Custom labels and help text configuration
+        - Widget attribute assignments for Bootstrap styling
+        - Color picker integration for visual customization
+        - Number input constraints for order management
+        - Checkbox styling for activation control
+        - Text area configuration for descriptions
+        - Placeholder text for user guidance
+        
+    Validation Scenarios:
+        - Valid form submissions with all fields
+        - Minimal form submissions with required fields only
+        - Invalid submissions with missing required fields
+        - Invalid submissions with malformed data
+        - Duplicate name validation across existing types
+        - Color format validation with various input formats
+        - Order value validation with boundary conditions
+        - Description field optional validation
+        
+    Setup Dependencies:
+        - PedidoRequerimento model for data persistence
+        - Django form validation framework
+        - Bootstrap CSS framework compatibility
+        - Test database configuration
+        - Form widget and validation testing utilities
+    """
+    
+    def setUp(self):
+        """
+        Set up test data for PedidoRequerimentoForm testing.
+        
+        Creates standard test data and existing PedidoRequerimento instances
+        to support comprehensive form validation testing, including uniqueness
+        constraints and business logic validation.
+        """
+        self.valid_form_data = {
+            'nome': 'Prioridade por Idade Avançada',
+            'descricao': 'Requerimento de prioridade processual devido à idade avançada do requerente',
+            'cor': '#6f42c1',
+            'ordem': 1,
+            'ativo': True
+        }
+        
+        # Create existing pedido for uniqueness testing
+        self.existing_pedido = PedidoRequerimento.objects.create(
+            nome='Acordo Principal Existente',
+            descricao='Tipo de pedido já existente para testes de unicidade',
+            cor='#007bff',
+            ordem=5,
+            ativo=True
+        )
+        
+        # Create inactive pedido for testing
+        self.inactive_pedido = PedidoRequerimento.objects.create(
+            nome='Tipo Inativo',
+            descricao='Tipo de pedido inativo para testes',
+            cor='#6c757d',
+            ordem=10,
+            ativo=False
+        )
+    
+    # ============ BASIC FORM VALIDATION TESTS ============
+    
+    def test_valid_form_with_all_fields(self):
+        """Test form validation with all valid data fields populated"""
+        form = PedidoRequerimentoForm(data=self.valid_form_data)
+        self.assertTrue(form.is_valid(), f"Form should be valid but got errors: {form.errors}")
+        
+        # Test that cleaned data matches input
+        if form.is_valid():
+            self.assertEqual(form.cleaned_data['nome'], 'Prioridade por Idade Avançada')
+            self.assertEqual(form.cleaned_data['cor'], '#6f42c1')
+            self.assertEqual(form.cleaned_data['ordem'], 1)
+            self.assertTrue(form.cleaned_data['ativo'])
+    
+    def test_form_save_creates_object_correctly(self):
+        """Test that form save creates PedidoRequerimento object with correct data"""
+        form = PedidoRequerimentoForm(data=self.valid_form_data)
+        self.assertTrue(form.is_valid())
+        
+        pedido = form.save()
+        self.assertEqual(pedido.nome, 'Prioridade por Idade Avançada')
+        self.assertEqual(pedido.descricao, 'Requerimento de prioridade processual devido à idade avançada do requerente')
+        self.assertEqual(pedido.cor, '#6f42c1')
+        self.assertEqual(pedido.ordem, 1)
+        self.assertTrue(pedido.ativo)
+        
+        # Verify object was saved to database
+        self.assertTrue(PedidoRequerimento.objects.filter(nome='Prioridade por Idade Avançada').exists())
+    
+    def test_minimal_valid_form(self):
+        """Test form with minimal required data (nome and cor only)"""
+        minimal_data = {
+            'nome': 'Pedido Mínimo',
+            'cor': '#28a745',
+            'ordem': 0
+        }
+        form = PedidoRequerimentoForm(data=minimal_data)
+        self.assertTrue(form.is_valid(), f"Minimal form should be valid but got errors: {form.errors}")
+        
+        if form.is_valid():
+            pedido = form.save()
+            self.assertEqual(pedido.nome, 'Pedido Mínimo')
+            self.assertEqual(pedido.cor, '#28a745')
+            self.assertEqual(pedido.ordem, 0)
+            # Optional field gets empty string, not None
+            self.assertEqual(pedido.descricao, '')
+    
+    def test_form_required_fields(self):
+        """Test form validation with missing required fields"""
+        # Test with empty data
+        empty_form = PedidoRequerimentoForm(data={})
+        self.assertFalse(empty_form.is_valid())
+        self.assertIn('nome', empty_form.errors)
+        self.assertIn('cor', empty_form.errors)
+        self.assertIn('ordem', empty_form.errors)
+        # ativo is not required (checkbox default behavior)
+        
+        # Test with missing nome
+        missing_nome = self.valid_form_data.copy()
+        del missing_nome['nome']
+        form = PedidoRequerimentoForm(data=missing_nome)
+        self.assertFalse(form.is_valid())
+        self.assertIn('nome', form.errors)
+        
+        # Test with missing cor
+        missing_cor = self.valid_form_data.copy()
+        del missing_cor['cor']
+        form = PedidoRequerimentoForm(data=missing_cor)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cor', form.errors)
+        
+        # Test with missing ordem
+        missing_ordem = self.valid_form_data.copy()
+        del missing_ordem['ordem']
+        form = PedidoRequerimentoForm(data=missing_ordem)
+        self.assertFalse(form.is_valid())
+        self.assertIn('ordem', form.errors)
+    
+    # ============ NOME FIELD VALIDATION TESTS ============
+    
+    def test_nome_field_uniqueness_constraint(self):
+        """Test that nome field enforces uniqueness constraint"""
+        # Try to create pedido with same nome as existing
+        duplicate_data = self.valid_form_data.copy()
+        duplicate_data['nome'] = 'Acordo Principal Existente'  # Same as existing_pedido
+        
+        form = PedidoRequerimentoForm(data=duplicate_data)
+        self.assertFalse(form.is_valid())
+        
+        # Check for uniqueness error - could be in form.errors or non_field_errors
+        has_uniqueness_error = (
+            'nome' in form.errors or 
+            '__all__' in form.errors or 
+            form.non_field_errors()
+        )
+        self.assertTrue(has_uniqueness_error, "Should have uniqueness validation error")
+    
+    def test_nome_field_case_sensitivity(self):
+        """Test nome field case sensitivity in uniqueness validation"""
+        # Test different case
+        case_data = self.valid_form_data.copy()
+        case_data['nome'] = 'acordo principal existente'  # lowercase version
+        
+        form = PedidoRequerimentoForm(data=case_data)
+        # This should be valid since database uniqueness is typically case-sensitive
+        self.assertTrue(form.is_valid())
+    
+    def test_nome_field_whitespace_handling(self):
+        """Test nome field handles whitespace correctly"""
+        # Test with leading/trailing whitespace - Django strips whitespace by default
+        whitespace_data = self.valid_form_data.copy()
+        whitespace_data['nome'] = '  Nome com Espaços  '
+        
+        form = PedidoRequerimentoForm(data=whitespace_data)
+        self.assertTrue(form.is_valid())
+        
+        # Verify Django's default behavior strips whitespace
+        if form.is_valid():
+            self.assertEqual(form.cleaned_data['nome'], 'Nome com Espaços')
+    
+    def test_nome_field_empty_validation(self):
+        """Test nome field rejects empty values"""
+        empty_cases = ['', '   ', None]
+        
+        for empty_value in empty_cases:
+            with self.subTest(nome_value=empty_value):
+                test_data = self.valid_form_data.copy()
+                test_data['nome'] = empty_value
+                
+                form = PedidoRequerimentoForm(data=test_data)
+                self.assertFalse(form.is_valid())
+                self.assertIn('nome', form.errors)
+    
+    def test_nome_field_max_length_validation(self):
+        """Test nome field maximum length constraint"""
+        # Test within limit (100 characters)
+        valid_length_data = self.valid_form_data.copy()
+        valid_length_data['nome'] = 'A' * 100  # Exactly 100 characters
+        
+        form = PedidoRequerimentoForm(data=valid_length_data)
+        self.assertTrue(form.is_valid())
+        
+        # Test beyond limit (101 characters)
+        invalid_length_data = self.valid_form_data.copy()
+        invalid_length_data['nome'] = 'A' * 101  # 101 characters
+        
+        form = PedidoRequerimentoForm(data=invalid_length_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('nome', form.errors)
+    
+    def test_nome_field_special_characters(self):
+        """Test nome field handles special characters correctly"""
+        special_names = [
+            'Prioridade (Art. 1º) - Doença',
+            'Acordo & Honorários 50%',
+            'Requerimento: Tipo Especial',
+            'Nome com ação, ç, ã, é, ô',
+            'Pedido #1 - Categoria A/B',
+        ]
+        
+        for special_name in special_names:
+            with self.subTest(nome=special_name):
+                test_data = self.valid_form_data.copy()
+                test_data['nome'] = special_name
+                
+                form = PedidoRequerimentoForm(data=test_data)
+                self.assertTrue(form.is_valid(), f"Special name '{special_name}' should be valid")
+    
+    def test_nome_field_editing_existing_excludes_self(self):
+        """Test that editing existing pedido excludes itself from uniqueness check"""
+        # Edit existing pedido with same nome should be allowed
+        edit_data = {
+            'nome': 'Acordo Principal Existente',  # Same name as existing
+            'cor': '#ff6b35',  # Different color
+            'ordem': 3,
+            'ativo': True
+        }
+        
+        edit_form = PedidoRequerimentoForm(data=edit_data, instance=self.existing_pedido)
+        self.assertTrue(edit_form.is_valid(), "Editing existing pedido with same name should be valid")
+    
+    # ============ COR FIELD VALIDATION TESTS ============
+    
+    def test_cor_field_valid_hex_formats(self):
+        """Test cor field accepts various valid hexadecimal color formats"""
+        valid_colors = [
+            '#FF0000',  # Red
+            '#00FF00',  # Green  
+            '#0000FF',  # Blue
+            '#FFFFFF',  # White
+            '#000000',  # Black
+            '#6f42c1',  # Purple
+            '#28a745',  # Success green
+            '#ffc107',  # Warning yellow
+            '#dc3545',  # Danger red
+            '#17a2b8',  # Info cyan
+            '#f8f9fa',  # Light gray
+            '#343a40',  # Dark gray
+            '#ABCDEF',  # Hex letters uppercase
+            '#abcdef',  # Hex letters lowercase
+            '#123456',  # Mixed numbers
+        ]
+        
+        for color in valid_colors:
+            with self.subTest(color=color):
+                test_data = self.valid_form_data.copy()
+                test_data['nome'] = f'Teste Cor {color}'  # Unique name
+                test_data['cor'] = color
+                
+                form = PedidoRequerimentoForm(data=test_data)
+                self.assertTrue(form.is_valid(), f"Color {color} should be valid but got errors: {form.errors}")
+    
+    def test_cor_field_invalid_formats(self):
+        """Test cor field rejects invalid color formats"""
+        invalid_colors = [
+            'red',          # Color name
+            'FF0000',       # Missing #
+            '#FF00',        # Too short
+            '#GGGGGG',      # Invalid hex characters
+            '#12345G',      # Mixed valid/invalid
+            '#',            # Just hash
+            '#xyz123',      # Invalid characters
+        ]
+        
+        for color in invalid_colors:
+            with self.subTest(color=color):
+                test_data = self.valid_form_data.copy()
+                test_data['nome'] = f'Teste Cor Inválida {color}'  # Unique name
+                test_data['cor'] = color
+                
+                form = PedidoRequerimentoForm(data=test_data)
+                self.assertFalse(form.is_valid(), f"Color {color} should be invalid")
+                self.assertIn('cor', form.errors, f"Should have cor validation error for {color}")
+                
+                # Check error message mentions hexadecimal format for validation errors from clean_cor
+                error_message = str(form.errors['cor'])
+                if 'hexadecimal' in error_message.lower():
+                    self.assertIn('#RRGGBB', error_message)
+        
+        # Test specific cases that trigger max length validation instead of custom validation
+        max_length_cases = [
+            '#FF00000',     # Too long (8 chars)
+            'rgb(255,0,0)', # RGB format (12 chars)
+            '#ff00ff00',    # 9 characters
+        ]
+        
+        for color in max_length_cases:
+            with self.subTest(color=color):
+                test_data = self.valid_form_data.copy()
+                test_data['nome'] = f'Teste Cor Máx {color}'  # Unique name
+                test_data['cor'] = color
+                
+                form = PedidoRequerimentoForm(data=test_data)
+                self.assertFalse(form.is_valid(), f"Color {color} should be invalid")
+                self.assertIn('cor', form.errors, f"Should have cor validation error for {color}")
+        
+        # Test empty string triggers required field validation
+        empty_data = self.valid_form_data.copy()
+        empty_data['nome'] = 'Teste Cor Vazia'
+        empty_data['cor'] = ''
+        
+        form = PedidoRequerimentoForm(data=empty_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('cor', form.errors)
+    
+    def test_cor_field_custom_clean_method(self):
+        """Test cor field custom clean method validation"""
+        # Test the clean_cor method directly
+        form = PedidoRequerimentoForm(data=self.valid_form_data)
+        form.is_valid()  # Trigger validation
+        
+        # Test with valid color
+        form.cleaned_data = {'cor': '#FF0000'}
+        cleaned_cor = form.clean_cor()
+        self.assertEqual(cleaned_cor, '#FF0000')
+        
+        # Test with invalid color should raise ValidationError
+        form.cleaned_data = {'cor': 'invalid'}
+        with self.assertRaises(ValidationError):
+            form.clean_cor()
+    
+    # ============ ORDEM FIELD VALIDATION TESTS ============
+    
+    def test_ordem_field_valid_values(self):
+        """Test ordem field accepts valid integer values"""
+        valid_orders = [0, 1, 5, 10, 50, 100, 999, 9999]
+        
+        for ordem in valid_orders:
+            with self.subTest(ordem=ordem):
+                test_data = self.valid_form_data.copy()
+                test_data['nome'] = f'Teste Ordem {ordem}'  # Unique name
+                test_data['ordem'] = ordem
+                
+                form = PedidoRequerimentoForm(data=test_data)
+                self.assertTrue(form.is_valid(), f"Order {ordem} should be valid")
+                
+                if form.is_valid():
+                    self.assertEqual(form.cleaned_data['ordem'], ordem)
+    
+    def test_ordem_field_invalid_values(self):
+        """Test ordem field rejects invalid values"""
+        invalid_orders = [
+            -1,         # Negative number
+            -10,        # More negative
+            'abc',      # Non-numeric string
+            '10.5',     # Decimal string
+            '',         # Empty string
+            None,       # None value
+        ]
+        
+        for ordem in invalid_orders:
+            with self.subTest(ordem=ordem):
+                test_data = self.valid_form_data.copy()
+                test_data['nome'] = f'Teste Ordem Inválida {ordem}'  # Unique name
+                test_data['ordem'] = ordem
+                
+                form = PedidoRequerimentoForm(data=test_data)
+                self.assertFalse(form.is_valid(), f"Order {ordem} should be invalid")
+                self.assertIn('ordem', form.errors)
+    
+    def test_ordem_field_boundary_values(self):
+        """Test ordem field boundary value handling"""
+        # Test zero (minimum valid value)
+        zero_data = self.valid_form_data.copy()
+        zero_data['nome'] = 'Teste Ordem Zero'
+        zero_data['ordem'] = 0
+        
+        form = PedidoRequerimentoForm(data=zero_data)
+        self.assertTrue(form.is_valid())
+        
+        # Test large positive value
+        large_data = self.valid_form_data.copy()
+        large_data['nome'] = 'Teste Ordem Grande'
+        large_data['ordem'] = 999999
+        
+        form = PedidoRequerimentoForm(data=large_data)
+        self.assertTrue(form.is_valid())
+    
+    def test_ordem_field_default_value(self):
+        """Test ordem field default value configuration"""
+        form = PedidoRequerimentoForm()
+        
+        # Check widget has default value
+        ordem_widget = form.fields['ordem'].widget
+        self.assertEqual(ordem_widget.attrs.get('value'), '0')
+    
+    # ============ ATIVO FIELD VALIDATION TESTS ============
+    
+    def test_ativo_field_boolean_values(self):
+        """Test ativo field accepts boolean values correctly"""
+        # Test True value
+        active_data = self.valid_form_data.copy()
+        active_data['ativo'] = True
+        
+        form = PedidoRequerimentoForm(data=active_data)
+        self.assertTrue(form.is_valid())
+        self.assertTrue(form.cleaned_data['ativo'])
+        
+        # Test False value
+        inactive_data = self.valid_form_data.copy()
+        inactive_data['ativo'] = False
+        
+        form = PedidoRequerimentoForm(data=inactive_data)
+        self.assertTrue(form.is_valid())
+        self.assertFalse(form.cleaned_data['ativo'])
+    
+    def test_ativo_field_default_behavior(self):
+        """Test ativo field default behavior when not provided"""
+        # Test without ativo field (checkbox unchecked)
+        no_ativo_data = self.valid_form_data.copy()
+        del no_ativo_data['ativo']
+        
+        form = PedidoRequerimentoForm(data=no_ativo_data)
+        self.assertTrue(form.is_valid())
+        
+        # BooleanField returns False when not provided (unchecked checkbox)
+        self.assertFalse(form.cleaned_data['ativo'])
+    
+    def test_ativo_field_string_values(self):
+        """Test ativo field handles string values appropriately"""
+        string_cases = [
+            ('true', True),
+            ('false', False),
+            ('on', True),    # Checkbox value
+            ('', False),     # Empty string
+        ]
+        
+        for string_value, expected_bool in string_cases:
+            with self.subTest(string_value=string_value):
+                test_data = self.valid_form_data.copy()
+                test_data['nome'] = f'Teste Ativo {string_value}'  # Unique name
+                test_data['ativo'] = string_value
+                
+                form = PedidoRequerimentoForm(data=test_data)
+                self.assertTrue(form.is_valid())
+                self.assertEqual(form.cleaned_data['ativo'], expected_bool)
+    
+    # ============ DESCRICAO FIELD VALIDATION TESTS ============
+    
+    def test_descricao_field_optional(self):
+        """Test descricao field is optional"""
+        # Test without descricao field
+        no_desc_data = self.valid_form_data.copy()
+        del no_desc_data['descricao']
+        
+        form = PedidoRequerimentoForm(data=no_desc_data)
+        self.assertTrue(form.is_valid())
+        
+        # Test with empty descricao
+        empty_desc_data = self.valid_form_data.copy()
+        empty_desc_data['descricao'] = ''
+        
+        form = PedidoRequerimentoForm(data=empty_desc_data)
+        self.assertTrue(form.is_valid())
+    
+    def test_descricao_field_content_handling(self):
+        """Test descricao field handles various content types"""
+        description_cases = [
+            '',  # Empty string
+            'Descrição simples',  # Simple text
+            'Descrição com múltiplas\nlinhas de texto\ne quebras de linha',  # Multiline
+            'Descrição com acentos: ção, ã, é, ô, ü, ç',  # Unicode
+            'Descrição com símbolos: @#$%^&*()_+-=[]{}|;:,.<>?',  # Special chars
+            'A' * 1000,  # Very long description
+        ]
+        
+        for description in description_cases:
+            with self.subTest(description=description[:50] + '...' if len(description) > 50 else description):
+                test_data = self.valid_form_data.copy()
+                test_data['nome'] = f'Teste Desc {hash(description)}'  # Unique name using hash
+                test_data['descricao'] = description
+                
+                form = PedidoRequerimentoForm(data=test_data)
+                self.assertTrue(form.is_valid(), f"Description should be valid: {form.errors}")
+                
+                if form.is_valid():
+                    self.assertEqual(form.cleaned_data['descricao'], description)
+    
+    def test_descricao_field_widget_configuration(self):
+        """Test descricao field textarea widget configuration"""
+        form = PedidoRequerimentoForm()
+        desc_widget = form.fields['descricao'].widget
+        
+        # Check widget type
+        self.assertEqual(desc_widget.__class__.__name__, 'Textarea')
+        
+        # Check widget attributes
+        self.assertIn('form-control', desc_widget.attrs.get('class', ''))
+        self.assertEqual(desc_widget.attrs.get('rows'), 3)
+        self.assertIn('opcional', desc_widget.attrs.get('placeholder', ''))
+    
+    # ============ FORM CONFIGURATION AND WIDGET TESTS ============
+    
+    def test_form_field_labels(self):
+        """Test form fields have correct labels"""
+        form = PedidoRequerimentoForm()
+        
+        expected_labels = {
+            'nome': 'Nome do Tipo de Pedido',
+            'descricao': 'Descrição',
+            'cor': 'Cor',
+            'ordem': 'Ordem de Exibição',
+            'ativo': 'Ativo'
+        }
+        
+        for field_name, expected_label in expected_labels.items():
+            self.assertEqual(
+                form.fields[field_name].label, 
+                expected_label,
+                f"Field {field_name} should have label '{expected_label}'"
+            )
+    
+    def test_form_field_help_texts(self):
+        """Test form fields have appropriate help texts"""
+        form = PedidoRequerimentoForm()
+        
+        expected_help_texts = {
+            'nome': 'único para o tipo de pedido',
+            'descricao': 'opcional',
+            'cor': 'identificação visual',
+            'ordem': 'ordem de exibição',
+            'ativo': 'disponível para uso'
+        }
+        
+        for field_name, expected_text in expected_help_texts.items():
+            help_text = form.fields[field_name].help_text.lower()
+            self.assertIn(
+                expected_text.lower(), 
+                help_text,
+                f"Field {field_name} help text should contain '{expected_text}'"
+            )
+    
+    def test_form_widget_attributes(self):
+        """Test form widgets have correct attributes and CSS classes"""
+        form = PedidoRequerimentoForm()
+        
+        # Test nome widget
+        nome_widget = form.fields['nome'].widget
+        self.assertIn('form-control', nome_widget.attrs.get('class', ''))
+        self.assertIn('Digite o nome', nome_widget.attrs.get('placeholder', ''))
+        
+        # Test descricao widget  
+        desc_widget = form.fields['descricao'].widget
+        self.assertEqual(desc_widget.__class__.__name__, 'Textarea')
+        self.assertIn('form-control', desc_widget.attrs.get('class', ''))
+        self.assertEqual(desc_widget.attrs.get('rows'), 3)
+        
+        # Test cor widget - TextInput with color styling
+        # Note: Django ModelForm may override some widget attributes based on model field constraints
+        cor_widget = form.fields['cor'].widget
+        self.assertEqual(cor_widget.__class__.__name__, 'TextInput')
+        self.assertIn('form-control', cor_widget.attrs.get('class', ''))
+        self.assertEqual(cor_widget.attrs.get('value'), '#007bff')
+        # maxlength from model field may override widget type attribute
+        if 'maxlength' in cor_widget.attrs:
+            self.assertEqual(cor_widget.attrs.get('maxlength'), '7')
+        
+        # Test ordem widget
+        ordem_widget = form.fields['ordem'].widget
+        self.assertEqual(ordem_widget.__class__.__name__, 'NumberInput')
+        self.assertIn('form-control', ordem_widget.attrs.get('class', ''))
+        self.assertEqual(ordem_widget.attrs.get('min'), 0)  # Integer value
+        self.assertEqual(ordem_widget.attrs.get('value'), '0')  # String value
+        
+        # Test ativo widget
+        ativo_widget = form.fields['ativo'].widget
+        self.assertEqual(ativo_widget.input_type, 'checkbox')
+        self.assertIn('form-check-input', ativo_widget.attrs.get('class', ''))
+    
+    def test_form_field_required_status(self):
+        """Test form fields have correct required status"""
+        form = PedidoRequerimentoForm()
+        
+        # Required fields
+        required_fields = ['nome', 'cor', 'ordem']
+        for field_name in required_fields:
+            self.assertTrue(
+                form.fields[field_name].required,
+                f"Field {field_name} should be required"
+            )
+        
+        # Optional fields (descricao is made optional in __init__)
+        optional_fields = ['descricao']
+        for field_name in optional_fields:
+            self.assertFalse(
+                form.fields[field_name].required,
+                f"Field {field_name} should be optional"
+            )
+        
+        # BooleanField (ativo) has special behavior - not required (can be unchecked)
+        # BooleanField.required is typically False to allow unchecked checkboxes
+        self.assertFalse(form.fields['ativo'].required, "Ativo field should not be required to allow unchecked checkbox")
+    
+    def test_form_meta_configuration(self):
+        """Test form Meta class configuration"""
+        form = PedidoRequerimentoForm()
+        
+        # Test model
+        self.assertEqual(form._meta.model, PedidoRequerimento)
+        
+        # Test fields
+        expected_fields = ['nome', 'descricao', 'cor', 'ordem', 'ativo']
+        self.assertEqual(list(form._meta.fields), expected_fields)
+        
+        # Test all expected fields are present in form
+        for field_name in expected_fields:
+            self.assertIn(field_name, form.fields)
+    
+    # ============ INTEGRATION AND WORKFLOW TESTS ============
+    
+    def test_complete_form_submission_workflow(self):
+        """Test complete form submission and object creation workflow"""
+        # Create new pedido
+        create_data = {
+            'nome': 'Impugnação de Cálculos',
+            'descricao': 'Requerimento para contestar cálculos apresentados',
+            'cor': '#fd7e14',
+            'ordem': 6,
+            'ativo': True
+        }
+        
+        create_form = PedidoRequerimentoForm(data=create_data)
+        self.assertTrue(create_form.is_valid())
+        
+        created_pedido = create_form.save()
+        self.assertEqual(created_pedido.nome, 'Impugnação de Cálculos')
+        self.assertEqual(created_pedido.cor, '#fd7e14')
+        self.assertTrue(created_pedido.ativo)
+        
+        # Verify object exists in database
+        self.assertTrue(PedidoRequerimento.objects.filter(nome='Impugnação de Cálculos').exists())
+    
+    def test_edit_existing_pedido_workflow(self):
+        """Test editing existing PedidoRequerimento workflow"""
+        # Edit existing pedido
+        edit_data = {
+            'nome': 'Acordo Principal Atualizado',
+            'descricao': 'Descrição atualizada do acordo principal',
+            'cor': '#28a745',
+            'ordem': 2,
+            'ativo': False
+        }
+        
+        edit_form = PedidoRequerimentoForm(data=edit_data, instance=self.existing_pedido)
+        self.assertTrue(edit_form.is_valid())
+        
+        updated_pedido = edit_form.save()
+        self.assertEqual(updated_pedido.nome, 'Acordo Principal Atualizado')
+        self.assertEqual(updated_pedido.cor, '#28a745')
+        self.assertFalse(updated_pedido.ativo)
+        
+        # Verify changes persisted
+        self.existing_pedido.refresh_from_db()
+        self.assertEqual(self.existing_pedido.nome, 'Acordo Principal Atualizado')
+    
+    def test_form_with_initial_data(self):
+        """Test form initialization with initial data"""
+        initial_data = {
+            'nome': 'Tipo Inicial',
+            'cor': '#17a2b8',
+            'ordem': 3,
+            'ativo': True
+        }
+        
+        form = PedidoRequerimentoForm(initial=initial_data)
+        
+        # Check that initial values are set
+        self.assertEqual(form.initial['nome'], 'Tipo Inicial')
+        self.assertEqual(form.initial['cor'], '#17a2b8')
+        self.assertEqual(form.initial['ordem'], 3)
+        self.assertTrue(form.initial['ativo'])
+    
+    def test_form_validation_error_messages(self):
+        """Test form validation provides user-friendly error messages"""
+        # Test missing required fields
+        empty_form = PedidoRequerimentoForm(data={})
+        self.assertFalse(empty_form.is_valid())
+        
+        # Check required field errors
+        for field in ['nome', 'cor', 'ordem']:
+            self.assertIn(field, empty_form.errors)
+        
+        # Test invalid color format error message
+        invalid_color_data = self.valid_form_data.copy()
+        invalid_color_data['cor'] = 'invalid'
+        
+        color_form = PedidoRequerimentoForm(data=invalid_color_data)
+        self.assertFalse(color_form.is_valid())
+        
+        cor_error = str(color_form.errors['cor'][0])
+        self.assertIn('hexadecimal', cor_error)
+        self.assertIn('#RRGGBB', cor_error)
+    
+    # ============ EDGE CASES AND BOUNDARY CONDITIONS ============
+    
+    def test_form_with_unicode_content(self):
+        """Test form handles unicode content correctly"""
+        unicode_data = {
+            'nome': 'Prioridade Açaí & Ação',
+            'descricao': 'Descrição com caracteres especiais: ção, ã, é, ô, ü, ñ, ç',
+            'cor': '#6f42c1',
+            'ordem': 1,
+            'ativo': True
+        }
+        
+        form = PedidoRequerimentoForm(data=unicode_data)
+        self.assertTrue(form.is_valid())
+        
+        if form.is_valid():
+            pedido = form.save()
+            self.assertEqual(pedido.nome, 'Prioridade Açaí & Ação')
+            self.assertIn('ção', pedido.descricao)
+    
+    def test_form_boundary_values(self):
+        """Test form with boundary values"""
+        boundary_cases = [
+            # Minimum valid values
+            {
+                'nome': 'A',  # Single character
+                'cor': '#000000',  # Black
+                'ordem': 0,  # Minimum order
+                'ativo': False
+            },
+            # Maximum values
+            {
+                'nome': 'A' * 100,  # Maximum length
+                'cor': '#FFFFFF',  # White
+                'ordem': 999999,  # Large order
+                'ativo': True
+            },
+        ]
+        
+        for i, test_data in enumerate(boundary_cases):
+            with self.subTest(case=i):
+                # Ensure unique name for each test
+                if i > 0:
+                    test_data['nome'] = test_data['nome'][:-1] + str(i)
+                
+                form = PedidoRequerimentoForm(data=test_data)
+                self.assertTrue(form.is_valid(), f"Boundary case {i} should be valid: {form.errors}")
+    
+    def test_form_concurrent_uniqueness_validation(self):
+        """Test form handles concurrent creation attempts correctly"""
+        # Simulate concurrent form submissions with same name
+        concurrent_data_1 = self.valid_form_data.copy()
+        concurrent_data_1['nome'] = 'Pedido Concorrente'
+        
+        concurrent_data_2 = self.valid_form_data.copy()
+        concurrent_data_2['nome'] = 'Pedido Concorrente'
+        
+        # First form should validate successfully
+        form1 = PedidoRequerimentoForm(data=concurrent_data_1)
+        self.assertTrue(form1.is_valid())
+        
+        # Save first form
+        form1.save()
+        
+        # Second form should fail validation due to uniqueness
+        form2 = PedidoRequerimentoForm(data=concurrent_data_2)
+        self.assertFalse(form2.is_valid())
+    
+    def test_form_performance_with_large_dataset(self):
+        """Test form performance doesn't degrade with existing data"""
+        # Create multiple pedidos to test validation performance
+        for i in range(50):
+            PedidoRequerimento.objects.create(
+                nome=f'Performance Test {i}',
+                cor=f'#{i:06x}',
+                ordem=i,
+                ativo=True
+            )
+        
+        # Test that form validation still works efficiently
+        test_data = self.valid_form_data.copy()
+        test_data['nome'] = 'Performance Test New'
+        
+        form = PedidoRequerimentoForm(data=test_data)
+        self.assertTrue(form.is_valid())
+        
+        # Test uniqueness validation still works
+        duplicate_data = test_data.copy()
+        duplicate_data['nome'] = 'Performance Test 25'
+        
+        duplicate_form = PedidoRequerimentoForm(data=duplicate_data)
         self.assertFalse(duplicate_form.is_valid())
         self.assertIn('nome', duplicate_form.errors)
 

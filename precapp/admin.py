@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.http import HttpResponseRedirect
 from .models import (
     Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo,
-    FaseHonorariosContratuais, TipoDiligencia, Diligencias
+    FaseHonorariosContratuais, TipoDiligencia, Diligencias, PedidoRequerimento
 )
 
 # Custom admin configurations
@@ -241,18 +241,12 @@ class RequerimentoAdmin(admin.ModelAdmin):
     cliente_nome.short_description = 'Cliente'
     
     def pedido_colored(self, obj):
-        colors = {
-            'prioridade doença': '#dc3545',
-            'prioridade idade': '#fd7e14',
-            'acordo principal': '#28a745',
-            'acordo honorários contratuais': '#007bff',
-            'acordo honorários sucumbenciais': '#6f42c1',
-        }
-        color = colors.get(obj.pedido, '#6c757d')
-        return format_html(
-            '<span style="background-color: {}; color: white; padding: 2px 6px; border-radius: 3px;">{}</span>',
-            color, obj.get_pedido_abreviado()
-        )
+        if obj.pedido:
+            return format_html(
+                '<span style="background-color: {}; color: white; padding: 2px 6px; border-radius: 3px;">{}</span>',
+                obj.pedido.cor, obj.pedido.nome
+            )
+        return '-'
     pedido_colored.short_description = 'Pedido'
     
     def valor_formatted(self, obj):
@@ -350,6 +344,40 @@ class TipoAdmin(admin.ModelAdmin):
         count = obj.precatorio_set.count()
         return format_html('<span style="color: blue;">{}</span>', count)
     usage_count.short_description = 'Precatórios'
+
+
+@admin.register(PedidoRequerimento)
+class PedidoRequerimentoAdmin(admin.ModelAdmin):
+    """Admin configuration for PedidoRequerimento model"""
+    
+    list_display = ('nome', 'cor_preview', 'ordem', 'ativo', 'usage_count', 'criado_em')
+    list_filter = ('ativo',)
+    search_fields = ('nome', 'descricao')
+    ordering = ('ordem', 'nome')
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('nome', 'descricao')
+        }),
+        ('Aparência e Ordenação', {
+            'fields': ('cor', 'ordem')
+        }),
+        ('Status', {
+            'fields': ('ativo',)
+        }),
+    )
+    
+    def cor_preview(self, obj):
+        return format_html(
+            '<div style="width: 50px; height: 20px; background-color: {}; border: 1px solid #ccc; border-radius: 3px;"></div>',
+            obj.cor
+        )
+    cor_preview.short_description = 'Cor'
+    
+    def usage_count(self, obj):
+        count = obj.requerimento_set.count()
+        return format_html('<span style="color: blue;">{}</span>', count)
+    usage_count.short_description = 'Requerimentos'
 
 
 @admin.register(FaseHonorariosContratuais)

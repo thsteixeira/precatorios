@@ -11,12 +11,12 @@ from django.core.management import call_command
 import tempfile
 import os
 from io import StringIO
-from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo, FaseHonorariosContratuais, TipoDiligencia, Diligencias
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo, FaseHonorariosContratuais, TipoDiligencia, Diligencias, PedidoRequerimento
 from .forms import (
     PrecatorioForm, ClienteForm, PrecatorioSearchForm, 
     ClienteSearchForm, RequerimentoForm, ClienteSimpleForm, 
     AlvaraSimpleForm, FaseForm, TipoForm, FaseHonorariosContratuaisForm, TipoDiligenciaForm,
-    DiligenciasForm, DiligenciasUpdateForm
+    DiligenciasForm, DiligenciasUpdateForm, PedidoRequerimentoForm
 )
 
 # ===============================
@@ -191,7 +191,7 @@ def precatorio_view(request):
             # Handle these cases by applying individual filters sequentially
             # Apply the "sem" filter first
             precatorios_com_acordo = Requerimento.objects.filter(
-                pedido__in=['acordo principal', 'acordo honorários contratuais', 'acordo honorários sucumbenciais']
+                pedido__nome__in=['Acordo no Principal', 'Acordo nos Hon. Contratuais', 'Acordo nos Hon. Sucumbenciais']
             ).values_list('precatorio__cnj', flat=True).distinct()
             precatorios = precatorios.exclude(cnj__in=precatorios_com_acordo)
             
@@ -210,9 +210,12 @@ def precatorio_view(request):
             # Combined filter: find requerimentos that match both tipo AND deferimento status
             requerimento_query = Requerimento.objects.all()
             
-            # Apply tipo filter (only acordo now)
+            # Apply tipo filter
             if tipo_requerimento_filter == 'acordo':
-                requerimento_query = requerimento_query.filter(pedido__in=['acordo principal', 'acordo honorários contratuais', 'acordo honorários sucumbenciais'])
+                # Filter for acordo requerimentos using PedidoRequerimento model
+                requerimento_query = requerimento_query.filter(
+                    pedido__nome__in=['Acordo no Principal', 'Acordo nos Hon. Contratuais', 'Acordo nos Hon. Sucumbenciais']
+                )
             
             # Apply deferimento filter
             if requerimento_deferido_filter == 'deferido':
@@ -229,13 +232,13 @@ def precatorio_view(request):
         if tipo_requerimento_filter == 'acordo':
             # Show only precatorios that have requerimentos with acordo pedidos
             precatorios_com_acordo = Requerimento.objects.filter(
-                pedido__in=['acordo principal', 'acordo honorários contratuais', 'acordo honorários sucumbenciais']
+                pedido__nome__in=['Acordo no Principal', 'Acordo nos Hon. Contratuais', 'Acordo nos Hon. Sucumbenciais']
             ).values_list('precatorio__cnj', flat=True).distinct()
             precatorios = precatorios.filter(cnj__in=precatorios_com_acordo)
         elif tipo_requerimento_filter == 'sem_acordo':
             # Show precatorios that have NO acordo requerimentos (may have other types or none at all)
             precatorios_com_acordo = Requerimento.objects.filter(
-                pedido__in=['acordo principal', 'acordo honorários contratuais', 'acordo honorários sucumbenciais']
+                pedido__nome__in=['Acordo no Principal', 'Acordo nos Hon. Contratuais', 'Acordo nos Hon. Sucumbenciais']
             ).values_list('precatorio__cnj', flat=True).distinct()
             precatorios = precatorios.exclude(cnj__in=precatorios_com_acordo)
         
@@ -264,7 +267,7 @@ def precatorio_view(request):
     
     # Calculate prioritarios count (precatorios with prioridade requerimentos)
     prioritarios_cnjs = Requerimento.objects.filter(
-        pedido__in=['prioridade idade', 'prioridade doença']
+        pedido__nome__in=['Prioridade por idade', 'Prioridade por doença']
     ).values_list('precatorio__cnj', flat=True).distinct()
     prioritarios = precatorios.filter(cnj__in=prioritarios_cnjs).count()
     
@@ -479,7 +482,18 @@ def precatorio_detalhe_view(request, precatorio_cnj):
                 # Update the requerimento fields
                 requerimento.valor = float(request.POST.get('valor', requerimento.valor))
                 requerimento.desagio = float(request.POST.get('desagio', requerimento.desagio))
-                requerimento.pedido = request.POST.get('pedido', requerimento.pedido)
+                
+                # Handle pedido field properly (ForeignKey)
+                pedido_id = request.POST.get('pedido')
+                if pedido_id:
+                    try:
+                        pedido = PedidoRequerimento.objects.get(id=pedido_id)
+                        requerimento.pedido = pedido
+                    except PedidoRequerimento.DoesNotExist:
+                        messages.error(request, 'Tipo de pedido selecionado não existe.')
+                        return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
+                else:
+                    requerimento.pedido = None
                 
                 # Handle fase field properly (ForeignKey)
                 fase_id = request.POST.get('fase')
@@ -534,6 +548,7 @@ def precatorio_detalhe_view(request, precatorio_cnj):
         'alvara_fases': Fase.get_fases_for_alvara(),
         'requerimento_fases': Fase.get_fases_for_requerimento(),
         'fases_honorarios_contratuais': FaseHonorariosContratuais.objects.filter(ativa=True),  # Uses model's default ordering: ['ordem', 'nome']
+        'available_pedidos': PedidoRequerimento.get_ativos(),
     }
     
     return render(request, 'precapp/precatorio_detail.html', context)
@@ -629,14 +644,14 @@ def clientes_view(request):
         if requerimento_prioridade_filter == 'deferido':
             # Find clientes that have priority requerimentos with 'Deferido' phase
             clientes_deferidos = Requerimento.objects.filter(
-                pedido__in=['prioridade idade', 'prioridade doença'],
+                pedido__nome__in=['Prioridade por idade', 'Prioridade por doença'],
                 fase__nome='Deferido'
             ).values_list('cliente__cpf', flat=True).distinct()
             clientes = clientes.filter(cpf__in=clientes_deferidos)
         elif requerimento_prioridade_filter == 'nao_deferido':
             # Find clientes that have priority requerimentos that are NOT 'Deferido'
             clientes_nao_deferidos = Requerimento.objects.filter(
-                pedido__in=['prioridade idade', 'prioridade doença']
+                pedido__nome__in=['Prioridade por idade', 'Prioridade por doença']
             ).exclude(
                 fase__nome='Deferido'
             ).values_list('cliente__cpf', flat=True).distinct()
@@ -644,7 +659,7 @@ def clientes_view(request):
         elif requerimento_prioridade_filter == 'sem_requerimento':
             # Find clientes that have NO priority requerimentos at all
             clientes_com_requerimentos = Requerimento.objects.filter(
-                pedido__in=['prioridade idade', 'prioridade doença']
+                pedido__nome__in=['Prioridade por idade', 'Prioridade por doença']
             ).values_list('cliente__cpf', flat=True).distinct()
             clientes = clientes.exclude(cpf__in=clientes_com_requerimentos)
     
@@ -960,7 +975,7 @@ def delete_alvara_view(request, alvara_id):
 @login_required
 def requerimento_list_view(request):
     """View to list all requerimentos with filtering"""
-    requerimentos = Requerimento.objects.all().select_related('cliente', 'precatorio', 'fase').order_by('-id')
+    requerimentos = Requerimento.objects.all().select_related('cliente', 'precatorio', 'fase', 'pedido').order_by('-id')
     
     # Get filter parameters
     cliente_filter = request.GET.get('cliente', '').strip()
@@ -976,7 +991,7 @@ def requerimento_list_view(request):
         requerimentos = requerimentos.filter(precatorio__cnj__icontains=precatorio_filter)
     
     if pedido_filter:
-        requerimentos = requerimentos.filter(pedido=pedido_filter)
+        requerimentos = requerimentos.filter(pedido__id=pedido_filter)
     
     if fase_filter:
         requerimentos = requerimentos.filter(fase__nome=fase_filter)
@@ -984,6 +999,9 @@ def requerimento_list_view(request):
     # Get available phases for requerimentos
     from .models import Fase
     available_fases = Fase.get_fases_for_requerimento()
+    
+    # Get available pedido requerimento types
+    available_pedidos = PedidoRequerimento.get_ativos()
     
     # Calculate financial statistics based on filtered results
     valor_total = sum(r.valor for r in requerimentos if r.valor)
@@ -1004,6 +1022,7 @@ def requerimento_list_view(request):
     context = {
         'requerimentos': requerimentos,
         'available_fases': available_fases,
+        'available_pedidos': available_pedidos,
         'valor_total': valor_total,
         'desagio_medio': desagio_medio,
         # Current filter values for form persistence
@@ -1525,6 +1544,123 @@ def ativar_tipo_precatorio_view(request, tipo_id):
 
 
 # ===============================
+# PEDIDO REQUERIMENTO VIEWS
+# ===============================
+
+@login_required
+def tipos_pedido_requerimento_view(request):
+    """List all tipos de pedido de requerimento"""
+    tipos = PedidoRequerimento.objects.all().order_by('ordem', 'nome')
+    
+    context = {
+        'tipos': tipos,
+        'total_tipos': tipos.count(),
+        'tipos_ativos': tipos.filter(ativo=True).count(),
+        'tipos_inativos': tipos.filter(ativo=False).count(),
+    }
+    
+    return render(request, 'precapp/tipos_pedido_requerimento_list.html', context)
+
+
+@login_required
+def novo_tipo_pedido_requerimento_view(request):
+    """Create a new tipo de pedido de requerimento"""
+    if request.method == 'POST':
+        form = PedidoRequerimentoForm(request.POST)
+        if form.is_valid():
+            tipo = form.save()
+            messages.success(request, f'Tipo de Pedido "{tipo.nome}" criado com sucesso!')
+            return redirect('tipos_pedido_requerimento')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = PedidoRequerimentoForm()
+    
+    return render(request, 'precapp/tipo_pedido_requerimento_form.html', {
+        'form': form,
+        'title': 'Novo Tipo de Pedido de Requerimento'
+    })
+
+
+@login_required
+def editar_tipo_pedido_requerimento_view(request, tipo_id):
+    """Edit an existing tipo de pedido de requerimento"""
+    tipo = get_object_or_404(PedidoRequerimento, id=tipo_id)
+    
+    if request.method == 'POST':
+        form = PedidoRequerimentoForm(request.POST, instance=tipo)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Tipo de Pedido "{tipo.nome}" atualizado com sucesso!')
+            return redirect('tipos_pedido_requerimento')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = PedidoRequerimentoForm(instance=tipo)
+    
+    return render(request, 'precapp/tipo_pedido_requerimento_form.html', {
+        'form': form,
+        'tipo': tipo,
+        'title': f'Editar Tipo de Pedido: {tipo.nome}'
+    })
+
+
+@login_required
+def deletar_tipo_pedido_requerimento_view(request, tipo_id):
+    """Delete a tipo de pedido de requerimento"""
+    tipo = get_object_or_404(PedidoRequerimento, id=tipo_id)
+    
+    # Check if tipo is being used
+    requerimentos_count = tipo.requerimento_set.count()
+    
+    if requerimentos_count > 0:
+        messages.error(
+            request, 
+            f'Não é possível excluir o tipo de pedido "{tipo.nome}" pois ele está sendo usado por {requerimentos_count} requerimento(s).'
+        )
+        return redirect('tipos_pedido_requerimento')
+    
+    if request.method == 'POST':
+        tipo_nome = tipo.nome
+        tipo.delete()
+        messages.success(request, f'Tipo de Pedido "{tipo_nome}" excluído com sucesso!')
+        return redirect('tipos_pedido_requerimento')
+    
+    return render(request, 'precapp/confirmar_delete_tipo_pedido_requerimento.html', {
+        'tipo_pedido': tipo,
+        'requerimentos_count': requerimentos_count
+    })
+
+
+@login_required
+def ativar_tipo_pedido_requerimento_view(request, tipo_id):
+    """Toggle activation status of a tipo de pedido de requerimento"""
+    tipo = get_object_or_404(PedidoRequerimento, id=tipo_id)
+    
+    # Handle POST data (from AJAX calls)
+    if request.method == 'POST':
+        ativo_value = request.POST.get('ativo', '').strip()
+        tipo.ativo = ativo_value.lower() == 'true'
+    else:
+        # Handle GET for backward compatibility
+        ativo_param = request.GET.get('ativo', '').lower()
+        if ativo_param == 'true':
+            tipo.ativo = True
+        elif ativo_param == 'false':
+            tipo.ativo = False
+        else:
+            # Toggle if no parameter
+            tipo.ativo = not tipo.ativo
+    
+    tipo.save()
+    
+    status = "ativado" if tipo.ativo else "desativado"
+    messages.success(request, f'Tipo de Pedido de Requerimento "{tipo.nome}" {status} com sucesso!')
+    
+    return redirect('tipos_pedido_requerimento')
+
+
+# ===============================
 # CUSTOMIZAÇÃO VIEWS
 # ===============================
 
@@ -1536,6 +1672,7 @@ def customizacao_view(request):
     fases_honorarios = FaseHonorariosContratuais.objects.all()
     tipos_precatorio = Tipo.objects.all()
     tipos_diligencia = TipoDiligencia.objects.all()
+    tipos_pedido_requerimento = PedidoRequerimento.objects.all()
     
     context = {
         # Fases Principais stats
@@ -1553,6 +1690,11 @@ def customizacao_view(request):
         'tipos_precatorio_ativos': tipos_precatorio.filter(ativa=True).count(),
         'tipos_precatorio_inativos': tipos_precatorio.filter(ativa=False).count(),
         
+        # Tipos Pedido Requerimento stats
+        'total_tipos_pedido_requerimento': tipos_pedido_requerimento.count(),
+        'tipos_pedido_requerimento_ativos': tipos_pedido_requerimento.filter(ativo=True).count(),
+        'tipos_pedido_requerimento_inativos': tipos_pedido_requerimento.filter(ativo=False).count(),
+        
         # Tipos Diligência stats
         'total_tipos_diligencia': tipos_diligencia.count(),
         'tipos_diligencia_ativos': tipos_diligencia.filter(ativo=True).count(),
@@ -1562,6 +1704,7 @@ def customizacao_view(request):
         'recent_fases_principais': fases_principais.order_by('-criado_em')[:5],
         'recent_fases_honorarios': fases_honorarios.order_by('-criado_em')[:5],
         'recent_tipos_precatorio': tipos_precatorio.order_by('-criado_em')[:5],
+        'recent_tipos_pedido_requerimento': tipos_pedido_requerimento.order_by('-criado_em')[:5],
         'recent_tipos_diligencia': tipos_diligencia.order_by('-criado_em')[:5],
     }
     

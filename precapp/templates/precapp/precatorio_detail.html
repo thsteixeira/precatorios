@@ -710,7 +710,13 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="badge bg-primary">{{ requerimento.get_pedido_display }}</span>
+                                        {% if requerimento.pedido %}
+                                            <span class="badge text-white" style="background-color: {{ requerimento.pedido.cor }};">
+                                                {{ requerimento.pedido.nome }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Não informado</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <span class="text-success fw-bold">R$ {{ requerimento.valor|floatformat:2 }}</span>
@@ -776,11 +782,9 @@
                                                             <label for="pedido_{{ requerimento.id }}" class="form-label">Tipo de Pedido</label>
                                                             <select class="form-select form-select-sm" id="pedido_{{ requerimento.id }}" name="pedido">
                                                                 <option value="">Selecione o tipo de pedido</option>
-                                                                <option value="prioridade doença" {% if requerimento.pedido == 'prioridade doença' %}selected{% endif %}>Prioridade por doença</option>
-                                                                <option value="prioridade idade" {% if requerimento.pedido == 'prioridade idade' %}selected{% endif %}>Prioridade por idade</option>
-                                                                <option value="acordo principal" {% if requerimento.pedido == 'acordo principal' %}selected{% endif %}>Acordo sobre o valor Principal</option>
-                                                                <option value="acordo honorários contratuais" {% if requerimento.pedido == 'acordo honorários contratuais' %}selected{% endif %}>Acordo sobre os Honorários Contratuais</option>
-                                                                <option value="acordo honorários sucumbenciais" {% if requerimento.pedido == 'acordo honorários sucumbenciais' %}selected{% endif %}>Acordo sobre os Honorários Sucumbenciais</option>
+                                                                {% for pedido in available_pedidos %}
+                                                                    <option value="{{ pedido.id }}" {% if requerimento.pedido.id == pedido.id %}selected{% endif %}>{{ pedido.nome }}</option>
+                                                                {% endfor %}
                                                             </select>
                                                         </div>
                                                         
@@ -873,7 +877,12 @@
                                                     <h6>Tem certeza que deseja excluir este requerimento?</h6>
                                                     <p class="text-muted mb-0">
                                                         <strong>Cliente:</strong> {{ requerimento.cliente.nome }}<br>
-                                                        <strong>Tipo:</strong> {{ requerimento.get_pedido_display }}<br>
+                                                        <strong>Tipo:</strong> 
+                                                        {% if requerimento.pedido %}
+                                                            {{ requerimento.pedido.nome }}
+                                                        {% else %}
+                                                            Não informado
+                                                        {% endif %}<br>
                                                         <strong>Valor:</strong> R$ {{ requerimento.valor|floatformat:2 }}
                                                     </p>
                                                     <div class="alert alert-warning mt-3">

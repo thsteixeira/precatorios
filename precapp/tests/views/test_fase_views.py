@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.contrib.messages import get_messages
 from django.contrib import messages as constants
 
-from precapp.models import Fase, Alvara, Requerimento, Precatorio, Cliente
+from precapp.models import Fase, Alvara, Requerimento, Precatorio, Cliente, PedidoRequerimento
 from datetime import date
 
 
@@ -116,13 +116,22 @@ class FasesViewTest(TestCase):
             fase=self.fase_alvara_ativa
         )
         
+        # Create test PedidoRequerimento
+        self.pedido_prioridade = PedidoRequerimento.objects.create(
+            nome='Prioridade por idade',
+            descricao='Pedido de prioridade por idade',
+            cor='#ffc107',
+            ordem=1,
+            ativo=True
+        )
+        
         # Create requerimento using active phase
         self.requerimento = Requerimento.objects.create(
             precatorio=self.precatorio,
             cliente=self.cliente,
             valor=25000.00,
             desagio=5.0,
-            pedido='prioridade idade',
+            pedido=self.pedido_prioridade,
             fase=self.fase_requerimento_ativa
         )
         
@@ -2135,13 +2144,30 @@ class DeletarFaseViewTest(TestCase):
             fase=self.fase_used_by_both
         )
         
+        # Create test PedidoRequerimento instances
+        self.pedido_prioridade_idade = PedidoRequerimento.objects.create(
+            nome='Prioridade por idade',
+            descricao='Pedido de prioridade por idade',
+            cor='#ffc107',
+            ordem=1,
+            ativo=True
+        )
+        
+        self.pedido_prioridade_doenca = PedidoRequerimento.objects.create(
+            nome='Prioridade por doença',
+            descricao='Pedido de prioridade por doença',
+            cor='#dc3545',
+            ordem=2,
+            ativo=True
+        )
+        
         # Create requerimento using the fase
         self.requerimento = Requerimento.objects.create(
             precatorio=self.precatorio,
             cliente=self.cliente,
             valor=25000.00,
             desagio=5.0,
-            pedido='prioridade idade',
+            pedido=self.pedido_prioridade_idade,
             fase=self.fase_used_by_requerimento
         )
         
@@ -2151,7 +2177,7 @@ class DeletarFaseViewTest(TestCase):
             cliente=self.cliente,
             valor=15000.00,
             desagio=3.0,
-            pedido='prioridade doença',
+            pedido=self.pedido_prioridade_doenca,
             fase=self.fase_used_by_both
         )
         
@@ -2438,7 +2464,7 @@ class DeletarFaseViewTest(TestCase):
             cliente=self.cliente,
             valor=20000.00,
             desagio=4.0,
-            pedido='prioridade doença',  # Valid choice
+            pedido=self.pedido_prioridade_doenca,  # Use existing PedidoRequerimento
             fase=self.fase_used_by_requerimento
         )
         

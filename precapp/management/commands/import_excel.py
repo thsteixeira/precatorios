@@ -7,7 +7,7 @@ from decimal import Decimal, InvalidOperation
 from datetime import datetime
 import pandas as pd
 import os
-from precapp.models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, TipoDiligencia, Tipo
+from precapp.models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, TipoDiligencia, Tipo, PedidoRequerimento
 
 
 class Command(BaseCommand):
@@ -48,6 +48,7 @@ class Command(BaseCommand):
             self.create_main_phases()
             self.create_tipos_diligencia()
             self.create_tipos_precatorio()
+            self.create_tipos_pedido_requerimento()
         
         try:
             self.import_excel_data(file_path, sheet_name, dry_run)
@@ -315,6 +316,77 @@ class Command(BaseCommand):
             self.stdout.write(f'Created {created_count} new tipos de precatorio')
         else:
             self.stdout.write('All tipos de precatorio already exist')
+        
+        self.stdout.write('')
+    
+    def create_tipos_pedido_requerimento(self):
+        """Create default tipos de pedido requerimento"""
+        
+        tipos_pedido_requerimento = [
+            {
+                'nome': 'Prioridade por idade',
+                'descricao': 'Requerimento para prioridade de tramitação por idade (acima de 60 anos)',
+                'cor': '#6f42c1',  # Roxo
+                'ordem': 1
+            },
+            {
+                'nome': 'Prioridade por doença',
+                'descricao': 'Requerimento para prioridade de tramitação por doença grave',
+                'cor': '#e83e8c',  # Rosa
+                'ordem': 2
+            },
+            {
+                'nome': 'Acordo no Principal',
+                'descricao': 'Requerimento de acordo sobre o valor principal do precatório',
+                'cor': '#007bff',  # Azul
+                'ordem': 3
+            },
+            {
+                'nome': 'Acordo nos Hon. Sucumbenciais',
+                'descricao': 'Requerimento de acordo sobre os honorários sucumbenciais',
+                'cor': '#28a745',  # Verde
+                'ordem': 4
+            },
+            {
+                'nome': 'Acordo nos Hon. Contratuais',
+                'descricao': 'Requerimento de acordo sobre os honorários contratuais',
+                'cor': '#ffc107',  # Amarelo
+                'ordem': 5
+            },
+            {
+                'nome': 'Impugnação aos cálculos',
+                'descricao': 'Requerimento de impugnação aos cálculos apresentados',
+                'cor': '#fd7e14',  # Laranja
+                'ordem': 6
+            },
+            {
+                'nome': 'Repartição de honorários',
+                'descricao': 'Requerimento para repartição de honorários entre advogados',
+                'cor': '#dc3545',  # Vermelho
+                'ordem': 7
+            }
+        ]
+        
+        created_count = 0
+        for tipo_data in tipos_pedido_requerimento:
+            tipo, created = PedidoRequerimento.objects.get_or_create(
+                nome=tipo_data['nome'],
+                defaults={
+                    'descricao': tipo_data['descricao'],
+                    'cor': tipo_data['cor'],
+                    'ordem': tipo_data['ordem'],
+                    'ativo': True
+                }
+            )
+            if created:
+                created_count += 1
+                self.stdout.write(f'✓ Created Tipo de Pedido Requerimento: {tipo.nome} (ordem: {tipo.ordem})')
+        
+        if created_count > 0:
+            self.stdout.write(f'\n=== TIPOS DE PEDIDO REQUERIMENTO CREATED ===')
+            self.stdout.write(f'Created {created_count} new tipos de pedido requerimento')
+        else:
+            self.stdout.write('All tipos de pedido requerimento already exist')
         
         self.stdout.write('')
     

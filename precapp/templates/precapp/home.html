@@ -390,7 +390,13 @@
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="ms-2 me-auto">
                                 <div class="fw-bold">{{ requerimento.cliente.nome }}</div>
-                                <small class="text-muted">{{ requerimento.get_pedido_display }}</small>
+                                <small class="text-muted">
+                                    {% if requerimento.pedido %}
+                                        {{ requerimento.pedido.nome }}
+                                    {% else %}
+                                        Não informado
+                                    {% endif %}
+                                </small>
                             </div>
                             <span class="badge bg-warning text-dark rounded-pill">R$ {{ requerimento.valor|floatformat:0 }}</span>
                         </div>

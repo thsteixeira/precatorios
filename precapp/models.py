@@ -421,16 +421,112 @@ class Cliente(models.Model):
         
         Returns:
             list: List of Requerimento instances with priority pedidos
-                 ('prioridade idade' or 'prioridade doença')
+                 (pedidos with names containing 'prioridade')
         """
         priority_reqs = []
         
         # Only get requerimentos that actually belong to THIS cliente
         for req in Requerimento.objects.filter(cliente=self):
-            if req.pedido in ['prioridade idade', 'prioridade doença']:
+            # Check if the pedido nome contains 'prioridade' (case insensitive)
+            if req.pedido and 'prioridade' in req.pedido.nome.lower():
                 priority_reqs.append(req)
         
         return priority_reqs
+
+
+class PedidoRequerimento(models.Model):
+    """
+    Model for customizable request types for Requerimentos.
+    
+    This model defines the types of requests (pedidos) that can be made in
+    Requerimentos. Each type can be configured with visual styling and
+    organizational properties for better management.
+    
+    Attributes:
+        nome (CharField): Unique name of the request type (max 100 characters)
+        descricao (TextField): Optional detailed description of the request type
+        cor (CharField): Hexadecimal color code for visual identification (default: #007bff)
+        ordem (PositiveIntegerField): Display order (lower numbers appear first)
+        ativo (BooleanField): Whether this type is active for use (default: True)
+        criado_em (DateTimeField): Timestamp when the type was created
+        atualizado_em (DateTimeField): Timestamp when the type was last updated
+    
+    Business Rules:
+        - Each type name must be unique across all request types
+        - Only active types are available for selection in forms
+        - Types are ordered by ordem field, then by nome alphabetically
+        - Color field allows visual categorization in the interface
+        - Soft delete pattern: types are deactivated rather than deleted to preserve history
+    
+    Related Models:
+        - Requerimento: Foreign key relationship with PROTECT constraint
+          (prevents deletion of types that are referenced by existing requerimentos)
+    
+    Methods:
+        get_ativos(): Class method returning only active request types
+    
+    Usage Examples:
+        # Create a new request type
+        pedido = PedidoRequerimento.objects.create(
+            nome="Prioridade por Idade",
+            descricao="Solicitação de prioridade no processamento devido à idade avançada",
+            cor="#28a745"
+        )
+        
+        # Get all active types for form choices
+        active_types = PedidoRequerimento.get_ativos()
+        
+        # Deactivate a type instead of deleting
+        pedido.ativo = False
+        pedido.save()
+    """
+    
+    nome = models.CharField(
+        max_length=100, 
+        unique=True,
+        help_text="Nome do tipo de pedido"
+    )
+    descricao = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Descrição opcional do tipo de pedido"
+    )
+    cor = models.CharField(
+        max_length=7, 
+        default='#007bff',
+        help_text="Cor em hexadecimal para identificação visual (ex: #007bff)"
+    )
+    ordem = models.PositiveIntegerField(
+        default=0,
+        help_text="Ordem de exibição (números menores aparecem primeiro)"
+    )
+    ativo = models.BooleanField(
+        default=True,
+        help_text="Se este tipo está ativo para uso"
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.nome
+    
+    @classmethod
+    def get_ativos(cls):
+        """
+        Return only active request types.
+        
+        This method provides a convenient way to filter request types
+        to only those that are currently active and available for use.
+        
+        Returns:
+            QuerySet: Active PedidoRequerimento instances ordered by ordem and nome
+        """
+        return cls.objects.filter(ativo=True)
+    
+    class Meta:
+        verbose_name = "Tipo de Pedido de Requerimento"
+        verbose_name_plural = "Tipos de Pedidos de Requerimento"
+        ordering = ['ordem', 'nome']
 
 
 class TipoDiligencia(models.Model):
@@ -869,15 +965,8 @@ class Requerimento(models.Model):
         cliente (ForeignKey): Client making the request (CASCADE deletion)
         valor (FloatField): Monetary value associated with the request
         desagio (FloatField): Discount/premium percentage applied
-        pedido (CharField): Type of request being made (from PEDIDO_CHOICES)
+        pedido (ForeignKey): Type of request being made (from PedidoRequerimento model)
         fase (ForeignKey): Current phase of the requerimento (PROTECT constraint)
-    
-    Request Types (PEDIDO_CHOICES):
-        - prioridade doença: Priority processing due to illness
-        - prioridade idade: Priority processing due to age (elderly)
-        - acordo principal: Agreement on principal amount
-        - acordo honorários contratuais: Agreement on contractual fees
-        - acordo honorários sucumbenciais: Agreement on succumbence fees
     
     Business Rules:
         - Cliente must be linked to the precatório before creating a requerimento
@@ -885,6 +974,7 @@ class Requerimento(models.Model):
         - Validation ensures client-precatório relationship exists
         - Phase tracking allows monitoring request progress
         - Financial values (valor, desagio) are required and must be positive
+        - Only active request types can be selected
     
     Validation:
         - clean() method validates cliente-precatório relationship
@@ -897,40 +987,35 @@ class Requerimento(models.Model):
     Related Models:
         - Precatorio: Parent document (CASCADE)
         - Cliente: Request submitter (CASCADE)
+        - PedidoRequerimento: Request type (PROTECT)
         - Fase: Phase tracking (PROTECT)
     
     Usage Examples:
         # Create a priority request (cliente must be linked to precatório first)
         precatorio.clientes.add(cliente)
+        pedido_tipo = PedidoRequerimento.objects.get(nome="Prioridade por Idade")
         requerimento = Requerimento.objects.create(
             precatorio=precatorio,
             cliente=cliente,
-            pedido="prioridade idade",
+            pedido=pedido_tipo,
             valor=25000.00,
             desagio=15.5,
             fase=fase_em_andamento
         )
         
         # Get abbreviated display name
-        short_name = requerimento.get_pedido_abreviado()  # "Prioridade Idade"
+        short_name = requerimento.get_pedido_abreviado()  # Based on pedido.nome
     """
-    
-    PEDIDO_CHOICES = [
-        ('prioridade doença', 'Prioridade por doença'),
-        ('prioridade idade', 'Prioridade por idade'),
-        ('acordo principal', 'Acordo sobre o valor Principal'),
-        ('acordo honorários contratuais', 'Acordo sobre os Honorários Contratuais'),
-        ('acordo honorários sucumbenciais', 'Acordo sobre os Honorários Sucumbenciais'),
-    ]
     
     precatorio = models.ForeignKey(Precatorio, on_delete=models.CASCADE, to_field='cnj')
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, to_field='cpf')
     valor = models.FloatField()
     desagio = models.FloatField()
-    pedido = models.CharField(
-        max_length=50,
-        choices=PEDIDO_CHOICES,
-        help_text='Selecione apenas um pedido.'
+    pedido = models.ForeignKey(
+        PedidoRequerimento,
+        on_delete=models.PROTECT,
+        limit_choices_to={'ativo': True},
+        help_text='Selecione o tipo de pedido.'
     )
     fase = models.ForeignKey(
         Fase, 
@@ -983,28 +1068,20 @@ class Requerimento(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Requerimento - {self.pedido} - {self.cliente.nome}"
+        return f"Requerimento - {self.pedido.nome} - {self.cliente.nome}"
     
     def get_pedido_abreviado(self):
         """
         Return abbreviated version of pedido for display purposes.
         
-        Provides shortened, more concise versions of the pedido choices
-        for use in tables, lists, or other space-constrained displays.
+        Provides shortened, more concise versions of the pedido for use in
+        tables, lists, or other space-constrained displays. Now uses the
+        related PedidoRequerimento model's nome field.
         
         Returns:
-            str: Abbreviated pedido text, or title-cased original if no abbreviation exists
+            str: The pedido nome, which can be customized through the admin
         """
-        abbreviations = {
-            'prioridade doença': 'Prioridade Doença',
-            'prioridade idade': 'Prioridade Idade',
-            'acordo principal': 'Acordo Principal',
-            'acordo honorários contratuais': 'Acordo Hon. Contratuais',
-            'acordo honorários sucumbenciais': 'Acordo Hon. Sucumbenciais',
-        }
-        return abbreviations.get(self.pedido.lower(), self.pedido.title())
-    
-    # Removed list/set logic since only one choice is allowed
+        return self.pedido.nome if self.pedido else "N/A"
     
     class Meta:
         verbose_name = "Requerimento"

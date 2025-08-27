@@ -39,7 +39,7 @@ from decimal import Decimal
 
 from precapp.models import (
     Fase, FaseHonorariosContratuais, Precatorio, Cliente, 
-    Alvara, Requerimento, TipoDiligencia, Diligencias, Tipo
+    Alvara, Requerimento, TipoDiligencia, Diligencias, Tipo, PedidoRequerimento
 )
 
 
@@ -543,6 +543,592 @@ class TipoModelTest(TestCase):
         tipo.refresh_from_db()
         self.assertEqual(tipo.criado_em, initial_created)
         self.assertGreater(tipo.atualizado_em, initial_updated)
+
+
+class PedidoRequerimentoModelTest(TestCase):
+    """
+    Comprehensive test suite for the PedidoRequerimento model.
+    
+    The PedidoRequerimento model represents customizable types of legal requests
+    that can be submitted for precatórios. This model replaced the hardcoded
+    choices in the Requerimento model to provide flexibility for administrators
+    to define their own request types. This test class validates:
+    
+    - Model creation with visual and organizational properties
+    - Unique constraint on 'nome' field
+    - Default value assignment (cor, ativo, ordem, timestamps)
+    - Color field validation for hexadecimal values
+    - Ordering behavior (ordem, nome)
+    - Active/inactive status management
+    - Class methods for filtering active types
+    - String representation consistency
+    - Soft delete pattern (deactivation instead of deletion)
+    - Business rule enforcement for request type management
+    
+    Key Features Tested:
+    - Unique request type names across the system
+    - Color coding for visual categorization (hexadecimal format)
+    - Display ordering for organized presentation in forms/dropdowns
+    - Active status control for availability in selections
+    - Automatic timestamping for audit trail
+    - Class method for retrieving active types only
+    - Description field for detailed explanations
+    
+    Business Rules:
+    - Each pedido name must be globally unique
+    - Only active pedidos are available for requerimento creation
+    - Default color is blue (#007bff)
+    - Ordering determines display sequence in forms and interfaces
+    - Deactivation preserves data integrity (soft delete pattern)
+    - Descriptions provide context for legal request types
+    
+    Integration Points:
+    - Used as ForeignKey in Requerimento model (replacing old choices)
+    - Supports PROTECT deletion to preserve historical data integrity
+    - Visual identification through color coding in templates
+    - Form integration through get_ativos() method
+    - Admin interface with visual color previews
+    
+    Request Types Examples:
+    - Prioridade por idade: Priority due to advanced age
+    - Prioridade por doença: Priority due to serious illness
+    - Acordo no Principal: Agreement on principal amount
+    - Acordo nos Hon. Contratuais: Agreement on contractual fees
+    - Acordo nos Hon. Sucumbenciais: Agreement on succumbence fees
+    - Impugnação aos cálculos: Challenge to calculations
+    - Repartição de honorários: Fee distribution arrangements
+    
+    Validation Coverage:
+    - Unique constraint enforcement across all instances
+    - Color format validation (hexadecimal with # prefix)
+    - Required field validation (nome)
+    - Optional field handling (descricao)
+    - Default value testing for all applicable fields
+    - Class method functionality verification
+    - Ordering behavior validation
+    - Active/inactive status management
+    - Timestamp functionality (auto_now_add, auto_now)
+    
+    Edge Cases:
+    - Empty descriptions (should be allowed)
+    - Special characters in names
+    - Maximum length validation
+    - Color format variations
+    - Ordering edge cases (duplicate ordem values)
+    - Mass activation/deactivation scenarios
+    """
+    
+    def setUp(self):
+        """
+        Set up test data for PedidoRequerimento model tests.
+        
+        Creates a standard test data dictionary that represents a typical
+        request type with all fields populated. This data structure is
+        used across multiple test methods to ensure consistency.
+        """
+        self.pedido_requerimento_data = {
+            'nome': 'Prioridade por idade',
+            'descricao': 'Requerimento de prioridade com base na idade avançada do requerente',
+            'cor': '#6f42c1',
+            'ativo': True,
+            'ordem': 1
+        }
+    
+    def test_pedido_requerimento_creation(self):
+        """
+        Test creating a PedidoRequerimento with valid data.
+        
+        Validates that:
+        - A PedidoRequerimento instance can be created with valid data
+        - full_clean() passes without raising ValidationError
+        - The instance can be saved to the database
+        - All field values are correctly assigned and accessible
+        - Timestamps are automatically set on creation
+        """
+        pedido = PedidoRequerimento(**self.pedido_requerimento_data)
+        pedido.full_clean()  # This should not raise ValidationError
+        pedido.save()
+        
+        # Verify all field values
+        self.assertEqual(pedido.nome, 'Prioridade por idade')
+        self.assertEqual(pedido.descricao, 'Requerimento de prioridade com base na idade avançada do requerente')
+        self.assertEqual(pedido.cor, '#6f42c1')
+        self.assertTrue(pedido.ativo)
+        self.assertEqual(pedido.ordem, 1)
+        
+        # Verify timestamps were set
+        self.assertIsNotNone(pedido.criado_em)
+        self.assertIsNotNone(pedido.atualizado_em)
+    
+    def test_pedido_requerimento_str_method(self):
+        """
+        Test the __str__ method of PedidoRequerimento.
+        
+        Validates that the string representation returns the nome field
+        as expected, providing a human-readable identification for the
+        request type that will be displayed in admin interfaces, forms,
+        and templates.
+        """
+        pedido = PedidoRequerimento(**self.pedido_requerimento_data)
+        expected_str = pedido.nome
+        self.assertEqual(str(pedido), expected_str)
+        
+        # Test with different nome values
+        test_names = ['Acordo no Principal', 'Impugnação aos cálculos', 'Repartição de honorários']
+        for name in test_names:
+            with self.subTest(nome=name):
+                pedido.nome = name
+                self.assertEqual(str(pedido), name)
+    
+    def test_pedido_requerimento_required_fields(self):
+        """
+        Test that required fields are enforced.
+        
+        Validates field requirements:
+        - 'nome' field is required and cannot be empty or None
+        - Other fields have defaults and should not cause validation failures
+        - Tests both negative (missing required field) and positive cases
+        - Ensures proper error handling for missing required data
+        """
+        # Test without nome (nome is required)
+        with self.assertRaises(ValidationError):
+            pedido = PedidoRequerimento(
+                descricao='Test description',
+                cor='#007bff',
+                ativo=True,
+                ordem=1
+            )
+            pedido.full_clean()
+        
+        # Test with empty nome (should also fail)
+        with self.assertRaises(ValidationError):
+            pedido = PedidoRequerimento(
+                nome='',
+                descricao='Test description',
+                cor='#007bff',
+                ativo=True
+            )
+            pedido.full_clean()
+        
+        # Test valid creation with just nome (other fields have defaults)
+        pedido = PedidoRequerimento(nome='Test Pedido')
+        pedido.full_clean()  # Should pass
+        pedido.save()
+        self.assertEqual(pedido.nome, 'Test Pedido')
+    
+    def test_pedido_requerimento_unique_constraint(self):
+        """
+        Test that nome field has unique constraint.
+        
+        Validates that:
+        - Two PedidoRequerimento instances cannot have the same nome
+        - Database constraint is properly enforced
+        - Appropriate error is raised on duplicate creation attempts
+        - Case sensitivity in uniqueness validation
+        """
+        # Create first pedido
+        PedidoRequerimento.objects.create(**self.pedido_requerimento_data)
+        
+        # Try to create duplicate - should raise exception
+        from django.db import IntegrityError
+        with self.assertRaises(IntegrityError):
+            duplicate_pedido = PedidoRequerimento(**self.pedido_requerimento_data)
+            duplicate_pedido.save()  # Skip full_clean() to test database constraint
+    
+    def test_pedido_requerimento_default_values(self):
+        """
+        Test default values for optional fields.
+        
+        Validates that:
+        - cor field defaults to '#007bff' (blue)
+        - ativo field defaults to True
+        - ordem field defaults to 0
+        - descricao field defaults to empty string
+        - Timestamp fields are automatically set (criado_em, atualizado_em)
+        """
+        pedido = PedidoRequerimento.objects.create(nome='Test Default Values')
+        
+        # Check default values
+        self.assertEqual(pedido.cor, '#007bff')  # Default color from model
+        self.assertTrue(pedido.ativo)  # Default to active
+        self.assertEqual(pedido.ordem, 0)  # Default order
+        self.assertIsNone(pedido.descricao)  # Default null description (not empty string)
+        
+        # Check timestamp defaults
+        self.assertIsNotNone(pedido.criado_em)  # Auto timestamp on creation
+        self.assertIsNotNone(pedido.atualizado_em)  # Auto timestamp on save
+    
+    def test_pedido_requerimento_color_field_validation(self):
+        """
+        Test color field accepts valid hexadecimal colors.
+        
+        Validates various valid color formats:
+        - Standard hex colors with # prefix
+        - Different color values (primary colors, custom colors)
+        - Ensures the field properly handles hexadecimal color codes
+        - Tests both 6-digit and 3-digit hex formats
+        """
+        valid_colors = [
+            '#FF0000',  # Red
+            '#00FF00',  # Green
+            '#0000FF',  # Blue
+            '#FFFFFF',  # White
+            '#000000',  # Black
+            '#123ABC',  # Custom hex
+            '#6f42c1',  # Purple (as in test data)
+            '#e83e8c',  # Pink
+            '#28a745',  # Success green
+            '#ffc107',  # Warning yellow
+            '#dc3545',  # Danger red
+            '#fd7e14'   # Orange
+        ]
+        
+        for color in valid_colors:
+            with self.subTest(color=color):
+                data = self.pedido_requerimento_data.copy()
+                data['cor'] = color
+                data['nome'] = f'Test {color}'  # Unique name for each test
+                pedido = PedidoRequerimento(**data)
+                pedido.full_clean()
+                pedido.save()
+                self.assertEqual(pedido.cor, color)
+    
+    def test_pedido_requerimento_ordering(self):
+        """
+        Test that pedidos are ordered by ordem and nome.
+        
+        Validates the model's Meta ordering configuration:
+        - Primary sort by ordem field (ascending)
+        - Secondary sort by nome field (alphabetical)
+        - Ensures consistent ordering for UI display
+        - Tests various ordem values including duplicates
+        """
+        # Create pedidos with different orders and names
+        PedidoRequerimento.objects.create(nome='Z Último', ordem=3, cor='#FF0000')
+        PedidoRequerimento.objects.create(nome='A Primeiro', ordem=1, cor='#00FF00')
+        PedidoRequerimento.objects.create(nome='C Terceiro', ordem=2, cor='#0000FF')
+        PedidoRequerimento.objects.create(nome='B Segundo', ordem=1, cor='#FFFF00')  # Same ordem as A
+        PedidoRequerimento.objects.create(nome='D Quarto', ordem=0, cor='#FF00FF')   # Lowest ordem
+        
+        pedidos = PedidoRequerimento.objects.all()
+        expected_order = ['D Quarto', 'A Primeiro', 'B Segundo', 'C Terceiro', 'Z Último']
+        actual_order = [pedido.nome for pedido in pedidos]
+        self.assertEqual(actual_order, expected_order)
+    
+    def test_get_ativos_class_method(self):
+        """
+        Test get_ativos class method.
+        
+        Validates that:
+        - Method returns only active pedidos
+        - Inactive pedidos are excluded from results
+        - Results maintain proper ordering (ordem, nome)
+        - Method is accessible as class method
+        - Empty queryset handling when no active pedidos exist
+        """
+        # Create active and inactive pedidos
+        ativo1 = PedidoRequerimento.objects.create(
+            nome='Ativo Primeiro', 
+            ativo=True, 
+            ordem=2,
+            cor='#28a745'
+        )
+        ativo2 = PedidoRequerimento.objects.create(
+            nome='Ativo Segundo', 
+            ativo=True, 
+            ordem=1,
+            cor='#007bff'
+        )
+        inativo1 = PedidoRequerimento.objects.create(
+            nome='Inativo Primeiro', 
+            ativo=False, 
+            ordem=0,
+            cor='#6c757d'
+        )
+        inativo2 = PedidoRequerimento.objects.create(
+            nome='Inativo Segundo', 
+            ativo=False, 
+            ordem=3,
+            cor='#dc3545'
+        )
+        
+        pedidos_ativos = PedidoRequerimento.get_ativos()
+        
+        # Check that only active pedidos are returned
+        self.assertIn(ativo1, pedidos_ativos)
+        self.assertIn(ativo2, pedidos_ativos)
+        self.assertNotIn(inativo1, pedidos_ativos)
+        self.assertNotIn(inativo2, pedidos_ativos)
+        self.assertEqual(pedidos_ativos.count(), 2)
+        
+        # Check ordering (should be by ordem, then nome)
+        pedidos_list = list(pedidos_ativos)
+        self.assertEqual(pedidos_list[0], ativo2)  # ordem=1
+        self.assertEqual(pedidos_list[1], ativo1)  # ordem=2
+    
+    def test_pedido_requerimento_soft_delete_pattern(self):
+        """
+        Test soft delete pattern through ativo field.
+        
+        Validates that:
+        - Pedidos can be deactivated instead of deleted
+        - Deactivated pedidos are excluded from active queries
+        - Data integrity is preserved when deactivating
+        - Historical references remain intact
+        - Reactivation is possible
+        """
+        # Create active pedido
+        pedido = PedidoRequerimento.objects.create(
+            nome='Test Deactivation',
+            descricao='Testing soft delete pattern',
+            ativo=True,
+            cor='#17a2b8'
+        )
+        
+        # Verify it appears in active pedidos
+        self.assertIn(pedido, PedidoRequerimento.get_ativos())
+        
+        # Deactivate the pedido
+        pedido.ativo = False
+        pedido.save()
+        
+        # Verify it no longer appears in active pedidos
+        self.assertNotIn(pedido, PedidoRequerimento.get_ativos())
+        
+        # Verify the pedido still exists in database
+        self.assertTrue(PedidoRequerimento.objects.filter(nome='Test Deactivation').exists())
+        
+        # Test reactivation
+        pedido.ativo = True
+        pedido.save()
+        self.assertIn(pedido, PedidoRequerimento.get_ativos())
+    
+    def test_pedido_requerimento_meta_configuration(self):
+        """
+        Test model Meta configuration.
+        
+        Validates that:
+        - Verbose names are properly set for admin interface
+        - Ordering configuration is correct
+        - Model metadata is properly configured
+        """
+        meta = PedidoRequerimento._meta
+        self.assertEqual(meta.verbose_name, "Tipo de Pedido de Requerimento")
+        self.assertEqual(meta.verbose_name_plural, "Tipos de Pedidos de Requerimento")
+        self.assertEqual(meta.ordering, ['ordem', 'nome'])
+    
+    def test_pedido_requerimento_timestamps(self):
+        """
+        Test automatic timestamp functionality.
+        
+        Validates that:
+        - criado_em is set on creation and never changes
+        - atualizado_em is updated on each save
+        - Timestamps are properly maintained throughout lifecycle
+        - Timezone handling is correct
+        """
+        pedido = PedidoRequerimento.objects.create(nome='Timestamp Test')
+        
+        # Check initial timestamps
+        self.assertIsNotNone(pedido.criado_em)
+        self.assertIsNotNone(pedido.atualizado_em)
+        initial_created = pedido.criado_em
+        initial_updated = pedido.atualizado_em
+        
+        # Update the pedido
+        import time
+        time.sleep(0.01)  # Ensure timestamp difference
+        pedido.descricao = 'Updated description for timestamp test'
+        pedido.save()
+        
+        # Check that atualizado_em changed but criado_em didn't
+        pedido.refresh_from_db()
+        self.assertEqual(pedido.criado_em, initial_created)
+        self.assertGreater(pedido.atualizado_em, initial_updated)
+    
+    def test_pedido_requerimento_maximum_lengths(self):
+        """
+        Test field maximum length constraints.
+        
+        Validates that:
+        - nome field respects max_length constraint
+        - descricao field handles long text properly
+        - cor field accepts standard hex color length
+        - Appropriate errors are raised for oversized content
+        """
+        # Test nome max length (assuming 100 characters based on typical Django patterns)
+        long_nome = 'A' * 101  # Exceed typical max length
+        with self.assertRaises(ValidationError):
+            pedido = PedidoRequerimento(nome=long_nome)
+            pedido.full_clean()
+        
+        # Test valid nome length
+        valid_nome = 'A' * 50  # Well within limits
+        pedido = PedidoRequerimento(nome=valid_nome)
+        pedido.full_clean()  # Should pass
+        pedido.save()
+        self.assertEqual(pedido.nome, valid_nome)
+    
+    def test_pedido_requerimento_description_field(self):
+        """
+        Test description field behavior.
+        
+        Validates that:
+        - Description field is optional (can be empty)
+        - Long descriptions are properly handled
+        - HTML content is preserved (if any)
+        - Unicode characters are supported
+        """
+        # Test with empty description
+        pedido_empty = PedidoRequerimento.objects.create(
+            nome='Empty Description Test',
+            descricao=''
+        )
+        self.assertEqual(pedido_empty.descricao, '')
+        
+        # Test with long description
+        long_description = (
+            'Este é um requerimento de prioridade baseado na idade avançada do requerente. '
+            'Conforme previsto na legislação brasileira, pessoas idosas têm direito a '
+            'tramitação prioritária de seus processos, incluindo precatórios. '
+            'Este tipo de pedido deve ser acompanhado da documentação comprobatória da idade.'
+        )
+        pedido_long = PedidoRequerimento.objects.create(
+            nome='Long Description Test',
+            descricao=long_description
+        )
+        self.assertEqual(pedido_long.descricao, long_description)
+        
+        # Test with unicode characters
+        unicode_description = 'Requerimento com acentuação: ção, ã, ê, ô, ü, ñ'
+        pedido_unicode = PedidoRequerimento.objects.create(
+            nome='Unicode Test',
+            descricao=unicode_description
+        )
+        self.assertEqual(pedido_unicode.descricao, unicode_description)
+    
+    def test_pedido_requerimento_integration_scenarios(self):
+        """
+        Test integration scenarios that simulate real usage.
+        
+        Validates common use cases:
+        - Creating default pedido types for a new system
+        - Bulk operations (activation/deactivation)
+        - Searching and filtering operations
+        - Template rendering compatibility
+        """
+        # Create typical default pedido types
+        default_pedidos = [
+            {'nome': 'Prioridade por idade', 'cor': '#6f42c1', 'ordem': 1},
+            {'nome': 'Prioridade por doença', 'cor': '#e83e8c', 'ordem': 2},
+            {'nome': 'Acordo no Principal', 'cor': '#007bff', 'ordem': 3},
+            {'nome': 'Acordo nos Hon. Sucumbenciais', 'cor': '#28a745', 'ordem': 4},
+            {'nome': 'Acordo nos Hon. Contratuais', 'cor': '#ffc107', 'ordem': 5},
+            {'nome': 'Impugnação aos cálculos', 'cor': '#fd7e14', 'ordem': 6},
+            {'nome': 'Repartição de honorários', 'cor': '#dc3545', 'ordem': 7},
+        ]
+        
+        created_pedidos = []
+        for pedido_data in default_pedidos:
+            pedido = PedidoRequerimento.objects.create(**pedido_data)
+            created_pedidos.append(pedido)
+        
+        # Test that all were created successfully
+        self.assertEqual(PedidoRequerimento.objects.count(), 7)
+        
+        # Test ordering is correct
+        ordered_pedidos = list(PedidoRequerimento.objects.all())
+        expected_names = [p['nome'] for p in default_pedidos]
+        actual_names = [p.nome for p in ordered_pedidos]
+        self.assertEqual(actual_names, expected_names)
+        
+        # Test bulk deactivation
+        PedidoRequerimento.objects.filter(nome__icontains='Acordo').update(ativo=False)
+        active_count = PedidoRequerimento.get_ativos().count()
+        self.assertEqual(active_count, 4)  # Only non-acordo pedidos remain active
+        
+        # Test searching functionality
+        prioridade_pedidos = PedidoRequerimento.objects.filter(nome__icontains='Prioridade')
+        self.assertEqual(prioridade_pedidos.count(), 2)
+        
+        acordo_pedidos = PedidoRequerimento.objects.filter(nome__icontains='Acordo')
+        self.assertEqual(acordo_pedidos.count(), 3)
+    
+    def test_pedido_requerimento_edge_cases(self):
+        """
+        Test edge cases and boundary conditions.
+        
+        Validates handling of:
+        - Special characters in names
+        - Very long descriptions
+        - Extreme ordem values
+        - Color format variations
+        - Concurrent creation attempts
+        """
+        # Test special characters in nome
+        special_chars_name = "Prioridade (Art. 1º) - Doença & Idade > 60 anos"
+        pedido_special = PedidoRequerimento.objects.create(
+            nome=special_chars_name,
+            cor='#123456'
+        )
+        self.assertEqual(pedido_special.nome, special_chars_name)
+        
+        # Test large ordem value (positive integers only)
+        pedido_large = PedidoRequerimento.objects.create(
+            nome='Large Order',
+            ordem=999999,
+            cor='#ABCDEF'
+        )
+        self.assertEqual(pedido_large.ordem, 999999)
+        
+        # Test color format variations (if model accepts them)
+        color_variations = ['#fff', '#000', '#F0F', '#0F0']  # 3-digit hex
+        for i, color in enumerate(color_variations):
+            try:
+                pedido_color = PedidoRequerimento.objects.create(
+                    nome=f'Color Test {i}',
+                    cor=color
+                )
+                self.assertEqual(pedido_color.cor, color)
+            except ValidationError:
+                # If 3-digit colors are not supported, that's also valid
+                pass
+    
+    def test_pedido_requerimento_queryset_methods(self):
+        """
+        Test custom queryset methods and managers.
+        
+        Validates any custom query methods:
+        - Active filtering through get_ativos()
+        - Ordering verification
+        - Performance considerations for large datasets
+        """
+        # Create a mix of active and inactive pedidos
+        for i in range(10):
+            PedidoRequerimento.objects.create(
+                nome=f'Pedido {i:02d}',
+                ativo=(i % 2 == 0),  # Even numbers are active
+                ordem=i,
+                cor='#007bff'
+            )
+        
+        # Test get_ativos efficiency
+        all_pedidos = PedidoRequerimento.objects.all()
+        active_pedidos = PedidoRequerimento.get_ativos()
+        
+        self.assertEqual(all_pedidos.count(), 10)
+        self.assertEqual(active_pedidos.count(), 5)  # Only even indices
+        
+        # Verify all returned pedidos are actually active
+        for pedido in active_pedidos:
+            self.assertTrue(pedido.ativo)
+        
+        # Test ordering is maintained in get_ativos
+        active_list = list(active_pedidos)
+        for i in range(len(active_list) - 1):
+            current_order = (active_list[i].ordem, active_list[i].nome)
+            next_order = (active_list[i + 1].ordem, active_list[i + 1].nome)
+            self.assertLessEqual(current_order, next_order)
 
 
 class PrecatorioModelTest(TestCase):
@@ -1072,31 +1658,42 @@ class RequerimentoModelTest(TestCase):
     The Requerimento model represents formal legal requests submitted in the
     context of precatório processes. This test class validates:
     
-    - Model creation with choice-based request types
-    - Foreign key relationships (Precatorio, Cliente, Fase)
+    - Model creation with foreign key-based request types
+    - Foreign key relationships (Precatorio, Cliente, Fase, PedidoRequerimento)
     - Business validation (cliente-precatorio linkage)
-    - Choice field validation for request types (pedido)
+    - PedidoRequerimento foreign key validation and behavior
     - Financial field handling (valor, desagio)
     - Phase tracking integration
     - String representation format
     - Custom business logic methods
     
-    Request Types Tested:
-    - prioridade doença: Priority due to illness
-    - prioridade idade: Priority due to age
-    - acordo principal: Agreement on principal amount
-    - acordo honorários contratuais: Contractual fee agreement
-    - acordo honorários sucumbenciais: Succumbence fee agreement
+    Updated Model Structure:
+    - pedido: ForeignKey to PedidoRequerimento (replacing old choices)
+    - Supports customizable request types through admin interface
+    - PROTECT constraint prevents deletion of referenced PedidoRequerimento
+    - Enhanced flexibility for legal request type management
+    
+    Request Types Through PedidoRequerimento:
+    - Prioridade por doença: Priority due to illness
+    - Prioridade por idade: Priority due to age
+    - Acordo no Principal: Agreement on principal amount
+    - Acordo nos Hon. Contratuais: Contractual fee agreement
+    - Acordo nos Hon. Sucumbenciais: Succumbence fee agreement
+    - Impugnação aos cálculos: Challenge to calculations
+    - Repartição de honorários: Fee distribution arrangements
     
     Key Business Rules:
     - Cliente must be linked to Precatorio before creation
-    - Single choice selection (not multiple selections)
+    - PedidoRequerimento must be active to be selectable
     - Phase tracking through Fase relationship
     - Financial values must be provided and valid
+    - PROTECT constraint preserves historical data integrity
     
     Methods Tested:
-    - get_pedido_display(): Choice field display value
-    - get_pedido_abreviado(): Abbreviated display version
+    - String representation with pedido.nome display
+    - Foreign key relationship navigation
+    - Filtering by pedido type and properties
+    - Protection constraints validation
     - clean() and save() validation enforcement
     """
     
@@ -1142,10 +1739,19 @@ class RequerimentoModelTest(TestCase):
             ativa=True
         )
         
+        # Create a PedidoRequerimento for testing
+        self.pedido_requerimento = PedidoRequerimento.objects.create(
+            nome='Prioridade por doença',
+            descricao='Requerimento de prioridade com base em doença grave',
+            cor='#e83e8c',
+            ativo=True,
+            ordem=1
+        )
+        
         self.requerimento_data = {
             'precatorio': self.precatorio,
             'cliente': self.cliente,
-            'pedido': 'prioridade doença',
+            'pedido': self.pedido_requerimento,
             'valor': 25000.00,
             'desagio': 15.5,
             'fase': self.fase_requerimento
@@ -1156,20 +1762,99 @@ class RequerimentoModelTest(TestCase):
         requerimento = Requerimento(**self.requerimento_data)
         requerimento.full_clean()  # This should not raise ValidationError
         requerimento.save()
-        self.assertEqual(requerimento.pedido, 'prioridade doença')
+        self.assertEqual(requerimento.pedido, self.pedido_requerimento)
+        self.assertEqual(requerimento.pedido.nome, 'Prioridade por doença')
         self.assertEqual(requerimento.precatorio, self.precatorio)
         self.assertEqual(requerimento.fase, self.fase_requerimento)
     
     def test_requerimento_str_method(self):
         """Test the __str__ method of Requerimento"""
         requerimento = Requerimento(**self.requerimento_data)
-        expected_str = f'Requerimento - {requerimento.pedido} - {requerimento.cliente.nome}'
+        expected_str = f'Requerimento - {requerimento.pedido.nome} - {requerimento.cliente.nome}'
         self.assertEqual(str(requerimento), expected_str)
     
-    def test_requerimento_get_pedido_display(self):
-        """Test get_pedido_display method"""
-        requerimento = Requerimento(**self.requerimento_data)
-        self.assertEqual(requerimento.get_pedido_display(), 'Prioridade por doença')
+    def test_requerimento_pedido_relationship(self):
+        """Test relationship between Requerimento and PedidoRequerimento"""
+        requerimento = Requerimento.objects.create(**self.requerimento_data)
+        self.assertEqual(requerimento.pedido.nome, 'Prioridade por doença')
+        self.assertEqual(requerimento.pedido.cor, '#e83e8c')
+        self.assertTrue(requerimento.pedido.ativo)
+    
+    def test_requerimento_with_different_pedido_types(self):
+        """Test creating requerimentos with different pedido types"""
+        # Create additional pedido types
+        acordo_principal = PedidoRequerimento.objects.create(
+            nome='Acordo no Principal',
+            descricao='Requerimento de acordo sobre o valor principal',
+            cor='#007bff',
+            ativo=True,
+            ordem=2
+        )
+        
+        acordo_honorarios = PedidoRequerimento.objects.create(
+            nome='Acordo nos Hon. Contratuais',
+            descricao='Requerimento de acordo sobre honorários contratuais',
+            cor='#ffc107',
+            ativo=True,
+            ordem=3
+        )
+        
+        # Test with acordo principal
+        data_acordo = self.requerimento_data.copy()
+        data_acordo['pedido'] = acordo_principal
+        requerimento_acordo = Requerimento.objects.create(**data_acordo)
+        self.assertEqual(requerimento_acordo.pedido.nome, 'Acordo no Principal')
+        
+        # Test with acordo honorarios
+        data_honorarios = self.requerimento_data.copy()
+        data_honorarios['pedido'] = acordo_honorarios
+        requerimento_honorarios = Requerimento.objects.create(**data_honorarios)
+        self.assertEqual(requerimento_honorarios.pedido.nome, 'Acordo nos Hon. Contratuais')
+    
+    def test_requerimento_pedido_protection(self):
+        """Test that PedidoRequerimento cannot be deleted if referenced by Requerimento"""
+        requerimento = Requerimento.objects.create(**self.requerimento_data)
+        
+        # Should not be able to delete pedido that's referenced
+        from django.db import IntegrityError
+        with self.assertRaises(IntegrityError):
+            self.pedido_requerimento.delete()
+    
+    def test_requerimento_pedido_filtering(self):
+        """Test filtering requerimentos by pedido type"""
+        # Create additional pedido and requerimento
+        prioridade_idade = PedidoRequerimento.objects.create(
+            nome='Prioridade por idade',
+            descricao='Requerimento de prioridade com base na idade',
+            cor='#6f42c1',
+            ativo=True,
+            ordem=1
+        )
+        
+        # Create requerimento with prioridade por doença
+        req_doenca = Requerimento.objects.create(**self.requerimento_data)
+        
+        # Create requerimento with prioridade por idade
+        data_idade = self.requerimento_data.copy()
+        data_idade['pedido'] = prioridade_idade
+        req_idade = Requerimento.objects.create(**data_idade)
+        
+        # Test filtering by pedido type
+        doenca_reqs = Requerimento.objects.filter(pedido__nome='Prioridade por doença')
+        self.assertIn(req_doenca, doenca_reqs)
+        self.assertNotIn(req_idade, doenca_reqs)
+        
+        idade_reqs = Requerimento.objects.filter(pedido__nome='Prioridade por idade')
+        self.assertIn(req_idade, idade_reqs)
+        self.assertNotIn(req_doenca, idade_reqs)
+        
+        # Test filtering by multiple pedido types
+        priority_reqs = Requerimento.objects.filter(
+            pedido__nome__in=['Prioridade por doença', 'Prioridade por idade']
+        )
+        self.assertIn(req_doenca, priority_reqs)
+        self.assertIn(req_idade, priority_reqs)
+        self.assertEqual(priority_reqs.count(), 2)
     
     def test_requerimento_fase_relationship(self):
         """Test relationship between Requerimento and Fase"""
