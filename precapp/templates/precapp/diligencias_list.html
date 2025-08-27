@@ -122,6 +122,19 @@
                         {% endfor %}
                     </select>
                 </div>
+                
+                <!-- Date range filters for due date -->
+                <div class="col-md-3">
+                    <label for="data_inicio" class="form-label">Data Inicial (Prazo)</label>
+                    <input type="date" class="form-control" id="data_inicio" name="data_inicio" 
+                           value="{{ data_inicio_filter }}" title="Filtrar por prazo a partir desta data">
+                </div>
+                <div class="col-md-3">
+                    <label for="data_fim" class="form-label">Data Final (Prazo)</label>
+                    <input type="date" class="form-control" id="data_fim" name="data_fim" 
+                           value="{{ data_fim_filter }}" title="Filtrar por prazo até esta data">
+                </div>
+                
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary me-2">
                         <i class="fas fa-search me-1"></i>Filtrar

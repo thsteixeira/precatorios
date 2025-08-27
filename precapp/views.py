@@ -1859,6 +1859,8 @@ def diligencias_list_view(request):
     urgencia_filter = request.GET.get('urgencia', '')
     tipo_filter = request.GET.get('tipo', '')
     search_query = request.GET.get('search', '')
+    data_inicio_filter = request.GET.get('data_inicio', '')
+    data_fim_filter = request.GET.get('data_fim', '')
     
     # Apply filters
     if status_filter == 'pendente':
@@ -1879,6 +1881,23 @@ def diligencias_list_view(request):
             Q(tipo__nome__icontains=search_query) |
             Q(descricao__icontains=search_query)
         )
+    
+    # Date range filter for data_final (due date)
+    if data_inicio_filter:
+        from datetime import datetime
+        try:
+            data_inicio = datetime.strptime(data_inicio_filter, '%Y-%m-%d').date()
+            diligencias = diligencias.filter(data_final__gte=data_inicio)
+        except ValueError:
+            pass  # Invalid date format, ignore filter
+    
+    if data_fim_filter:
+        from datetime import datetime
+        try:
+            data_fim = datetime.strptime(data_fim_filter, '%Y-%m-%d').date()
+            diligencias = diligencias.filter(data_final__lte=data_fim)
+        except ValueError:
+            pass  # Invalid date format, ignore filter
     
     # Pagination
     from django.core.paginator import Paginator
@@ -1912,6 +1931,8 @@ def diligencias_list_view(request):
         'urgencia_filter': urgencia_filter,
         'tipo_filter': tipo_filter,
         'search_query': search_query,
+        'data_inicio_filter': data_inicio_filter,
+        'data_fim_filter': data_fim_filter,
     }
     
     return render(request, 'precapp/diligencias_list.html', context)
