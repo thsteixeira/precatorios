@@ -158,10 +158,19 @@
         <form method="post">
             {% csrf_token %}
             
+            <!-- Display non-field errors -->
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">
+                    {% for error in form.non_field_errors %}
+                        <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
             <div class="form-floating mb-3">
-                {{ form.username }}
-                <label for="{{ form.username.id_for_label }}">
-                    <i class="fas fa-user me-2"></i>{{ form.username.label }}
+                <input type="text" name="username" class="form-control" id="id_username" placeholder="Nome de usuário" required>
+                <label for="id_username">
+                    <i class="fas fa-user me-2"></i>Nome de usuário
                 </label>
                 {% if form.username.errors %}
                     <div class="text-danger mt-2">
@@ -173,9 +182,9 @@
             </div>
 
             <div class="form-floating mb-3">
-                {{ form.password }}
-                <label for="{{ form.password.id_for_label }}">
-                    <i class="fas fa-lock me-2"></i>{{ form.password.label }}
+                <input type="password" name="password" class="form-control" id="id_password" placeholder="Senha" required>
+                <label for="id_password">
+                    <i class="fas fa-lock me-2"></i>Senha
                 </label>
                 {% if form.password.errors %}
                     <div class="text-danger mt-2">
