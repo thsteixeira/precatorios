@@ -152,7 +152,7 @@ STATIC_ROOT = os.path.join('/var/www', 'precatorios', 'static')
 # que não estão dentro de uma pasta 'static' de um app específico.
 # Por exemplo, um diretório 'static' na raiz do projeto.
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'precatorios', 'static'),
+    os.path.join(BASE_DIR, 'static'),
 ]
 
 # Authentication settings
