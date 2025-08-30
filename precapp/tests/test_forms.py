@@ -2717,7 +2717,7 @@ class ClienteFormComprehensiveTest(TestCase):
         # Check field requirements
         self.assertTrue(form.fields['cpf'].required)
         self.assertTrue(form.fields['nome'].required)
-        self.assertTrue(form.fields['nascimento'].required)
+        self.assertFalse(form.fields['nascimento'].required)  # Changed to allow null values
         self.assertFalse(form.fields['prioridade'].required)
         self.assertFalse(form.fields['precatorio_cnj'].required)
     
@@ -2801,6 +2801,22 @@ class ClienteFormComprehensiveTest(TestCase):
         """Test form validation with minimal required data (no precatorio_cnj)"""
         form = ClienteForm(data=self.minimal_valid_data)
         self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+    
+    def test_form_valid_without_nascimento(self):
+        """Test form validation without nascimento field (now optional)"""
+        data = {
+            'cpf': '12345678909',
+            'nome': 'João Silva Sem Data',
+            'prioridade': False
+        }
+        form = ClienteForm(data=data)
+        self.assertTrue(form.is_valid(), f"Form should be valid without nascimento: {form.errors}")
+        
+        # Test saving the form
+        if form.is_valid():
+            cliente = form.save()
+            self.assertIsNone(cliente.nascimento)
+            self.assertEqual(cliente.nome, 'João Silva Sem Data')
     
     def test_cpf_format_flexibility(self):
         """Test CPF field accepts multiple input formats"""
@@ -2956,7 +2972,7 @@ class ClienteFormComprehensiveTest(TestCase):
     
     def test_missing_required_fields(self):
         """Test form validation with missing required fields"""
-        required_fields = ['cpf', 'nome', 'nascimento']
+        required_fields = ['cpf', 'nome']  # nascimento is now optional
         
         for field_name in required_fields:
             with self.subTest(field=field_name):

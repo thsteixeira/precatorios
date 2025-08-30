@@ -539,7 +539,7 @@ class Command(BaseCommand):
                 tipo_obj = Tipo.objects.filter(nome__icontains=tipo_nome).first()
                 if not tipo_obj:
                     self.stdout.write(f'Warning: Tipo "{tipo_nome}" not found, creating new one')
-                    tipo_obj = Tipo.objects.create(nome=tipo_nome, ativo=True)
+                    tipo_obj = Tipo.objects.create(nome=tipo_nome, ativa=True)
             except Exception as e:
                 self.stdout.write(f'Warning: Error handling tipo "{tipo_nome}": {e}')
         

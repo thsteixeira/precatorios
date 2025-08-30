@@ -305,6 +305,8 @@ class Precatorio(models.Model):
     
     cnj = models.CharField(max_length=200, primary_key=True)
     orcamento = models.IntegerField(
+        null=True,
+        blank=True,
         validators=[
             MinValueValidator(1988),
             MaxValueValidator(2050)

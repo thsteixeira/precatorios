@@ -49,8 +49,8 @@ class PrecatorioAdmin(admin.ModelAdmin):
     """Admin configuration for Precatorio model"""
     
     list_display = (
-        'cnj', 'orcamento', 'origem_short', 'credito_principal', 
-        'honorarios_contratuais', 'honorarios_sucumbenciais', 
+        'cnj', 'orcamento', 'origem_short', 'credito_principal_display', 
+        'honorarios_contratuais_display', 'honorarios_sucumbenciais_display', 
         'valor_de_face_formatted', 'tipo_colored', 'clientes_count', 'alvaras_count', 'requerimentos_count'
     )
     list_filter = (
@@ -74,7 +74,8 @@ class PrecatorioAdmin(admin.ModelAdmin):
         }),
         ('Percentuais', {
             'fields': ('percentual_contratuais_assinado', 'percentual_contratuais_apartado', 'percentual_sucumbenciais'),
-            'classes': ('collapse',)
+            'classes': ('collapse',),
+            'description': 'Percentual apartado é preenchido automaticamente pela coluna "Destacado" durante importação'
         }),
         ('Relacionamentos', {
             'fields': ('clientes',),
@@ -117,6 +118,21 @@ class PrecatorioAdmin(admin.ModelAdmin):
         count = obj.requerimento_set.count()
         return format_html('<span style="color: orange;">{}</span>', count)
     requerimentos_count.short_description = 'Requerimentos'
+    
+    def credito_principal_display(self, obj):
+        """Display status with updated labels"""
+        return obj.get_credito_principal_display()
+    credito_principal_display.short_description = 'Crédito Principal'
+    
+    def honorarios_contratuais_display(self, obj):
+        """Display status with updated labels"""
+        return obj.get_honorarios_contratuais_display()
+    honorarios_contratuais_display.short_description = 'Hon. Contratuais'
+    
+    def honorarios_sucumbenciais_display(self, obj):
+        """Display status with updated labels"""
+        return obj.get_honorarios_sucumbenciais_display()
+    honorarios_sucumbenciais_display.short_description = 'Hon. Sucumbenciais'
 
 
 @admin.register(Cliente)
@@ -137,10 +153,12 @@ class ClienteAdmin(admin.ModelAdmin):
     inlines = [DiligenciasInline]
     
     def idade(self, obj):
-        from datetime import date
-        today = date.today()
-        age = today.year - obj.nascimento.year - ((today.month, today.day) < (obj.nascimento.month, obj.nascimento.day))
-        return f'{age} anos'
+        if obj.nascimento:
+            from datetime import date
+            today = date.today()
+            age = today.year - obj.nascimento.year - ((today.month, today.day) < (obj.nascimento.month, obj.nascimento.day))
+            return f'{age} anos'
+        return '-'
     idade.short_description = 'Idade'
     
     def precatorios_count(self, obj):
