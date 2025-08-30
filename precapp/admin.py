@@ -153,7 +153,8 @@ class ClienteAdmin(admin.ModelAdmin):
     inlines = [DiligenciasInline]
     
     def idade(self, obj):
-        if obj.nascimento:
+        """Calculate and display client age from birth date."""
+        if obj.nascimento is not None:
             from datetime import date
             today = date.today()
             age = today.year - obj.nascimento.year - ((today.month, today.day) < (obj.nascimento.month, obj.nascimento.day))
