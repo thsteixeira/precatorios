@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
 
-{% block title %}Consultar Precatórios - Controle de Precatórios{% endblock %}
+{% block title %}Consultar Precatórios                         <select class="form-control" id="honorarios_sucumbenciais" name="honorarios_sucumbenciais">
+                            <option value="">Todos</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if current_honorarios_sucumbenciais == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>ole de Precatórios{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -50,29 +55,27 @@
                         <label for="credito_principal" class="form-label">Crédito Principal</label>
                         <select class="form-control" id="credito_principal" name="credito_principal">
                             <option value="">Todos</option>
-                            <option value="pendente" {% if current_credito_principal == 'pendente' %}selected{% endif %}>Pendente</option>
-                            <option value="parcial" {% if current_credito_principal == 'parcial' %}selected{% endif %}>Parcialmente Quitado</option>
-                            <option value="quitado" {% if current_credito_principal == 'quitado' %}selected{% endif %}>Quitado Integralmente</option>
-                            <option value="vendido" {% if current_credito_principal == 'vendido' %}selected{% endif %}>Vendido</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if current_credito_principal == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label for="honorarios_contratuais" class="form-label">Hon. Contratuais</label>
                         <select class="form-control" id="honorarios_contratuais" name="honorarios_contratuais">
                             <option value="">Todos</option>
-                            <option value="pendente" {% if current_honorarios_contratuais == 'pendente' %}selected{% endif %}>Pendente</option>
-                            <option value="parcial" {% if current_honorarios_contratuais == 'parcial' %}selected{% endif %}>Parcialmente Quitado</option>
-                            <option value="quitado" {% if current_honorarios_contratuais == 'quitado' %}selected{% endif %}>Quitado Integralmente</option>
-                            <option value="vendido" {% if current_honorarios_contratuais == 'vendido' %}selected{% endif %}>Vendido</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if current_honorarios_contratuais == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label for="honorarios_sucumbenciais" class="form-label">Hon. Sucumbenciais</label>
                         <select class="form-control" id="honorarios_sucumbenciais" name="honorarios_sucumbenciais">
                             <option value="">Todos</option>
-                            <option value="pendente" {% if current_honorarios_sucumbenciais == 'pendente' %}selected{% endif %}>Pendente</option>
-                            <option value="parcial" {% if current_honorarios_sucumbenciais == 'parcial' %}selected{% endif %}>Parcialmente Quitado</option>
-                            <option value="quitado" {% if current_honorarios_sucumbenciais == 'quitado' %}selected{% endif %}>Quitado Integralmente</option>
+                            <option value="pendente" {% if current_honorarios_sucumbenciais == 'pendente' %}selected{% endif %}>Pendente de pagamento</option>
+                            <option value="parcial" {% if current_honorarios_sucumbenciais == 'parcial' %}selected{% endif %}>Quitado parcialmente</option>
+                            <option value="quitado" {% if current_honorarios_sucumbenciais == 'quitado' %}selected{% endif %}>Quitado integralmente</option>
                             <option value="vendido" {% if current_honorarios_sucumbenciais == 'vendido' %}selected{% endif %}>Vendido</option>
                         </select>
                     </div>

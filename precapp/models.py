@@ -297,9 +297,9 @@ class Precatorio(models.Model):
     """
     
     STATUS_PAGAMENTO_CHOICES = [
-        ('pendente', 'Pendente de pagamento'),
-        ('parcial', 'Quitado parcialmente'),
-        ('quitado', 'Quitado integralmente'),
+        ('pendente', 'Pendente'),
+        ('parcial', 'Parcial'),
+        ('quitado', 'Quitado'),
         ('vendido', 'Vendido'),
     ]
     
@@ -408,7 +408,7 @@ class Cliente(models.Model):
     """
     cpf = models.CharField(max_length=18, primary_key=True, help_text="CPF ou CNPJ do cliente")
     nome = models.CharField(max_length=400)
-    nascimento = models.DateField()
+    nascimento = models.DateField(null=True, blank=True)
     prioridade = models.BooleanField()
 
     def __str__(self):

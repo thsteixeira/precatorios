@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -141,6 +142,18 @@ DATETIME_INPUT_FORMATS = [
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# STATIC_ROOT é o caminho absoluto no sistema de arquivos para onde o `collectstatic`
+# irá copiar todos os arquivos estáticos para o deploy.
+# RECOMENDADO: Fora do diretório do seu projeto.
+STATIC_ROOT = os.path.join('/var/www', 'precatorios', 'static')
+
+# STATICFILES_DIRS (opcional, mas comum) diz ao Django onde encontrar arquivos estáticos
+# que não estão dentro de uma pasta 'static' de um app específico.
+# Por exemplo, um diretório 'static' na raiz do projeto.
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
 # Authentication settings
 LOGIN_URL = 'login'

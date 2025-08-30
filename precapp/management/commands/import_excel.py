@@ -394,9 +394,15 @@ class Command(BaseCommand):
         """Main import logic"""
         # Read Excel file
         excel_file = pd.ExcelFile(file_path)
-        sheets_to_process = [sheet_name] if sheet_name else excel_file.sheet_names
+        
+        # Use sheet 2026 specifically, or the provided sheet_name
+        target_sheet = sheet_name if sheet_name else '2026'
+        
+        if target_sheet not in excel_file.sheet_names:
+            raise CommandError(f'Sheet "{target_sheet}" not found. Available sheets: {excel_file.sheet_names}')
         
         self.stdout.write(f'Found sheets: {excel_file.sheet_names}')
+        self.stdout.write(f'Using sheet: {target_sheet}')
         
         total_imported = {
             'precatorios': 0,
@@ -404,37 +410,38 @@ class Command(BaseCommand):
             'requerimentos': 0
         }
         
-        for sheet in sheets_to_process:
-            self.stdout.write(f'\n=== Processing sheet: {sheet} ===')
-            
-            # Read with header row detection
-            df = pd.read_excel(file_path, sheet_name=sheet, header=1)  # Headers are in row 1 (0-indexed)
-            
-            # Clean up column names - adjusted for new structure after first column deletion
-            df.columns = [
-                'cnj', 'cnj_origem', 'orcamento', 'nome', 'cpf', 'nascimento', 'valor_face'
-            ]
-            
-            # Remove any completely empty rows
-            df = df.dropna(how='all')
-            
-            # Display sheet info
-            self.stdout.write(f'Shape after cleaning: {df.shape} (rows x columns)')
-            self.stdout.write(f'Columns: {list(df.columns)}')
-            self.stdout.write(f'Sample data:')
-            self.stdout.write(str(df.head(2)))
-            
-            if not dry_run and not df.empty:
-                with transaction.atomic():
-                    imported = self.process_precatorios_2014_format(df)
-                    for key, value in imported.items():
-                        total_imported[key] += value
-            elif dry_run:
-                self.stdout.write(f'\n📊 DRY RUN - Would process {len(df)} rows')
-                self.stdout.write('Sample records that would be created (Precatórios + Clientes only):')
-                for idx, row in df.head(3).iterrows():
-                    self.stdout.write(f'  Precatório: {row["cnj"]} | Cliente: {row["nome"]} | CPF: {row["cpf"]} | Valor: {row["valor_face"]}')
-                self.stdout.write('Note: Alvarás will NOT be created during import')
+        self.stdout.write(f'\n=== Processing sheet: {target_sheet} ===')
+        
+        # Read with header row detection
+        df = pd.read_excel(file_path, sheet_name=target_sheet, header=1)  # Headers are in row 1 (0-indexed)
+        
+        # Clean up column names for 2026 format
+        # Expected columns: ['Origem', 'Tipo', 'CNJ', 'Orçmanento', 'Destacado', 'Autor', 'CPF', 'Nascimento', 'Valor de Face']
+        df.columns = [
+            'origem', 'tipo', 'cnj', 'orcamento', 'destacado', 'nome', 'cpf', 'nascimento', 'valor_face'
+        ]
+        
+        # Remove any completely empty rows
+        df = df.dropna(how='all')
+        
+        # Display sheet info
+        self.stdout.write(f'Shape after cleaning: {df.shape} (rows x columns)')
+        self.stdout.write(f'Columns: {list(df.columns)}')
+        self.stdout.write(f'Sample data:')
+        self.stdout.write(str(df.head(2)))
+        
+        if not dry_run and not df.empty:
+            with transaction.atomic():
+                imported = self.process_precatorios_2026_format(df)
+                for key, value in imported.items():
+                    total_imported[key] += value
+        elif dry_run:
+            self.stdout.write(f'\n📊 DRY RUN - Would process {len(df)} rows')
+            self.stdout.write('Sample records that would be created (Precatórios + Clientes only):')
+            for idx, row in df.head(3).iterrows():
+                self.stdout.write(f'  Precatório: {row["cnj"]} | Cliente: {row["nome"]} | CPF: {row["cpf"]} | Valor: {row["valor_face"]}')
+                self.stdout.write(f'    Tipo: {row.get("tipo", "N/A")} | Destacado: {row.get("destacado", "N/A")}')
+            self.stdout.write('Note: Alvarás will NOT be created during import')
         
         # Summary
         self.stdout.write(f'\n=== IMPORT SUMMARY ===')
@@ -479,6 +486,136 @@ class Command(BaseCommand):
                 continue
         
         return imported
+    
+    def process_precatorios_2026_format(self, df):
+        """Process data in the new 2026 format from the Excel file"""
+        imported = {
+            'precatorios': 0,
+            'clientes': 0,
+            'requerimentos': 0
+        }
+        
+        for index, row in df.iterrows():
+            try:
+                # Create or get precatorio
+                precatorio = self.create_precatorio_from_row_2026(row)
+                if precatorio:
+                    imported['precatorios'] += 1
+                
+                # Create or get cliente
+                cliente = self.create_cliente_from_row_2026(row)
+                if cliente:
+                    imported['clientes'] += 1
+                
+                # Link cliente to precatorio
+                if precatorio and cliente:
+                    precatorio.clientes.add(cliente)
+                    
+                    # Skip Alvará creation as requested
+                
+            except Exception as e:
+                self.stdout.write(
+                    self.style.WARNING(f'Error processing row {index}: {str(e)}')
+                )
+                continue
+        
+        return imported
+
+    def create_precatorio_from_row_2026(self, row):
+        """Create precatorio from Excel row using 2026 format"""
+        cnj = str(row['cnj']).strip() if pd.notna(row['cnj']) else None
+        if not cnj:
+            return None
+        
+        # Get origem from the origem column
+        origem = str(row['origem']).strip() if pd.notna(row['origem']) else 'Importado da planilha'
+        
+        # Get tipo from the tipo column and map to Tipo model
+        tipo_obj = None
+        if pd.notna(row['tipo']):
+            tipo_nome = str(row['tipo']).strip()
+            try:
+                from precapp.models import Tipo
+                tipo_obj = Tipo.objects.filter(nome__icontains=tipo_nome).first()
+                if not tipo_obj:
+                    self.stdout.write(f'Warning: Tipo "{tipo_nome}" not found, creating new one')
+                    tipo_obj = Tipo.objects.create(nome=tipo_nome, ativo=True)
+            except Exception as e:
+                self.stdout.write(f'Warning: Error handling tipo "{tipo_nome}": {e}')
+        
+        # Get destacado value for percentual_contratuais_apartado
+        destacado = 0.0
+        if pd.notna(row['destacado']):
+            try:
+                destacado = float(row['destacado'])
+            except (ValueError, TypeError):
+                destacado = 0.0
+        
+        # Set up defaults
+        defaults = {
+            'orcamento': int(row['orcamento']) if pd.notna(row['orcamento']) else None,
+            'origem': origem,
+            'valor_de_face': float(row['valor_face']) if pd.notna(row['valor_face']) else 0.0,
+            'ultima_atualizacao': float(row['valor_face']) if pd.notna(row['valor_face']) else 0.0,
+            'percentual_contratuais_assinado': 0.0,
+            'percentual_contratuais_apartado': destacado,  # Map destacado to this field
+            'percentual_sucumbenciais': 0.0,
+            'credito_principal': 'pendente',
+            'honorarios_contratuais': 'pendente',
+            'honorarios_sucumbenciais': 'pendente',
+            'tipo': tipo_obj  # Map tipo to this field
+        }
+        
+        precatorio, created = Precatorio.objects.get_or_create(
+            cnj=cnj,
+            defaults=defaults
+        )
+        
+        if created:
+            self.stdout.write(f'✓ Created precatório: {cnj} (Valor: R$ {defaults["valor_de_face"]:,.2f}, Tipo: {tipo_obj.nome if tipo_obj else "N/A"}, Destacado: {destacado})')
+        
+        return precatorio
+
+    def create_cliente_from_row_2026(self, row):
+        """Create cliente from Excel row using 2026 format"""
+        cpf = str(row['cpf']).replace('.', '').replace('-', '').replace('/', '').strip() if pd.notna(row['cpf']) else None
+        nome = str(row['nome']).strip() if pd.notna(row['nome']) else None
+        
+        if not cpf or not nome:
+            return None
+        
+        # Handle birth date - field can now be null/blank
+        nascimento = None  # Default to None since field now allows null
+        if pd.notna(row['nascimento']):
+            try:
+                if isinstance(row['nascimento'], datetime):
+                    nascimento = row['nascimento'].date()
+                elif isinstance(row['nascimento'], str):
+                    # Try different date formats
+                    for fmt in ['%d/%m/%Y', '%Y-%m-%d', '%d-%m-%Y']:
+                        try:
+                            nascimento = datetime.strptime(row['nascimento'], fmt).date()
+                            break
+                        except ValueError:
+                            continue
+            except (ValueError, TypeError):
+                pass
+        
+        defaults = {
+            'nome': nome,
+            'nascimento': nascimento,
+            'prioridade': False  # Can be updated later based on other criteria
+        }
+        
+        cliente, created = Cliente.objects.get_or_create(
+            cpf=cpf,
+            defaults=defaults
+        )
+        
+        if created:
+            self.stdout.write(f'✓ Created cliente: {nome} (CPF: {cpf})')
+        
+        return cliente
     
     def create_precatorio_from_row(self, row):
         """Create precatorio from Excel row"""

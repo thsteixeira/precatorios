@@ -175,14 +175,21 @@
                                     {% endwith %}
                                 </td>
                                 <td>
-                                    {% for precatorio in cliente.precatorios.all %}
-                                        <a href="{% url 'precatorio_detalhe' precatorio.cnj %}" class="text-primary">
-                                            {{ precatorio.cnj }}
-                                        </a>
-                                        {% if not forloop.last %}<br>{% endif %}
-                                    {% empty %}
-                                        <span class="text-muted">-</span>
-                                    {% endfor %}
+                                    {% with precatorios_list=cliente.precatorios.all %}
+                                        {% if precatorios_list %}
+                                            {% for precatorio in precatorios_list|slice:":3" %}
+                                                <a href="{% url 'precatorio_detalhe' precatorio.cnj %}" class="text-primary">
+                                                    {{ precatorio.cnj }}
+                                                </a>
+                                                {% if not forloop.last %}<br>{% endif %}
+                                            {% endfor %}
+                                            {% if precatorios_list|length > 3 %}
+                                                <br><small class="text-muted">mais {{ precatorios_list|length|add:"-3" }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    {% endwith %}
                                 </td>
                             </tr>
                             {% endfor %}

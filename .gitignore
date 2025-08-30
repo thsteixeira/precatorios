@@ -274,3 +274,5 @@ tramp
 uploads/
 downloads/
 backups/
+precapp/static/precapp/xlsx/PRECATORIOS 2026.xlsx
+precatorios/__pycache__/settings.cpython-313.pyc

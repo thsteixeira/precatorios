@@ -283,6 +283,7 @@ def precatorio_view(request):
         'vendidos_principal': vendidos_principal,
         'prioritarios': prioritarios,
         'tipos': tipos,
+        'status_choices': Precatorio.STATUS_PAGAMENTO_CHOICES,  # Add status choices for template
         # Include current filter values to maintain state in form
         'current_cnj': cnj_filter,
         'current_origem': origem_filter,
