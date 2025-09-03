@@ -175,7 +175,7 @@ class ImportExcelCommandTest(TestCase):
             out = StringIO()
             call_command('import_excel', '--file', 'dummy_file.xlsx', stdout=out, verbosity=2)
             
-            # Check that new Tipo was created (command creates several default tipos + our test tipo + the new one)
+            # Check that new Tipo was created (import command creates tipos as needed)
             self.assertTrue(Tipo.objects.filter(nome='New Tipo').exists())
             new_tipo = Tipo.objects.get(nome='New Tipo')
             self.assertTrue(new_tipo.ativa)
