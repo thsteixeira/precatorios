@@ -52,7 +52,7 @@ class SetupCustomizationCommandTest(TestCase):
         self.assertEqual(Fase.objects.count(), 11)  # 4 requerimento + 7 alvara
         self.assertEqual(FaseHonorariosContratuais.objects.count(), 5)  # Updated from 4 to 5
         self.assertEqual(TipoDiligencia.objects.count(), 5)
-        self.assertEqual(Tipo.objects.count(), 4)  # Updated from 3 to 4
+        self.assertEqual(Tipo.objects.count(), 7)  # Updated from 4 to 7
         self.assertEqual(PedidoRequerimento.objects.count(), 4)
 
         # Check output contains success message
@@ -194,13 +194,16 @@ class SetupCustomizationCommandTest(TestCase):
 
         # Verify all precatory types were created
         tipos = Tipo.objects.all().order_by('ordem')
-        self.assertEqual(tipos.count(), 4)  # Updated from 3 to 4
+        self.assertEqual(tipos.count(), 7)  # Updated from 4 to 7
 
         expected_names = [
             'Descompressão',
             'URV',
             'Reclassificação',
-            'Revisão de proventos'  # Added new type
+            'Revisão de proventos',
+            'Excedente Concurso',
+            'Abono de Permanência',
+            'Indenização'
         ]
         actual_names = list(tipos.values_list('nome', flat=True))
         self.assertEqual(actual_names, expected_names)
@@ -407,7 +410,7 @@ class SetupCustomizationCommandTest(TestCase):
         # Test Tipo ordem
         tipos = Tipo.objects.all().order_by('ordem')
         tipo_ordens = list(tipos.values_list('ordem', flat=True))
-        self.assertEqual(tipo_ordens, [1, 2, 3, 4])  # Updated from [1, 2, 3] to [1, 2, 3, 4]
+        self.assertEqual(tipo_ordens, [1, 2, 3, 4, 5, 6, 7])  # Updated from [1, 2, 3, 4] to [1, 2, 3, 4, 5, 6, 7]
         
         # Test PedidoRequerimento ordem
         pedidos = PedidoRequerimento.objects.all().order_by('ordem')

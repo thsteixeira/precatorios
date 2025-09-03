@@ -508,6 +508,27 @@ class Command(BaseCommand):
                 'cor': "#ff0707",
                 'ordem': 4,
                 'ativa': True
+            },
+            {
+                'nome': 'Excedente Concurso',
+                'descricao': 'Precatórios de processos de excedentes de concurso',
+                'cor': "#00ffcc",
+                'ordem': 5,
+                'ativa': True
+            },
+            {
+                'nome': 'Abono de Permanência',
+                'descricao': 'Precatórios de processos de abono de permanência',
+                'cor': "#ff9307",
+                'ordem': 6,
+                'ativa': True
+            },
+            {
+                'nome': 'Indenização',
+                'descricao': 'Precatórios de processos de indenização',
+                'cor': "#ff00c8",
+                'ordem': 7,
+                'ativa': True
             }
         ]
         
