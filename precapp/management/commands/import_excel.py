@@ -28,12 +28,14 @@ Version: 2.0
 Last Updated: September 2025
 """
 from django.core.management.base import BaseCommand, CommandError
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from decimal import Decimal, InvalidOperation
 from datetime import datetime
 import pandas as pd
 import os
 from precapp.models import Precatorio, Cliente, Alvara, Requerimento, Fase
+from precapp.forms import validate_cpf, validate_cnpj, validate_cnj
 
 
 class Command(BaseCommand):
@@ -385,8 +387,23 @@ class Command(BaseCommand):
         if not cnj:
             return None
         
+        # Validate CNJ format
+        try:
+            validate_cnj(cnj)
+        except ValidationError as e:
+            self.stdout.write(f'✗ Invalid CNJ: {cnj} - {str(e)}')
+            return None
+        
         # Get origem from the origem column
         origem = str(row['origem']).strip() if pd.notna(row['origem']) else 'Importado da planilha'
+        
+        # Validate origem CNJ if it looks like a CNJ
+        if origem and origem != 'Importado da planilha' and len(origem) > 20:
+            try:
+                validate_cnj(origem)
+            except ValidationError as e:
+                self.stdout.write(f'✗ Invalid origem CNJ: {origem} - {str(e)}')
+                return None
         
         # Get tipo from the tipo column and map to Tipo model
         tipo_obj = None
@@ -524,6 +541,19 @@ class Command(BaseCommand):
         nome = str(row['nome']).strip() if pd.notna(row['nome']) else None
         
         if not cpf or not nome:
+            return None
+        
+        # Validate CPF or CNPJ format
+        if len(cpf) == 11:
+            if not validate_cpf(cpf):
+                self.stdout.write(f'✗ Invalid CPF: {cpf} for client {nome}')
+                return None
+        elif len(cpf) == 14:
+            if not validate_cnpj(cpf):
+                self.stdout.write(f'✗ Invalid CNPJ: {cpf} for client {nome}')
+                return None
+        else:
+            self.stdout.write(f'✗ Invalid document: {cpf} for client {nome} (must be 11 or 14 digits)')
             return None
         
         # Handle birth date - field can now be null/blank
@@ -1025,10 +1055,13 @@ class Command(BaseCommand):
                 if precatorio:
                     imported['precatorios'] += 1
                 
-                # Import cliente
-                cliente = self.create_or_update_cliente(row, columns, mappings)
-                if cliente:
-                    imported['clientes'] += 1
+                # Import cliente only if precatorio was successfully created
+                # This ensures that clients are only created when there's a valid precatorio to link them to
+                cliente = None
+                if precatorio:
+                    cliente, client_created = self.create_or_update_cliente(row, columns, mappings)
+                    if cliente and client_created:
+                        imported['clientes'] += 1
                 
                 # Link cliente to precatorio
                 if precatorio and cliente:
@@ -1151,11 +1184,26 @@ class Command(BaseCommand):
         # Clean CNJ format
         cnj = str(cnj).strip()
         
+        # Validate CNJ format
+        try:
+            validate_cnj(cnj)
+        except ValidationError as e:
+            self.stdout.write(f'✗ Invalid CNJ: {cnj} - {str(e)}')
+            return None
+        
         defaults = {}
         
         # Get other fields
         if origem := self.get_column_value(row, columns, mappings, 'origem'):
-            defaults['origem'] = str(origem)
+            origem_str = str(origem).strip()
+            # Validate origem CNJ if it looks like a CNJ
+            if origem_str and len(origem_str) > 20:
+                try:
+                    validate_cnj(origem_str)
+                except ValidationError as e:
+                    self.stdout.write(f'✗ Invalid origem CNJ: {origem_str} - {str(e)}')
+                    return None
+            defaults['origem'] = origem_str
         
         # Handle orcamento with explicit None support
         orcamento_value = self.get_column_value(row, columns, mappings, 'orcamento')
@@ -1393,10 +1441,23 @@ class Command(BaseCommand):
         
         if not cpf or not nome:
             return None
-        
+
         # Clean CPF (remove formatting)
         cpf = str(cpf).replace('.', '').replace('-', '').replace('/', '').strip()
         
+        # Validate CPF or CNPJ format
+        if len(cpf) == 11:
+            if not validate_cpf(cpf):
+                self.stdout.write(f'✗ Invalid CPF: {cpf} for client {nome}')
+                return None
+        elif len(cpf) == 14:
+            if not validate_cnpj(cpf):
+                self.stdout.write(f'✗ Invalid CNPJ: {cpf} for client {nome}')
+                return None
+        else:
+            self.stdout.write(f'✗ Invalid document: {cpf} for client {nome} (must be 11 or 14 digits)')
+            return None
+
         defaults = {
             'nome': str(nome).strip(),
             'prioridade': False
@@ -1427,7 +1488,7 @@ class Command(BaseCommand):
         if created:
             self.stdout.write(f'Created cliente: {nome} ({cpf})')
         
-        return cliente
+        return cliente, created
     
     def create_alvara(self, row, columns, mappings, precatorio, cliente):
         """
@@ -1800,8 +1861,8 @@ class Command(BaseCommand):
         
         for index, row in df.iterrows():
             try:
-                cliente = self.create_or_update_cliente(row, columns, mappings)
-                if cliente:
+                cliente, created = self.create_or_update_cliente(row, columns, mappings)
+                if cliente and created:
                     count += 1
             except Exception as e:
                 self.stdout.write(

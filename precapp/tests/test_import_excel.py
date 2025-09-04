@@ -237,7 +237,7 @@ class ImportExcelCommandTest(TestCase):
     @patch('precapp.management.commands.import_excel.pd.ExcelFile')
     @patch('precapp.management.commands.import_excel.os.path.exists')
     def test_cpf_cleaning_and_validation(self, mock_exists, mock_excel_file):
-        """Test CPF cleaning removes dots, dashes and validates length."""
+        """Test CPF cleaning removes dots, dashes and validates correctly."""
         mock_exists.return_value = True
         mock_file_instance = MagicMock()
         mock_file_instance.sheet_names = ['2026']
@@ -250,7 +250,7 @@ class ImportExcelCommandTest(TestCase):
             'orcamento': [2026],
             'destacado': [0.1],
             'nome': ['João Silva'],
-            'cpf': ['123.456.789-01'],  # CPF with dots and dashes
+            'cpf': ['111.444.777-35'],  # Valid CPF with dots and dashes
             'nascimento': ['01/01/1990'],
             'valor_face': [10000.0]
         }
@@ -264,7 +264,7 @@ class ImportExcelCommandTest(TestCase):
             # Check that client was created with cleaned CPF
             self.assertEqual(Cliente.objects.count(), 1)
             cliente = Cliente.objects.first()
-            self.assertEqual(cliente.cpf, '12345678901')  # Should be cleaned
+            self.assertEqual(cliente.cpf, '11144477735')  # Should be cleaned
             self.assertEqual(cliente.nome, 'João Silva')
 
     @patch('precapp.management.commands.import_excel.pd.ExcelFile')
@@ -306,9 +306,7 @@ class ImportExcelCommandTest(TestCase):
     @patch('precapp.management.commands.import_excel.pd.ExcelFile')
     @patch('precapp.management.commands.import_excel.os.path.exists')
     def test_invalid_cpf_length_acceptance(self, mock_exists, mock_excel_file):
-        """Test that invalid CPF/CNPJ lengths are currently accepted (not validated)."""
-        # NOTE: This test documents current behavior. In the future, you might want
-        # to add validation to reject invalid lengths and change this test accordingly.
+        """Test that invalid CPF/CNPJ lengths are now rejected (validation implemented)."""
         mock_exists.return_value = True
         mock_file_instance = MagicMock()
         mock_file_instance.sheet_names = ['2026']
@@ -332,14 +330,13 @@ class ImportExcelCommandTest(TestCase):
             out = StringIO()
             call_command('import_excel', '--file', 'dummy_file.xlsx', stdout=out, verbosity=2)
             
-            # Current behavior: Invalid CPF lengths are accepted and stored as-is
-            self.assertEqual(Cliente.objects.count(), 2)
-            self.assertEqual(Precatorio.objects.count(), 2)
+            # With validation: Invalid CPF lengths are now rejected
+            self.assertEqual(Cliente.objects.count(), 0)  # No clients created
+            self.assertEqual(Precatorio.objects.count(), 2)  # But precatorios still created
             
-            # Verify the invalid CPF values were stored
-            invalid_cpfs = Cliente.objects.values_list('cpf', flat=True)
-            self.assertIn('12345', invalid_cpfs)          # Too short
-            self.assertIn('123456789012345', invalid_cpfs)  # Too long
+            # Check that error messages are in output
+            output = out.getvalue()
+            self.assertIn('Invalid document', output)
 
     @patch('precapp.management.commands.import_excel.pd.ExcelFile')
     @patch('precapp.management.commands.import_excel.os.path.exists')
@@ -394,16 +391,16 @@ class ImportExcelCommandTest(TestCase):
             'orcamento': [2026] * 4,
             'destacado': [0.1] * 4,
             'nome': [
-                'João Silva',           # Regular CPF
-                'Maria Santos',         # CPF with formatting
-                'Empresa ABC',          # CNPJ with formatting
-                'Empresa XYZ'           # Clean CNPJ
+                'João Silva',           # Valid CPF
+                'Maria Santos',         # Valid CPF with formatting
+                'Empresa ABC',          # Valid CNPJ with formatting
+                'Empresa XYZ'           # Valid CNPJ
             ],
             'cpf': [
-                '12345678901',          # Clean CPF (11 digits)
-                '987.654.321-00',       # Formatted CPF
-                '12.345.678/0001-90',   # Formatted CNPJ (14 digits)
-                '98765432000195'        # Clean CNPJ
+                '11144477735',              # Valid CPF (11 digits)
+                '12345678909',              # Different valid CPF
+                '11.222.333/0001-81',       # Valid formatted CNPJ (14 digits)
+                '12345678000195'            # Different valid CNPJ
             ],
             'nascimento': ['01/01/1990', '15/05/1985', None, None],
             'valor_face': [10000.0, 15000.0, 50000.0, 75000.0]
@@ -421,16 +418,16 @@ class ImportExcelCommandTest(TestCase):
             
             # Check individual clients
             joao = Cliente.objects.get(nome='João Silva')
-            self.assertEqual(joao.cpf, '12345678901')
+            self.assertEqual(joao.cpf, '11144477735')
             
             maria = Cliente.objects.get(nome='Maria Santos')
-            self.assertEqual(maria.cpf, '98765432100')
+            self.assertEqual(maria.cpf, '12345678909')
             
             empresa_abc = Cliente.objects.get(nome='Empresa ABC')
-            self.assertEqual(empresa_abc.cpf, '12345678000190')
+            self.assertEqual(empresa_abc.cpf, '11222333000181')
             
             empresa_xyz = Cliente.objects.get(nome='Empresa XYZ')
-            self.assertEqual(empresa_xyz.cpf, '98765432000195')
+            self.assertEqual(empresa_xyz.cpf, '12345678000195')
 
     @patch('precapp.management.commands.import_excel.pd.ExcelFile')
     @patch('precapp.management.commands.import_excel.os.path.exists')
@@ -453,9 +450,9 @@ class ImportExcelCommandTest(TestCase):
             'destacado': [0.1] * 3,
             'nome': ['User 1', 'User 2', 'User 3'],
             'cpf': [
-                '  123.456.789-01  ',     # CPF with leading/trailing spaces
-                '\t987.654.321-00\n',     # CPF with tabs and newlines
-                ' 12.345.678/0001-90 '    # CNPJ with spaces
+                '  111.444.777-35  ',       # Valid CPF with leading/trailing spaces
+                '\t123.456.789-09\n',       # Different valid CPF with tabs and newlines
+                ' 11.222.333/0001-81 '      # Valid CNPJ with spaces
             ],
             'nascimento': [None] * 3,
             'valor_face': [10000.0] * 3
@@ -471,6 +468,303 @@ class ImportExcelCommandTest(TestCase):
             self.assertEqual(Cliente.objects.count(), 3)
             
             users = Cliente.objects.all().order_by('nome')
-            self.assertEqual(users[0].cpf, '12345678901')    # User 1 - cleaned CPF
-            self.assertEqual(users[1].cpf, '98765432100')    # User 2 - cleaned CPF  
-            self.assertEqual(users[2].cpf, '12345678000190')  # User 3 - cleaned CNPJ
+            self.assertEqual(users[0].cpf, '11144477735')    # User 1 - cleaned CPF
+            self.assertEqual(users[1].cpf, '12345678909')    # User 2 - cleaned CPF  
+            self.assertEqual(users[2].cpf, '11222333000181')  # User 3 - cleaned CNPJ
+
+    @patch('precapp.management.commands.import_excel.pd.ExcelFile')
+    @patch('precapp.management.commands.import_excel.os.path.exists')
+    def test_invalid_cnj_validation(self, mock_exists, mock_excel_file):
+        """Test that invalid CNJ numbers are rejected during import."""
+        mock_exists.return_value = True
+        mock_file_instance = MagicMock()
+        mock_file_instance.sheet_names = ['2026']
+        mock_excel_file.return_value = mock_file_instance
+        
+        data = {
+            'origem': ['Test Origin'] * 3,
+            'tipo': ['Test Tipo'] * 3,
+            'cnj': [
+                '123456-89.2026.8.26.0001',    # Invalid: only 6 digits instead of 7
+                '1234567.89.2026.8.26.0002',   # Invalid: missing dash
+                '1234567-89.1900.8.26.0003'    # Invalid: year too old (1900)
+            ],
+            'orcamento': [2026] * 3,
+            'destacado': [0.1] * 3,
+            'nome': ['João Silva', 'Maria Santos', 'Pedro Costa'],
+            'cpf': ['11144477735', '11144477735', '11144477735'],  # Valid CPF
+            'nascimento': ['01/01/1990'] * 3,
+            'valor_face': [10000.0] * 3
+        }
+        
+        with patch('precapp.management.commands.import_excel.pd.read_excel') as mock_read_excel:
+            mock_read_excel.return_value = pd.DataFrame(data)
+            
+            out = StringIO()
+            call_command('import_excel', '--file', 'dummy_file.xlsx', stdout=out, verbosity=2)
+            
+            # No precatorios should be created due to invalid CNJ
+            self.assertEqual(Precatorio.objects.count(), 0)
+            # No clients should be created either since the rows failed processing
+            self.assertEqual(Cliente.objects.count(), 0)
+            
+            # Check that error messages are in output
+            output = out.getvalue()
+            self.assertIn('Invalid CNJ', output)
+
+    @patch('precapp.management.commands.import_excel.pd.ExcelFile')
+    @patch('precapp.management.commands.import_excel.os.path.exists')
+    def test_invalid_origem_cnj_validation(self, mock_exists, mock_excel_file):
+        """Test that invalid CNJ numbers in origem field are rejected."""
+        mock_exists.return_value = True
+        mock_file_instance = MagicMock()
+        mock_file_instance.sheet_names = ['2026']
+        mock_excel_file.return_value = mock_file_instance
+        
+        data = {
+            'origem': ['123456-89.2026.8.26.0001'],  # Invalid CNJ in origem field (too short)
+            'tipo': ['Test Tipo'],
+            'cnj': ['1234567-89.2026.8.26.0001'],    # Valid CNJ
+            'orcamento': [2026],
+            'destacado': [0.1],
+            'nome': ['João Silva'],
+            'cpf': ['11144477735'],  # Valid CPF
+            'nascimento': ['01/01/1990'],
+            'valor_face': [10000.0]
+        }
+        
+        with patch('precapp.management.commands.import_excel.pd.read_excel') as mock_read_excel:
+            mock_read_excel.return_value = pd.DataFrame(data)
+            
+            out = StringIO()
+            call_command('import_excel', '--file', 'dummy_file.xlsx', stdout=out, verbosity=2)
+            
+            # No objects should be created due to invalid origem CNJ
+            self.assertEqual(Precatorio.objects.count(), 0)
+            self.assertEqual(Cliente.objects.count(), 0)
+            
+            # Check that error message mentions origem CNJ
+            output = out.getvalue()
+            self.assertIn('Invalid origem CNJ', output)
+
+    @patch('precapp.management.commands.import_excel.pd.ExcelFile')
+    @patch('precapp.management.commands.import_excel.os.path.exists')
+    def test_invalid_cpf_validation(self, mock_exists, mock_excel_file):
+        """Test that invalid CPF numbers are rejected during import."""
+        mock_exists.return_value = True
+        mock_file_instance = MagicMock()
+        mock_file_instance.sheet_names = ['2026']
+        mock_excel_file.return_value = mock_file_instance
+        
+        data = {
+            'origem': ['Test Origin'] * 4,
+            'tipo': ['Test Tipo'] * 4,
+            'cnj': [
+                '1234567-89.2026.8.26.0001',
+                '1234567-89.2026.8.26.0002',
+                '1234567-89.2026.8.26.0003',
+                '1234567-89.2026.8.26.0004'
+            ],
+            'orcamento': [2026] * 4,
+            'destacado': [0.1] * 4,
+            'nome': ['Invalid User 1', 'Invalid User 2', 'Invalid User 3', 'Invalid User 4'],
+            'cpf': [
+                '12345678901',      # Invalid CPF check digits
+                '11111111111',      # Invalid CPF (all same digits)
+                '12345',            # Too short (5 digits)
+                '123456789012345'   # Too long (15 digits)
+            ],
+            'nascimento': ['01/01/1990'] * 4,
+            'valor_face': [10000.0] * 4
+        }
+        
+        with patch('precapp.management.commands.import_excel.pd.read_excel') as mock_read_excel:
+            mock_read_excel.return_value = pd.DataFrame(data)
+            
+            out = StringIO()
+            call_command('import_excel', '--file', 'dummy_file.xlsx', stdout=out, verbosity=2)
+            
+            # Precatorios should be created (they don't depend on CPF validation)
+            self.assertEqual(Precatorio.objects.count(), 4)
+            # But no clients should be created due to invalid CPF
+            self.assertEqual(Cliente.objects.count(), 0)
+            
+            # Check that error messages are in output
+            output = out.getvalue()
+            self.assertIn('Invalid CPF', output)
+            self.assertIn('Invalid document', output)
+
+    @patch('precapp.management.commands.import_excel.pd.ExcelFile')
+    @patch('precapp.management.commands.import_excel.os.path.exists')
+    def test_invalid_cnpj_validation(self, mock_exists, mock_excel_file):
+        """Test that invalid CNPJ numbers are rejected during import."""
+        mock_exists.return_value = True
+        mock_file_instance = MagicMock()
+        mock_file_instance.sheet_names = ['2026']
+        mock_excel_file.return_value = mock_file_instance
+        
+        data = {
+            'origem': ['Test Origin'] * 3,
+            'tipo': ['Test Tipo'] * 3,
+            'cnj': [
+                '1234567-89.2026.8.26.0001',
+                '1234567-89.2026.8.26.0002',
+                '1234567-89.2026.8.26.0003'
+            ],
+            'orcamento': [2026] * 3,
+            'destacado': [0.1] * 3,
+            'nome': ['Empresa A', 'Empresa B', 'Empresa C'],
+            'cpf': [
+                '12345678000190',      # Invalid CNPJ check digits
+                '11111111111111',      # Invalid CNPJ (all same digits)
+                '123456789'            # Too short (only 9 digits - should trigger "Invalid document")
+            ],
+            'nascimento': [None] * 3,
+            'valor_face': [50000.0] * 3
+        }
+        
+        with patch('precapp.management.commands.import_excel.pd.read_excel') as mock_read_excel:
+            mock_read_excel.return_value = pd.DataFrame(data)
+            
+            out = StringIO()
+            call_command('import_excel', '--file', 'dummy_file.xlsx', stdout=out, verbosity=2)
+            
+            # Precatorios should be created (they don't depend on CNPJ validation)
+            self.assertEqual(Precatorio.objects.count(), 3)
+            # But no clients should be created due to invalid CNPJ
+            self.assertEqual(Cliente.objects.count(), 0)
+            
+            # Check that error messages are in output
+            output = out.getvalue()
+            self.assertIn('Invalid CNPJ', output)
+            self.assertIn('Invalid document', output)
+
+    @patch('precapp.management.commands.import_excel.pd.ExcelFile')
+    @patch('precapp.management.commands.import_excel.os.path.exists')
+    def test_valid_cpf_cnpj_validation_passes(self, mock_exists, mock_excel_file):
+        """Test that valid CPF and CNPJ numbers pass validation during import."""
+        mock_exists.return_value = True
+        mock_file_instance = MagicMock()
+        mock_file_instance.sheet_names = ['2026']
+        mock_excel_file.return_value = mock_file_instance
+        
+        data = {
+            'origem': ['Test Origin'] * 2,
+            'tipo': ['Test Tipo'] * 2,
+            'cnj': [
+                '1234567-89.2026.8.26.0001',
+                '1234567-89.2026.8.26.0002'
+            ],
+            'orcamento': [2026] * 2,
+            'destacado': [0.1] * 2,
+            'nome': ['João Silva', 'Empresa ABC Ltda'],
+            'cpf': [
+                '11144477735',         # Valid CPF
+                '11222333000181'       # Valid CNPJ
+            ],
+            'nascimento': ['01/01/1990', None],
+            'valor_face': [10000.0, 50000.0]
+        }
+        
+        with patch('precapp.management.commands.import_excel.pd.read_excel') as mock_read_excel:
+            mock_read_excel.return_value = pd.DataFrame(data)
+            
+            out = StringIO()
+            call_command('import_excel', '--file', 'dummy_file.xlsx', stdout=out, verbosity=2)
+            
+            # Both precatorios and clients should be created
+            self.assertEqual(Precatorio.objects.count(), 2)
+            self.assertEqual(Cliente.objects.count(), 2)
+            
+            # Check that the clients were created with correct data
+            joao = Cliente.objects.get(nome='João Silva')
+            self.assertEqual(joao.cpf, '11144477735')
+            
+            empresa = Cliente.objects.get(nome='Empresa ABC Ltda')
+            self.assertEqual(empresa.cpf, '11222333000181')
+            
+            # Check that no error messages are in output
+            output = out.getvalue()
+            self.assertNotIn('Invalid CPF', output)
+            self.assertNotIn('Invalid CNPJ', output)
+            self.assertNotIn('Invalid CNJ', output)
+
+    @patch('precapp.management.commands.import_excel.pd.ExcelFile')
+    @patch('precapp.management.commands.import_excel.os.path.exists')
+    def test_valid_cnj_validation_passes(self, mock_exists, mock_excel_file):
+        """Test that valid CNJ numbers pass validation during import."""
+        mock_exists.return_value = True
+        mock_file_instance = MagicMock()
+        mock_file_instance.sheet_names = ['2026']
+        mock_excel_file.return_value = mock_file_instance
+        
+        data = {
+            'origem': ['1234567-89.2022.8.26.0001'],  # Valid origem CNJ
+            'tipo': ['Test Tipo'],
+            'cnj': ['1234567-89.2026.8.26.0001'],     # Valid main CNJ
+            'orcamento': [2026],
+            'destacado': [0.1],
+            'nome': ['João Silva'],
+            'cpf': ['11144477735'],  # Valid CPF
+            'nascimento': ['01/01/1990'],
+            'valor_face': [10000.0]
+        }
+        
+        with patch('precapp.management.commands.import_excel.pd.read_excel') as mock_read_excel:
+            mock_read_excel.return_value = pd.DataFrame(data)
+            
+            out = StringIO()
+            call_command('import_excel', '--file', 'dummy_file.xlsx', stdout=out, verbosity=2)
+            
+            # Both precatorio and client should be created
+            self.assertEqual(Precatorio.objects.count(), 1)
+            self.assertEqual(Cliente.objects.count(), 1)
+            
+            # Check precatorio data
+            precatorio = Precatorio.objects.first()
+            self.assertEqual(precatorio.cnj, '1234567-89.2026.8.26.0001')
+            self.assertEqual(precatorio.origem, '1234567-89.2022.8.26.0001')
+            
+            # Check that no error messages are in output
+            output = out.getvalue()
+            self.assertNotIn('Invalid CNJ', output)
+            self.assertNotIn('Invalid origem CNJ', output)
+
+    @patch('precapp.management.commands.import_excel.pd.ExcelFile')
+    @patch('precapp.management.commands.import_excel.os.path.exists')
+    def test_short_origem_field_not_validated(self, mock_exists, mock_excel_file):
+        """Test that short origem fields (non-CNJ) are not validated as CNJ."""
+        mock_exists.return_value = True
+        mock_file_instance = MagicMock()
+        mock_file_instance.sheet_names = ['2026']
+        mock_excel_file.return_value = mock_file_instance
+        
+        data = {
+            'origem': ['TJSP'],  # Short origem, should not be validated as CNJ
+            'tipo': ['Test Tipo'],
+            'cnj': ['1234567-89.2026.8.26.0001'],
+            'orcamento': [2026],
+            'destacado': [0.1],
+            'nome': ['João Silva'],
+            'cpf': ['11144477735'],
+            'nascimento': ['01/01/1990'],
+            'valor_face': [10000.0]
+        }
+        
+        with patch('precapp.management.commands.import_excel.pd.read_excel') as mock_read_excel:
+            mock_read_excel.return_value = pd.DataFrame(data)
+            
+            out = StringIO()
+            call_command('import_excel', '--file', 'dummy_file.xlsx', stdout=out, verbosity=2)
+            
+            # Should be created successfully - short origem not validated as CNJ
+            self.assertEqual(Precatorio.objects.count(), 1)
+            self.assertEqual(Cliente.objects.count(), 1)
+            
+            # Check precatorio data
+            precatorio = Precatorio.objects.first()
+            self.assertEqual(precatorio.origem, 'TJSP')
+            
+            # Check that no error messages are in output
+            output = out.getvalue()
+            self.assertNotIn('Invalid', output)
