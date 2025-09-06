@@ -618,6 +618,8 @@ class PrecatorioForm(forms.ModelForm):
             "percentual_contratuais_assinado",
             "percentual_contratuais_apartado",
             "percentual_sucumbenciais",
+            "observacao",
+            "integra_precatorio",
         ]
         
         widgets = {
@@ -637,6 +639,15 @@ class PrecatorioForm(forms.ModelForm):
             'credito_principal': forms.Select(attrs={'class': 'form-select'}),
             'honorarios_contratuais': forms.Select(attrs={'class': 'form-select'}),
             'honorarios_sucumbenciais': forms.Select(attrs={'class': 'form-select'}),
+            'observacao': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Digite observações gerais sobre o precatório (opcional)...'
+            }),
+            'integra_precatorio': forms.ClearableFileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf'
+            }),
         }
         
         labels = {
@@ -646,6 +657,8 @@ class PrecatorioForm(forms.ModelForm):
             'honorarios_contratuais': 'Status dos Honorários Contratuais',
             'honorarios_sucumbenciais': 'Status dos Honorários Sucumbenciais',
             'data_ultima_atualizacao': 'Data da Última Atualização (Opcional)',
+            'observacao': 'Observações',
+            'integra_precatorio': 'Íntegra do Precatório (PDF)',
         }
 
     def __init__(self, *args, **kwargs):
@@ -852,7 +865,7 @@ class ClienteForm(forms.ModelForm):
 
     class Meta:
         model = Cliente
-        fields = ["cpf", "nome", "nascimento", "prioridade"]
+        fields = ["cpf", "nome", "nascimento", "prioridade", "observacao"]
         
         widgets = {
             'nome': forms.TextInput(attrs={
@@ -863,12 +876,18 @@ class ClienteForm(forms.ModelForm):
             'prioridade': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
+            'observacao': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Digite observações gerais sobre o cliente (opcional)...'
+            }),
         }
         
         labels = {
             'nome': 'Nome Completo',
             'nascimento': 'Data de Nascimento',
             'prioridade': 'Cliente com Prioridade Legal',
+            'observacao': 'Observações',
         }
 
 
@@ -1028,7 +1047,7 @@ class ClienteSimpleForm(forms.ModelForm):
 
     class Meta:
         model = Cliente
-        fields = ["cpf", "nome", "nascimento", "prioridade"]
+        fields = ["cpf", "nome", "nascimento", "prioridade", "observacao"]
         
         widgets = {
             'nome': forms.TextInput(attrs={
@@ -1039,12 +1058,18 @@ class ClienteSimpleForm(forms.ModelForm):
             'prioridade': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
+            'observacao': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Digite observações gerais sobre o cliente (opcional)...'
+            }),
         }
 
         labels = {
             'nome': 'Nome Completo',
             'nascimento': 'Data de Nascimento',
             'prioridade': 'Cliente com Prioridade Legal',
+            'observacao': 'Observações',
         }
 
 

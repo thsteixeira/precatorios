@@ -51,7 +51,7 @@ class PrecatorioAdmin(admin.ModelAdmin):
     list_display = (
         'cnj', 'orcamento', 'origem_short', 'credito_principal_display', 
         'honorarios_contratuais_display', 'honorarios_sucumbenciais_display', 
-        'valor_de_face_formatted', 'tipo_colored', 'clientes_count', 'alvaras_count', 'requerimentos_count'
+        'valor_de_face_formatted', 'tipo_colored', 'has_pdf', 'clientes_count', 'alvaras_count', 'requerimentos_count'
     )
     list_filter = (
         'orcamento', 'credito_principal', 'honorarios_contratuais', 
@@ -77,6 +77,11 @@ class PrecatorioAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
             'description': 'Percentual apartado é preenchido automaticamente pela coluna "Destacado" durante importação'
         }),
+        ('Documentos e Observações', {
+            'fields': ('observacao', 'integra_precatorio'),
+            'classes': ('collapse',),
+            'description': 'Observações gerais e documentos relacionados ao precatório'
+        }),
         ('Relacionamentos', {
             'fields': ('clientes',),
             'classes': ('collapse',)
@@ -85,6 +90,11 @@ class PrecatorioAdmin(admin.ModelAdmin):
     
     filter_horizontal = ('clientes',)
     inlines = [AlvaraInline, RequerimentoInline]
+    
+    # Custom widget configuration for textarea fields
+    formfield_overrides = {
+        models.TextField: {'widget': Textarea(attrs={'rows': 4, 'cols': 80})},
+    }
     
     # Custom methods for display
     def origem_short(self, obj):
@@ -133,13 +143,20 @@ class PrecatorioAdmin(admin.ModelAdmin):
         """Display status with updated labels"""
         return obj.get_honorarios_sucumbenciais_display()
     honorarios_sucumbenciais_display.short_description = 'Hon. Sucumbenciais'
+    
+    def has_pdf(self, obj):
+        """Display PDF status"""
+        if obj.integra_precatorio:
+            return format_html('<span style="color: green;" title="PDF disponível">📄</span>')
+        return format_html('<span style="color: #ccc;" title="Sem PDF">📄</span>')
+    has_pdf.short_description = 'PDF'
 
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
     """Admin configuration for Cliente model"""
     
-    list_display = ('cpf', 'nome', 'nascimento', 'idade', 'prioridade', 'precatorios_count', 'diligencias_count')
+    list_display = ('cpf', 'nome', 'nascimento', 'idade', 'prioridade', 'has_observacao', 'precatorios_count', 'diligencias_count')
     list_filter = ('prioridade', 'nascimento')
     search_fields = ('cpf', 'nome')
     ordering = ('nome',)
@@ -148,9 +165,19 @@ class ClienteAdmin(admin.ModelAdmin):
         ('Dados Pessoais', {
             'fields': ('cpf', 'nome', 'nascimento', 'prioridade')
         }),
+        ('Observações', {
+            'fields': ('observacao',),
+            'classes': ('collapse',),
+            'description': 'Observações gerais sobre o cliente'
+        }),
     )
     
     inlines = [DiligenciasInline]
+    
+    # Custom widget configuration for textarea fields
+    formfield_overrides = {
+        models.TextField: {'widget': Textarea(attrs={'rows': 4, 'cols': 80})},
+    }
     
     def idade(self, obj):
         """Calculate and display client age from birth date."""
@@ -161,6 +188,13 @@ class ClienteAdmin(admin.ModelAdmin):
             return f'{age} anos'
         return '-'
     idade.short_description = 'Idade'
+    
+    def has_observacao(self, obj):
+        """Display if client has observations"""
+        if obj.observacao and obj.observacao.strip():
+            return format_html('<span style="color: blue;" title="Cliente tem observações">💬</span>')
+        return format_html('<span style="color: #ccc;" title="Sem observações">💬</span>')
+    has_observacao.short_description = 'Obs'
     
     def precatorios_count(self, obj):
         count = obj.precatorios.count()

@@ -2330,7 +2330,7 @@ class PrecatorioFormComprehensiveTest(TestCase):
         
         # Check field requirements
         self.assertTrue(form.fields['cnj'].required)
-        self.assertTrue(form.fields['orcamento'].required)
+        self.assertFalse(form.fields['orcamento'].required)  # orcamento is nullable/blank in model
         self.assertTrue(form.fields['origem'].required)
         self.assertTrue(form.fields['valor_de_face'].required)
         self.assertFalse(form.fields['ultima_atualizacao'].required)
@@ -2627,7 +2627,7 @@ class PrecatorioFormComprehensiveTest(TestCase):
     
     def test_missing_required_fields(self):
         """Test form validation with missing required fields"""
-        required_fields = ['cnj', 'orcamento', 'origem', 'valor_de_face', 
+        required_fields = ['cnj', 'origem', 'valor_de_face', 
                           'credito_principal', 'honorarios_contratuais', 'honorarios_sucumbenciais']
         
         for field_name in required_fields:
@@ -2987,7 +2987,7 @@ class ClienteFormComprehensiveTest(TestCase):
         form = ClienteForm()
         
         # Check Meta.fields
-        expected_fields = ["cpf", "nome", "nascimento", "prioridade"]
+        expected_fields = ["cpf", "nome", "nascimento", "prioridade", "observacao"]
         self.assertEqual(form._meta.fields, expected_fields)
         
         # Check that additional fields (not in Meta.fields) are still in form
@@ -3784,7 +3784,7 @@ class ClienteSimpleFormComprehensiveTest(TestCase):
         form = ClienteSimpleForm()
         
         # Test form has correct fields
-        expected_fields = ['cpf', 'nome', 'nascimento', 'prioridade']
+        expected_fields = ['cpf', 'nome', 'nascimento', 'prioridade', 'observacao']
         self.assertEqual(list(form.fields.keys()), expected_fields)
         
         # Test CPF field configuration
@@ -4051,7 +4051,7 @@ class ClienteSimpleFormComprehensiveTest(TestCase):
         self.assertEqual(form._meta.model, Cliente)
         
         # Test fields configuration
-        expected_fields = ["cpf", "nome", "nascimento", "prioridade"]
+        expected_fields = ["cpf", "nome", "nascimento", "prioridade", "observacao"]
         self.assertEqual(form._meta.fields, expected_fields)
         
         # Test widget configuration

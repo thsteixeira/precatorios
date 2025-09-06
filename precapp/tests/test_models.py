@@ -1333,6 +1333,81 @@ class PrecatorioModelTest(TestCase):
         data_without_tipo['tipo'] = None
         precatorio_without_tipo = Precatorio.objects.create(**data_without_tipo)
         self.assertIsNone(precatorio_without_tipo.tipo)
+    
+    def test_precatorio_observacao_field(self):
+        """
+        Test the observacao field functionality.
+        
+        Validates that:
+        - Observacao field can be empty (blank=True, null=True)
+        - Observacao field can store text content
+        - Observacao field doesn't affect model creation when empty
+        - Observacao field persists correctly when saved
+        """
+        # Test with observacao
+        data_with_observacao = self.precatorio_data.copy()
+        data_with_observacao['cnj'] = '1111111-11.2023.8.26.0111'
+        data_with_observacao['observacao'] = 'Este é um precatório com observações importantes.'
+        
+        precatorio_with_obs = Precatorio.objects.create(**data_with_observacao)
+        self.assertEqual(precatorio_with_obs.observacao, 'Este é um precatório com observações importantes.')
+        
+        # Test without observacao (should be None/empty)
+        data_without_observacao = self.precatorio_data.copy()
+        data_without_observacao['cnj'] = '2222222-22.2023.8.26.0222'
+        
+        precatorio_without_obs = Precatorio.objects.create(**data_without_observacao)
+        self.assertIsNone(precatorio_without_obs.observacao)
+        
+        # Test that empty observacao is valid
+        data_empty_observacao = self.precatorio_data.copy()
+        data_empty_observacao['cnj'] = '3333333-33.2023.8.26.0333'
+        data_empty_observacao['observacao'] = ''
+        
+        precatorio_empty_obs = Precatorio(**data_empty_observacao)
+        precatorio_empty_obs.full_clean()  # Should not raise ValidationError
+        precatorio_empty_obs.save()
+        self.assertEqual(precatorio_empty_obs.observacao, '')
+    
+    def test_precatorio_integra_precatorio_field(self):
+        """
+        Test the integra_precatorio file field functionality.
+        
+        Validates that:
+        - Integra_precatorio field can be empty (blank=True, null=True)
+        - Field is designed for file uploads
+        - Field doesn't affect model creation when empty
+        - Field can store file references when provided
+        """
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        
+        # Test without integra_precatorio file (should be None/empty)
+        data_without_file = self.precatorio_data.copy()
+        data_without_file['cnj'] = '4444444-44.2023.8.26.0444'
+        
+        precatorio_without_file = Precatorio.objects.create(**data_without_file)
+        self.assertFalse(precatorio_without_file.integra_precatorio)
+        
+        # Test with integra_precatorio file
+        # Create a simple test file
+        test_file_content = b'%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\nxref\n0 3\n0000000000 65535 f \ntrailer\n<<\n/Size 3\n/Root 1 0 R\n>>\nstartxref\n9\n%%EOF'
+        test_file = SimpleUploadedFile(
+            name='test_integra.pdf',
+            content=test_file_content,
+            content_type='application/pdf'
+        )
+        
+        data_with_file = self.precatorio_data.copy()
+        data_with_file['cnj'] = '5555555-55.2023.8.26.0555'
+        data_with_file['integra_precatorio'] = test_file
+        
+        precatorio_with_file = Precatorio.objects.create(**data_with_file)
+        self.assertTrue(precatorio_with_file.integra_precatorio)
+        self.assertIn('test_integra', precatorio_with_file.integra_precatorio.name)
+        
+        # Clean up the test file
+        if precatorio_with_file.integra_precatorio:
+            precatorio_with_file.integra_precatorio.delete()
 
 
 class ClienteModelTest(TestCase):
@@ -1416,6 +1491,50 @@ class ClienteModelTest(TestCase):
             duplicate_cliente = Cliente(**self.cliente_data)
             duplicate_cliente.full_clean()
             duplicate_cliente.save()
+    
+    def test_cliente_observacao_field(self):
+        """
+        Test the observacao field functionality.
+        
+        Validates that:
+        - Observacao field can be empty (blank=True, null=True)
+        - Observacao field can store text content
+        - Observacao field doesn't affect model creation when empty
+        - Observacao field persists correctly when saved
+        """
+        # Test with observacao
+        data_with_observacao = self.cliente_data.copy()
+        data_with_observacao['cpf'] = '11111111111'
+        data_with_observacao['observacao'] = 'Cliente com necessidades especiais de atendimento.'
+        
+        cliente_with_obs = Cliente.objects.create(**data_with_observacao)
+        self.assertEqual(cliente_with_obs.observacao, 'Cliente com necessidades especiais de atendimento.')
+        
+        # Test without observacao (should be None/empty)
+        data_without_observacao = self.cliente_data.copy()
+        data_without_observacao['cpf'] = '22222222222'
+        
+        cliente_without_obs = Cliente.objects.create(**data_without_observacao)
+        self.assertIsNone(cliente_without_obs.observacao)
+        
+        # Test that empty observacao is valid
+        data_empty_observacao = self.cliente_data.copy()
+        data_empty_observacao['cpf'] = '33333333333'
+        data_empty_observacao['observacao'] = ''
+        
+        cliente_empty_obs = Cliente(**data_empty_observacao)
+        cliente_empty_obs.full_clean()  # Should not raise ValidationError
+        cliente_empty_obs.save()
+        self.assertEqual(cliente_empty_obs.observacao, '')
+        
+        # Test with longer text
+        data_long_observacao = self.cliente_data.copy()
+        data_long_observacao['cpf'] = '44444444444'
+        data_long_observacao['observacao'] = 'Esta é uma observação mais longa que testa a capacidade do campo de armazenar textos extensos com informações detalhadas sobre o cliente, incluindo histórico médico, situação financeira e outras informações relevantes para o processamento do precatório.'
+        
+        cliente_long_obs = Cliente.objects.create(**data_long_observacao)
+        self.assertGreater(len(cliente_long_obs.observacao), 200)  # Verify the long text was stored
+        self.assertIn('histórico médico', cliente_long_obs.observacao)
 
 
 class AlvaraModelTest(TestCase):

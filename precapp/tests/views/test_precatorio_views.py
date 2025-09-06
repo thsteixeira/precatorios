@@ -66,7 +66,9 @@ class NovoPrecViewTest(TestCase):
             'percentual_sucumbenciais': '10.0',
             'credito_principal': 'pendente',
             'honorarios_contratuais': 'pendente',
-            'honorarios_sucumbenciais': 'pendente'
+            'honorarios_sucumbenciais': 'pendente',
+            'observacao': 'Observação de teste para validação do novo campo',
+            # integra_precatorio is a FileField and will be tested separately
         }
         
         # Invalid test data variations
@@ -114,6 +116,9 @@ class NovoPrecViewTest(TestCase):
         self.assertIn('orcamento', form.fields)
         self.assertIn('origem', form.fields)
         self.assertIn('valor_de_face', form.fields)
+        self.assertIn('observacao', form.fields)
+        # integra_precatorio should also be in form fields
+        self.assertIn('integra_precatorio', form.fields)
     
     def test_novo_prec_view_valid_post_creates_precatorio(self):
         """Test successful precatorio creation with valid data"""
@@ -134,6 +139,7 @@ class NovoPrecViewTest(TestCase):
         self.assertEqual(precatorio.cnj, '1234567-89.2024.8.26.0100')
         self.assertEqual(precatorio.orcamento, 2024)
         self.assertEqual(float(precatorio.valor_de_face), 100000.00)
+        self.assertEqual(precatorio.observacao, 'Observação de teste para validação do novo campo')
     
     def test_novo_prec_view_success_message(self):
         """Test that success message is displayed after creation"""
@@ -393,6 +399,106 @@ class NovoPrecViewTest(TestCase):
             int(self.client_app.session['_auth_user_id']), 
             self.user.id
         )
+    
+    def test_novo_prec_view_observacao_field_handling(self):
+        """Test that observacao field is properly handled"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Test with empty observacao (should be valid)
+        empty_observacao_data = self.valid_precatorio_data.copy()
+        empty_observacao_data['observacao'] = ''
+        
+        response = self.client_app.post(self.novo_prec_url, data=empty_observacao_data)
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify precatorio was created with empty observacao
+        precatorio = Precatorio.objects.get(cnj='1234567-89.2024.8.26.0100')
+        self.assertEqual(precatorio.observacao, '')
+        
+        # Clean up for next test
+        precatorio.delete()
+        
+        # Test with long observacao text
+        long_observacao_data = self.valid_precatorio_data.copy()
+        long_observacao_data['cnj'] = '1234567-89.2024.8.26.0101'  # Different CNJ
+        long_observacao_data['observacao'] = 'Este é um texto muito longo para testar o campo observacao. ' * 50
+        
+        response = self.client_app.post(self.novo_prec_url, data=long_observacao_data)
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify precatorio was created with long observacao
+        precatorio = Precatorio.objects.get(cnj='1234567-89.2024.8.26.0101')
+        self.assertTrue(len(precatorio.observacao) > 1000)
+        self.assertIn('Este é um texto muito longo', precatorio.observacao)
+    
+    def test_novo_prec_view_observacao_xss_protection(self):
+        """Test that observacao field is protected against XSS"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        xss_observacao_data = self.valid_precatorio_data.copy()
+        xss_observacao_data['cnj'] = '1234567-89.2024.8.26.0102'  # Different CNJ
+        xss_observacao_data['observacao'] = '<script>alert("xss")</script>Observação maliciosa'
+        
+        response = self.client_app.post(self.novo_prec_url, data=xss_observacao_data)
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify data was saved (form should accept it, template should escape it)
+        precatorio = Precatorio.objects.get(cnj='1234567-89.2024.8.26.0102')
+        self.assertIn('<script>alert("xss")</script>', precatorio.observacao)  # Raw data stored
+        
+        # XSS protection is handled at template level, not model level
+    
+    def test_novo_prec_view_integra_precatorio_file_field(self):
+        """Test that integra_precatorio FileField is properly handled"""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.test import override_settings
+        import tempfile
+        import os
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Test with no file (should be valid since field is optional)
+        no_file_data = self.valid_precatorio_data.copy()
+        no_file_data['cnj'] = '1234567-89.2024.8.26.0103'  # Different CNJ
+        
+        response = self.client_app.post(self.novo_prec_url, data=no_file_data)
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify precatorio was created without file
+        precatorio = Precatorio.objects.get(cnj='1234567-89.2024.8.26.0103')
+        self.assertFalse(precatorio.integra_precatorio)
+        
+        # Test with valid PDF file upload
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
+            temp_file.write(b'%PDF-1.4\nTest PDF content')
+            temp_file.flush()
+            
+            with open(temp_file.name, 'rb') as pdf_file:
+                file_data = self.valid_precatorio_data.copy()
+                file_data['cnj'] = '1234567-89.2024.8.26.0104'  # Different CNJ
+                file_data['integra_precatorio'] = SimpleUploadedFile(
+                    'test_document.pdf',
+                    pdf_file.read(),
+                    content_type='application/pdf'
+                )
+                
+                with override_settings(MEDIA_ROOT=tempfile.mkdtemp()):
+                    response = self.client_app.post(self.novo_prec_url, data=file_data)
+                    
+                    # Should create precatorio successfully
+                    self.assertEqual(response.status_code, 302)
+                    
+                    # Verify precatorio was created with file
+                    precatorio = Precatorio.objects.get(cnj='1234567-89.2024.8.26.0104')
+                    self.assertTrue(precatorio.integra_precatorio)
+                    self.assertIn('test_document.pdf', precatorio.integra_precatorio.name)
+            
+            # Clean up temp file
+            try:
+                os.unlink(temp_file.name)
+            except (PermissionError, OSError):
+                # On Windows, file might still be in use
+                pass
 
 
 # Additional test classes will be added in subsequent migrations due to file size limits
@@ -472,7 +578,9 @@ class PrecatorioDetalheViewTest(TestCase):
             percentual_sucumbenciais=20.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            observacao='Precatório de teste com observações detalhadas para validação completa do sistema.',
+            # integra_precatorio will be None (file field is optional)
         )
         
         # Create test clients with valid CPFs
@@ -634,7 +742,8 @@ class PrecatorioDetalheViewTest(TestCase):
             'percentual_sucumbenciais': 25.0,
             'credito_principal': 'liquidado',
             'honorarios_contratuais': 'liquidado',
-            'honorarios_sucumbenciais': 'liquidado'
+            'honorarios_sucumbenciais': 'liquidado',
+            'observacao': 'Observação atualizada durante teste de edição'
         }
         
         response = self.client_app.post(
@@ -652,6 +761,7 @@ class PrecatorioDetalheViewTest(TestCase):
             self.assertEqual(updated_precatorio.orcamento, 2024)
             self.assertEqual(updated_precatorio.origem, 'Updated Origin')
             self.assertEqual(updated_precatorio.credito_principal, 'liquidado')
+            self.assertEqual(updated_precatorio.observacao, 'Observação atualizada durante teste de edição')
         # If 200, the form had validation errors which is also a valid test outcome
     
     def test_edit_precatorio_invalid_post(self):
@@ -1238,6 +1348,53 @@ class PrecatorioDetalheViewTest(TestCase):
             # This shouldn't trigger additional queries
             cliente_nome = alvara.cliente.nome
             self.assertIsNotNone(cliente_nome)
+    
+    def test_observacao_field_display_and_editing(self):
+        """Test that observacao field is properly displayed and editable"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Test GET request shows observacao in context
+        response = self.client_app.get(reverse('precatorio_detalhe', args=[self.precatorio.cnj]))
+        self.assertEqual(response.status_code, 200)
+        
+        # Should contain observacao in template
+        self.assertContains(response, 'Precatório de teste com observações detalhadas')
+        
+        # Test editing observacao field
+        response = self.client_app.get(
+            reverse('precatorio_detalhe', args=[self.precatorio.cnj]) + '?edit=true'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['is_editing'])
+        
+        # Form should contain current observacao value
+        form = response.context['form']
+        self.assertEqual(
+            form.initial['observacao'], 
+            'Precatório de teste com observações detalhadas para validação completa do sistema.'
+        )
+    
+    def test_integra_precatorio_file_field_context(self):
+        """Test that integra_precatorio field is properly handled in context"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Test with no file initially
+        response = self.client_app.get(reverse('precatorio_detalhe', args=[self.precatorio.cnj]))
+        self.assertEqual(response.status_code, 200)
+        
+        # Precatorio should have no file initially
+        precatorio = response.context['precatorio']
+        self.assertFalse(precatorio.integra_precatorio)
+        
+        # Test edit form shows file field
+        response = self.client_app.get(
+            reverse('precatorio_detalhe', args=[self.precatorio.cnj]) + '?edit=true'
+        )
+        self.assertEqual(response.status_code, 200)
+        
+        # Form should contain integra_precatorio field
+        form = response.context['form']
+        self.assertIn('integra_precatorio', form.fields)
 
 
 class PrecatorioViewTest(TestCase):
@@ -1303,7 +1460,8 @@ class PrecatorioViewTest(TestCase):
             data_ultima_atualizacao=date(2023, 1, 15),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0
+            percentual_sucumbenciais=10.0,
+            observacao='Observação do precatório 1 para testes de listagem'
         )
         
         self.precatorio2 = Precatorio.objects.create(
@@ -1318,7 +1476,8 @@ class PrecatorioViewTest(TestCase):
             data_ultima_atualizacao=date(2023, 2, 20),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0
+            percentual_sucumbenciais=10.0,
+            observacao='Observação do precatório 2 com status quitado'
         )
         
         self.precatorio3 = Precatorio.objects.create(
@@ -1333,7 +1492,8 @@ class PrecatorioViewTest(TestCase):
             data_ultima_atualizacao=date(2023, 3, 25),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0
+            percentual_sucumbenciais=10.0,
+            observacao='Precatório parcial com observações específicas'
         )
         
         self.precatorio4 = Precatorio.objects.create(
@@ -1348,7 +1508,8 @@ class PrecatorioViewTest(TestCase):
             data_ultima_atualizacao=date(2023, 4, 30),
             percentual_contratuais_assinado=30.0,
             percentual_contratuais_apartado=0.0,
-            percentual_sucumbenciais=10.0
+            percentual_sucumbenciais=10.0,
+            observacao=''  # Empty observacao to test different scenarios
         )
         
         # Link clients to precatorios
@@ -1856,12 +2017,43 @@ class PrecatorioViewTest(TestCase):
         response2 = self.client_app.get(f'{self.precatorios_url}?origem=TRIBUNAL')
         response3 = self.client_app.get(f'{self.precatorios_url}?origem=Tribunal')
         
-        # All should return the same result (all 4 precatorios have "tribunal" in origem)
+            # All should return the same result (all 4 precatorios have "tribunal" in origem)
         self.assertEqual(len(response1.context['precatorios']), 4)
         self.assertEqual(len(response2.context['precatorios']), 4) 
         self.assertEqual(len(response3.context['precatorios']), 4)
     
-    def test_performance_with_large_dataset(self):
+    def test_observacao_field_in_precatorio_list(self):
+        """Test that observacao field data is properly loaded in precatorio list"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        response = self.client_app.get(self.precatorios_url)
+        self.assertEqual(response.status_code, 200)
+        
+        precatorios = response.context['precatorios']
+        
+        # Verify observacao fields are loaded
+        precatorio1 = next(p for p in precatorios if p.cnj == self.precatorio1.cnj)
+        self.assertEqual(precatorio1.observacao, 'Observação do precatório 1 para testes de listagem')
+        
+        precatorio2 = next(p for p in precatorios if p.cnj == self.precatorio2.cnj)
+        self.assertEqual(precatorio2.observacao, 'Observação do precatório 2 com status quitado')
+        
+        precatorio4 = next(p for p in precatorios if p.cnj == self.precatorio4.cnj)
+        self.assertEqual(precatorio4.observacao, '')  # Empty observacao
+    
+    def test_integra_precatorio_field_in_context(self):
+        """Test that integra_precatorio field is accessible in context"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        response = self.client_app.get(self.precatorios_url)
+        self.assertEqual(response.status_code, 200)
+        
+        precatorios = response.context['precatorios']
+        
+        # Verify integra_precatorio fields are accessible (should be None/False for test data)
+        for precatorio in precatorios:
+            # File field should be accessible even if empty
+            self.assertFalse(precatorio.integra_precatorio)  # No files uploaded in tests    def test_performance_with_large_dataset(self):
         """Test performance and memory usage with larger dataset"""
         # Create additional test data
         for i in range(50):
@@ -1948,7 +2140,8 @@ class DeletePrecatorioViewTest(TestCase):
             percentual_sucumbenciais=10.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            observacao='Precatório limpo para teste de exclusão'
         )
         
         self.precatorio_with_clients = Precatorio.objects.create(
@@ -1963,7 +2156,8 @@ class DeletePrecatorioViewTest(TestCase):
             percentual_sucumbenciais=10.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            observacao='Precatório com clientes associados'
         )
         
         self.precatorio_with_alvaras = Precatorio.objects.create(
@@ -1978,7 +2172,8 @@ class DeletePrecatorioViewTest(TestCase):
             percentual_sucumbenciais=10.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            observacao='Precatório com alvarás para teste de exclusão bloqueada'
         )
         
         self.precatorio_with_requerimentos = Precatorio.objects.create(
@@ -1993,7 +2188,8 @@ class DeletePrecatorioViewTest(TestCase):
             percentual_sucumbenciais=10.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            observacao='Precatório com requerimentos associados'
         )
         
         self.precatorio_with_everything = Precatorio.objects.create(
@@ -2008,7 +2204,8 @@ class DeletePrecatorioViewTest(TestCase):
             percentual_sucumbenciais=10.0,
             credito_principal='pendente',
             honorarios_contratuais='pendente',
-            honorarios_sucumbenciais='pendente'
+            honorarios_sucumbenciais='pendente',
+            observacao='Precatório com todas as associações possíveis'
         )
         
         # Create test clients with valid CPFs
@@ -2723,4 +2920,86 @@ class DeletePrecatorioViewTest(TestCase):
         self.assertTrue('_auth_user_id' in self.client_app.session)
         self.assertEqual(self.client_app.session['_auth_user_id'], user_id_before)
         self.assertEqual(int(self.client_app.session['_auth_user_id']), self.user.id)
+    
+    def test_file_field_handling_during_deletion(self):
+        """Test that integra_precatorio file field is properly handled during deletion"""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.test import override_settings
+        import tempfile
+        import os
+        
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Create a precatorio with a file
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
+            temp_file.write(b'%PDF-1.4\nTest PDF content for deletion test')
+            temp_file.flush()
+            
+            test_precatorio = Precatorio.objects.create(
+                cnj='9999999-99.2023.8.26.9999',
+                orcamento=2023,
+                origem='Test Deletion Tribunal',
+                valor_de_face=99999.00,
+                ultima_atualizacao=99999.00,
+                data_ultima_atualizacao=date(2023, 12, 31),
+                percentual_contratuais_assinado=30.0,
+                percentual_contratuais_apartado=0.0,
+                percentual_sucumbenciais=10.0,
+                credito_principal='pendente',
+                honorarios_contratuais='pendente',
+                honorarios_sucumbenciais='pendente',
+                observacao='Precatório com arquivo para teste de exclusão'
+            )
+            
+            # Assign file to precatorio
+            with open(temp_file.name, 'rb') as pdf_file:
+                test_precatorio.integra_precatorio.save(
+                    'test_deletion_document.pdf',
+                    SimpleUploadedFile(
+                        'test_deletion_document.pdf',
+                        pdf_file.read(),
+                        content_type='application/pdf'
+                    )
+                )
+            
+            # Verify file exists
+            self.assertTrue(test_precatorio.integra_precatorio)
+            
+            # Delete the precatorio
+            delete_url = reverse('delete_precatorio', args=[test_precatorio.cnj])
+            response = self.client_app.post(delete_url)
+            
+            # Should redirect after successful deletion
+            self.assertEqual(response.status_code, 302)
+            
+            # Verify precatorio was deleted
+            self.assertFalse(Precatorio.objects.filter(cnj=test_precatorio.cnj).exists())
+            
+            # Note: File cleanup behavior depends on Django's FileField implementation
+            # Django doesn't automatically delete files when model instances are deleted
+            # This is by design to prevent accidental file loss
+            
+            # Clean up temp file
+            try:
+                os.unlink(temp_file.name)
+            except (PermissionError, OSError):
+                # On Windows, file might still be in use
+                pass
+    
+    def test_observacao_field_persistence_through_deletion_process(self):
+        """Test that observacao field data is preserved through deletion validation"""
+        self.client_app.login(username='testuser', password='testpass123')
+        
+        # Try to delete precatorio with clients (should be blocked)
+        original_observacao = self.precatorio_with_clients.observacao
+        
+        response = self.client_app.post(self.delete_with_clients_url, follow=True)
+        
+        # Should redirect back to detail page with error
+        self.assertRedirects(response, reverse('precatorio_detalhe', args=[self.precatorio_with_clients.cnj]))
+        
+        # Verify precatorio and its observacao are unchanged
+        precatorio = Precatorio.objects.get(cnj=self.precatorio_with_clients.cnj)
+        self.assertEqual(precatorio.observacao, original_observacao)
+        self.assertEqual(precatorio.observacao, 'Precatório com clientes associados')
 

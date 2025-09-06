@@ -137,7 +137,7 @@ def home_view(request):
 def novoPrec_view(request):
     """View to create a new Precatorio"""
     if request.method == 'POST':
-        form = PrecatorioForm(request.POST)
+        form = PrecatorioForm(request.POST, request.FILES)
         if form.is_valid():
             precatorio = form.save()
             messages.success(request, f'Precatório {precatorio.cnj} criado com sucesso!')
@@ -326,7 +326,7 @@ def precatorio_detalhe_view(request, precatorio_cnj):
     if request.method == 'POST':
         if 'edit_precatorio' in request.POST:
             # Handle precatorio editing
-            precatorio_form = PrecatorioForm(request.POST, instance=precatorio)
+            precatorio_form = PrecatorioForm(request.POST, request.FILES, instance=precatorio)
             if precatorio_form.is_valid():
                 precatorio_form.save()
                 messages.success(request, f'Precatório {precatorio.cnj} atualizado com sucesso!')

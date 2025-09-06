@@ -6,6 +6,25 @@ from datetime import datetime
 import threading
 from django.utils import timezone
 
+
+def validate_file_size(value):
+    """Validate that file size is not larger than 50MB."""
+    filesize = value.size
+    max_size_mb = 50
+    max_size_bytes = max_size_mb * 1024 * 1024  # 50MB in bytes
+    
+    if filesize > max_size_bytes:
+        raise ValidationError(f'O arquivo é muito grande. Tamanho máximo permitido: {max_size_mb}MB')
+
+
+def validate_pdf_extension(value):
+    """Validate that file has .pdf extension."""
+    import os
+    ext = os.path.splitext(value.name)[1]
+    valid_extensions = ['.pdf']
+    if not ext.lower() in valid_extensions:
+        raise ValidationError('Apenas arquivos PDF são permitidos.')
+
 # Create your models here.
 
 class Fase(models.Model):
@@ -347,6 +366,22 @@ class Precatorio(models.Model):
         help_text="Tipo do precatório (ex: Alimentar, Comum, etc.)"
     )
     
+    observacao = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Observações",
+        help_text="Observações gerais sobre o precatório"
+    )
+    
+    integra_precatorio = models.FileField(
+        upload_to='precatorios/integras/%Y/%m/',
+        blank=True,
+        null=True,
+        validators=[validate_file_size, validate_pdf_extension],
+        help_text="Íntegra do precatório em PDF (máximo 50MB)",
+        verbose_name="Íntegra do precatório"
+    )
+    
     clientes = models.ManyToManyField('Cliente', related_name='precatorios')
 
     def __str__(self):
@@ -412,6 +447,12 @@ class Cliente(models.Model):
     nome = models.CharField(max_length=400)
     nascimento = models.DateField(null=True, blank=True)
     prioridade = models.BooleanField()
+    observacao = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Observações",
+        help_text="Observações gerais sobre o cliente"
+    )
 
     def __str__(self):
         return f"{self.nome} - {self.cpf}"
