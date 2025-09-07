@@ -142,10 +142,16 @@ staticfiles/
 static_root/
 
 # Local environment variables
+.env
 .env.local
+.env.test
+.env.production
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Keep only environment templates
+!.env.*.example
 
 # IDE and Editor files
 .vscode/

@@ -5,7 +5,9 @@ Um sistema web desenvolvido em Django para gerenciar precatórios judiciários, 
 ![Django](https://img.shields.io/badge/Django-3.1.12-green?style=flat-square&logo=django)
 ![Python](https://img.shields.io/badge/Python-3.x-blue?style=flat-square&logo=python)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3.0-purple?style=flat-square&logo=bootstrap)
-![SQLite](https://img.shields.io/badge/Database-SQLite-lightblue?style=flat-square&logo=sqlite)
+![Multi-Environment](https://img.shields.io/badge/Deployment-Multi--Environment-orange?style=flat-square&logo=docker)
+![Local](https://img.shields.io/badge/Local-SQLite-lightblue?style=flat-square&logo=sqlite)
+![Production](https://img.shields.io/badge/Production-PostgreSQL+S3-red?style=flat-square&logo=amazon-aws)
 
 ## 📋 Índice
 
@@ -139,55 +141,239 @@ O Sistema de Controle de Precatórios é uma aplicação web desenvolvida para f
 
 ## 🚀 Instalação
 
-### **Pré-requisitos**
+### **🏠 Desenvolvimento Local (Windows)**
+
+#### **Pré-requisitos**
 - Python 3.7 ou superior
 - pip (gerenciador de pacotes Python)
 - Git (opcional, para clonar o repositório)
 
-### **Passo a Passo**
+#### **Passo a Passo**
 
 1. **Clone o repositório**
    ```bash
-   git clone https://github.com/seu-usuario/precatorios.git
+   git clone https://github.com/thsteixeira/precatorios.git
    cd precatorios
    ```
 
-2. **Crie um ambiente virtual**
+2. **Configure o ambiente local (simplificado)**
+   ```bash
+   # Use o script automático para configurar o ambiente local
+   deployment\scripts\switch_env.bat local
+   
+   # Ou configure manualmente:
+   copy deployment\environments\.env.local .env
+   ```
+   
+   ✅ **Não são necessárias variáveis de ambiente!**  
+   Todas as configurações estão hardcoded para facilitar o desenvolvimento local.
+
+3. **Crie um ambiente virtual**
    ```bash
    python -m venv venv
-   
-   # Windows
    venv\Scripts\activate
-   
-   # macOS/Linux
-   source venv/bin/activate
    ```
 
-3. **Instale as dependências**
+4. **Instale as dependências**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Execute as migrações**
+5. **Execute as migrações**
    ```bash
-   python manage.py makemigrations
    python manage.py migrate
    ```
 
-5. **Crie um superusuário (opcional)**
+6. **Crie um superusuário (opcional)**
    ```bash
    python manage.py createsuperuser
    ```
 
-6. **Execute o servidor de desenvolvimento**
+7. **Execute o servidor de desenvolvimento**
    ```bash
    python manage.py runserver
    ```
 
-7. **Acesse a aplicação**
+8. **Acesse a aplicação**
    ```
    http://127.0.0.1:8000/
    ```
+
+### **🏗️ Deployment Multi-Ambiente (Produção)**
+
+Este projeto possui um **sistema completo de deployment multi-ambiente** com:
+
+#### **📁 Estrutura de Deployment**
+```
+deployment/
+├── docs/                          # Documentação completa
+│   ├── README.md                  # Guia principal
+│   ├── ENVIRONMENT_SETUP.md       # Setup detalhado
+│   └── AWS_S3_SETUP.md           # Configuração S3
+├── environments/                  # Templates de ambiente
+│   ├── .env.local                # Local (Windows + SQLite)
+│   ├── .env.test                 # Test (EC2 + PostgreSQL + S3)
+│   └── .env.production           # Production (EC2 + PostgreSQL + S3)
+└── scripts/                      # Scripts de automação
+    ├── switch_env.bat/.sh        # Troca de ambiente
+    ├── deploy_test.sh            # Deploy teste (completo)
+    └── deploy_production.sh      # Deploy produção (completo)
+```
+
+#### **🌟 Ambientes Disponíveis**
+
+| Ambiente | Plataforma | Database | Storage | Uso |
+|----------|------------|----------|---------|-----|
+| **Local** | Windows | SQLite | Local | Desenvolvimento |
+| **Test** | EC2 Ubuntu | PostgreSQL | AWS S3 | Testes |
+| **Production** | EC2 Ubuntu | PostgreSQL | AWS S3 | Produção |
+
+#### **⚡ Quick Start - Deployment**
+
+**Para Test Environment:**
+```bash
+# No servidor EC2 Ubuntu
+git clone https://github.com/thsteixeira/precatorios.git
+cd precatorios
+chmod +x deployment/scripts/deploy_test.sh
+./deployment/scripts/deploy_test.sh
+```
+
+**Para Production Environment:**
+```bash
+# No servidor EC2 Ubuntu (com domínio configurado)
+export PRODUCTION_DOMAIN_OR_IP="seu-dominio.com"
+chmod +x deployment/scripts/deploy_production.sh
+./deployment/scripts/deploy_production.sh
+```
+
+#### **🔧 Recursos dos Scripts de Deploy**
+
+**Deploy Test & Production incluem:**
+- ✅ **Setup completo do sistema** (Nginx + Gunicorn + systemd)
+- ✅ **Configuração automática de SSL** (Let's Encrypt para produção)
+- ✅ **Detecção inteligente de S3** (serve media do S3 se configurado)
+- ✅ **Firewall e segurança** (UFW + Fail2ban para produção)
+- ✅ **Backup automatizado** (scripts de backup diário)
+- ✅ **Monitoramento e logs** (rotação automática de logs)
+- ✅ **Health checks** (validação completa do deployment)
+
+#### **📖 Documentação Detalhada**
+
+📁 **[deployment/docs/README.md](deployment/docs/README.md)** - Guia completo de deployment  
+📁 **[deployment/docs/ENVIRONMENT_SETUP.md](deployment/docs/ENVIRONMENT_SETUP.md)** - Setup detalhado  
+📁 **[deployment/docs/AWS_S3_SETUP.md](deployment/docs/AWS_S3_SETUP.md)** - Configuração AWS S3
+
+### **🔄 Troca de Ambiente (Local)**
+
+```bash
+# Trocar para ambiente local
+deployment\scripts\switch_env.bat local
+
+# Trocar para teste (simulação)
+deployment\scripts\switch_env.bat test
+
+# Trocar para produção (simulação)
+deployment\scripts\switch_env.bat production
+```
+
+## 🏗️ Arquitetura Multi-Ambiente
+
+### **⚙️ Configuração Inteligente**
+
+O sistema utiliza **configuração automática baseada no ambiente**:
+
+```python
+# settings.py detecta automaticamente o ambiente
+ENVIRONMENT = config('ENVIRONMENT', default='local')
+
+if ENVIRONMENT == 'local':
+    # Configurações hardcoded para desenvolvimento
+    DEBUG = True
+    DATABASE = SQLite
+    MEDIA_STORAGE = Local
+else:
+    # Configurações via variáveis de ambiente
+    DEBUG = config('DEBUG', cast=bool)
+    DATABASE = PostgreSQL  
+    MEDIA_STORAGE = AWS_S3
+```
+
+### **🎯 Características por Ambiente**
+
+#### **🏠 Local (Windows)**
+- ✅ **Zero configuração** - settings hardcoded
+- ✅ **SQLite database** - sem dependências externas
+- ✅ **Local file storage** - arquivos na pasta media/
+- ✅ **Debug ativo** - para desenvolvimento
+- ✅ **Hot reload** - mudanças instantâneas
+
+#### **🧪 Test (EC2)**
+- ✅ **PostgreSQL** - database robusto
+- ✅ **AWS S3** - storage escalável
+- ✅ **Nginx + Gunicorn** - setup de produção
+- ✅ **SSL opcional** - para testes HTTPS
+- ✅ **Environment variables** - configuração segura
+
+#### **🚀 Production (EC2)**
+- ✅ **PostgreSQL** - alta performance
+- ✅ **AWS S3** - storage distribuído
+- ✅ **SSL/HTTPS obrigatório** - Let's Encrypt automático
+- ✅ **Firewall + Fail2ban** - segurança avançada
+- ✅ **Backup automatizado** - proteção de dados
+- ✅ **Log rotation** - gestão de logs
+- ✅ **Health monitoring** - monitoramento contínuo
+
+### **🔧 Recursos Avançados**
+
+#### **📦 Deploy com Um Comando**
+```bash
+# Deploy completo em segundos
+./deployment/scripts/deploy_production.sh
+
+# Inclui automaticamente:
+# - Sistema operacional atualizado
+# - Python + dependências
+# - Nginx + SSL + Gunicorn
+# - Database + migrações
+# - S3 + static files
+# - Firewall + segurança
+# - Backup + monitoring
+```
+
+#### **🔄 Detecção Inteligente de S3**
+```nginx
+# Nginx configurado automaticamente baseado em USE_S3
+location /media/ {
+    # Se S3=true: não inclui esta seção
+    # Se S3=false: serve arquivos localmente
+    alias /var/www/precatorios/media/;
+}
+```
+
+#### **🛡️ Segurança Automática (Produção)**
+- **SSL/TLS**: Certificados Let's Encrypt automáticos
+- **Headers de Segurança**: HSTS, CSP, XSS Protection
+- **Rate Limiting**: Proteção contra ataques
+- **Firewall**: UFW configurado automaticamente
+- **Fail2ban**: Proteção contra brute force
+- **Secret Key**: Geração automática para produção
+
+### **📊 Monitoramento e Logs**
+
+```bash
+# Logs centralizados por ambiente
+/var/log/precatorios/
+├── django.log              # Application logs
+├── gunicorn_access.log     # HTTP access logs
+├── gunicorn_error.log      # Application errors
+└── nginx_access.log        # Web server logs
+
+# Comandos de monitoramento
+sudo journalctl -u gunicorn_precatorios_production -f  # Live logs
+sudo systemctl status nginx                            # Service status
+curl https://seu-dominio.com/health/                  # Health check
+```
 
 ### **Comandos Úteis**
 
