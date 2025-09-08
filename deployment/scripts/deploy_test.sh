@@ -196,8 +196,8 @@ After=network.target
 User=$USER
 Group=www-data
 WorkingDirectory=${PROJECT_DIR}
-Environment="PATH=${PROJECT_DIR}/venv/bin"
-ExecStart=${PROJECT_DIR}/venv/bin/gunicorn \\
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+ExecStart=/usr/local/bin/gunicorn \\
     --workers 3 \\
     --bind unix:/tmp/${PROJECT_NAME}_test.sock \\
     --timeout 120 \\
