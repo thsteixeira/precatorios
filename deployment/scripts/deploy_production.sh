@@ -103,22 +103,22 @@ sudo chmod -R 775 ${PROJECT_DIR}
 sudo chmod -R 775 /var/log/${PROJECT_NAME}
 
 # 4. Clone or update repository
-print_status "Setting up project repository..."
-if [ -d "${PROJECT_DIR}/.git" ]; then
-    print_status "Repository exists, updating..."
-    cd ${PROJECT_DIR}
-    git pull origin main
-else
-    print_status "Cloning repository..."
-    sudo rm -rf ${PROJECT_DIR}/*
-    git clone ${REPO_URL} ${PROJECT_DIR}
-    cd ${PROJECT_DIR}
-fi
+#print_status "Setting up project repository..."
+#if [ -d "${PROJECT_DIR}/.git" ]; then
+#    print_status "Repository exists, updating..."
+#    cd ${PROJECT_DIR}
+#    git pull origin main
+#else
+#    print_status "Cloning repository..."
+#    sudo rm -rf ${PROJECT_DIR}/*
+#    git clone ${REPO_URL} ${PROJECT_DIR}
+#    cd ${PROJECT_DIR}
+#fi
 
 # 5. Create and activate virtual environment
-print_status "Setting up Python virtual environment..."
-python3 -m venv venv
-source venv/bin/activate
+#print_status "Setting up Python virtual environment..."
+#python3 -m venv venv
+#source venv/bin/activate
 
 # 6. Upgrade pip and install Python dependencies
 print_status "Installing Python dependencies..."
