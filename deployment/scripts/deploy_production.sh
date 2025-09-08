@@ -238,6 +238,16 @@ fi
 # 16. Configure Nginx
 print_status "Configuring Nginx..."
 
+# Add server_names_hash_bucket_size to main nginx.conf if not already present
+print_status "Configuring Nginx main settings..."
+if ! grep -q "server_names_hash_bucket_size" /etc/nginx/nginx.conf; then
+    print_status "Adding server_names_hash_bucket_size configuration..."
+    sudo sed -i '/http {/a\    server_names_hash_bucket_size 128;' /etc/nginx/nginx.conf
+    print_success "Added server_names_hash_bucket_size 128 to nginx.conf"
+else
+    print_status "server_names_hash_bucket_size already configured"
+fi
+
 # Check if using S3 for media files
 USE_S3=$(python manage.py shell -c "
 from django.conf import settings
