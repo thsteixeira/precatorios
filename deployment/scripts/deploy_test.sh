@@ -132,15 +132,15 @@ print_warning "If you need to modify any settings, edit deployment/environments/
 
 # 8. Test environment configuration
 print_status "Testing Django configuration..."
-python manage.py check
+python3 manage.py check
 
 # 9. Test database connection
 print_status "Testing database connection..."
-python manage.py check --database default
+python3 manage.py check --database default
 
 # 10. Test S3 connection (if configured)
 print_status "Testing S3 bucket access..."
-python manage.py shell -c "
+python3 manage.py shell -c "
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
@@ -164,16 +164,16 @@ else:
 
 # 11. Run database migrations
 print_status "Running database migrations..."
-python manage.py migrate
+python3 manage.py migrate
 
 # 12. Collect static files
 print_status "Collecting static files..."
-python manage.py collectstatic --noinput
+python3 manage.py collectstatic --noinput
 
 # 13. Create superuser (if needed)
 print_status "Setting up thiago user..."
 echo "Creating superuser account..."
-python manage.py shell -c "
+python3 manage.py shell -c "
 from django.contrib.auth import get_user_model
 User = get_user_model()
 if not User.objects.filter(username='thiago').exists():
@@ -349,7 +349,7 @@ done
 
 # Test Django application
 print_status "Testing Django application..."
-python manage.py check
+python3 manage.py check
 
 # Test HTTP response
 print_status "Testing HTTP response..."
