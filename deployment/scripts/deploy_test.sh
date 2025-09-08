@@ -36,9 +36,22 @@ PROJECT_DIR="/var/www/${PROJECT_NAME}"
 REPO_URL="https://github.com/thsteixeira/precatorios.git"
 NGINX_SITE_NAME="${PROJECT_NAME}_test"
 GUNICORN_SERVICE_NAME="gunicorn_${PROJECT_NAME}_test"
-DOMAIN_OR_IP="${TEST_DOMAIN_OR_IP:-54.191.130.149}"  # Use environment variable or default
+
+# EC2 server configuration (IP and DNS name)
+EC2_IP="52.89.86.51"
+EC2_DNS="ec2-52-89-86-51.us-west-2.compute.amazonaws.com"
+CUSTOM_DOMAIN="henriqueteixeira.adv.br"
+
+# For backward compatibility, still support TEST_DOMAIN_OR_IP override
+DOMAIN_OR_IP="${TEST_DOMAIN_OR_IP:-$EC2_IP}"
 
 print_status "Starting TEST environment deployment..."
+print_status "Server Configuration:"
+echo "   • EC2 IP: ${EC2_IP}"
+echo "   • EC2 DNS: ${EC2_DNS}"
+echo "   • Custom Domain: ${CUSTOM_DOMAIN}"
+echo "   • Nginx will respond to all three addresses"
+echo ""
 
 # 1. Update system packages
 print_status "Updating system packages..."
@@ -100,17 +113,22 @@ pip install -r requirements.txt
 print_status "Configuring environment settings..."
 cp deployment/environments/.env.test .env
 
-print_warning "Environment configuration copied. Please update .env with your actual credentials:"
-echo "   - DATABASE_HOST (PostgreSQL EC2 private IP)"
-echo "   - DATABASE_PASSWORD"
-echo "   - SECRET_KEY"
-echo "   - ALLOWED_HOSTS"
-echo "   - AWS_ACCESS_KEY_ID (for S3)"
-echo "   - AWS_SECRET_ACCESS_KEY (for S3)"
-echo "   - AWS_STORAGE_BUCKET_NAME (test bucket name)"
+# Load environment variables from .env.test for the deployment script
+print_status "Loading environment variables from .env.test..."
+set -a && source deployment/environments/.env.test && set +a
+print_success "Environment variables loaded successfully"
 
-# Wait for user confirmation
-read -p "Press Enter after updating .env file with your credentials..."
+# Display current configuration
+echo "📋 Current environment configuration:"
+echo "   • Environment: ${ENVIRONMENT}"
+echo "   • Debug: ${DEBUG}"
+echo "   • Database Host: ${DATABASE_HOST}"
+echo "   • Database Name: ${DATABASE_NAME}"
+echo "   • Use S3: ${USE_S3}"
+echo "   • S3 Bucket: ${AWS_STORAGE_BUCKET_NAME}"
+echo "   • AWS Region: ${AWS_S3_REGION_NAME}"
+
+print_warning "If you need to modify any settings, edit deployment/environments/.env.test and re-run this script"
 
 # 8. Test environment configuration
 print_status "Testing Django configuration..."
@@ -246,7 +264,7 @@ fi
 sudo tee /etc/nginx/sites-available/${NGINX_SITE_NAME} > /dev/null << EOF
 server {
     listen 80;
-    server_name ${DOMAIN_OR_IP};
+    server_name ${EC2_IP} ${EC2_DNS} ${CUSTOM_DOMAIN};
     
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -351,7 +369,7 @@ echo "   • Project Directory: ${PROJECT_DIR}"
 echo "   • Log Directory: /var/log/${PROJECT_NAME}"
 echo "   • Gunicorn Service: ${GUNICORN_SERVICE_NAME}"
 echo "   • Nginx Site: ${NGINX_SITE_NAME}"
-echo "   • Domain/IP: ${DOMAIN_OR_IP}"
+echo "   • Server Names: ${EC2_IP}, ${EC2_DNS}, ${CUSTOM_DOMAIN}"
 echo ""
 echo "🔧 Service Management Commands:"
 echo "   • Restart Gunicorn: sudo systemctl restart ${GUNICORN_SERVICE_NAME}"
@@ -359,9 +377,15 @@ echo "   • Restart Nginx: sudo systemctl restart nginx"
 echo "   • View logs: sudo journalctl -u ${GUNICORN_SERVICE_NAME} -f"
 echo "   • Check status: sudo systemctl status ${GUNICORN_SERVICE_NAME}"
 echo ""
-echo "🌐 Access your application:"
-echo "   • Web: http://${DOMAIN_OR_IP}/"
-echo "   • Admin: http://${DOMAIN_OR_IP}/admin/"
+echo "🌐 Access your application via any of these URLs:"
+echo "   • IP: http://${EC2_IP}/"
+echo "   • DNS: http://${EC2_DNS}/"
+echo "   • Domain: http://${CUSTOM_DOMAIN}/"
+echo ""
+echo "🔑 Django Admin access:"
+echo "   • IP: http://${EC2_IP}/admin/"
+echo "   • DNS: http://${EC2_DNS}/admin/"
+echo "   • Domain: http://${CUSTOM_DOMAIN}/admin/"
 echo ""
 echo "📝 Next Steps:"
 echo "   1. Set up SSL certificates (Let's Encrypt recommended)"

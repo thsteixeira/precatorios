@@ -36,9 +36,22 @@ PROJECT_DIR="/var/www/${PROJECT_NAME}"
 REPO_URL="https://github.com/thsteixeira/precatorios.git"
 NGINX_SITE_NAME="${PROJECT_NAME}_production"
 GUNICORN_SERVICE_NAME="gunicorn_${PROJECT_NAME}_production"
-DOMAIN_OR_IP="${PRODUCTION_DOMAIN_OR_IP:-your-domain.com}"  # Use environment variable or default
+
+# Production server configuration (update these with your actual production values)
+PRODUCTION_IP="44.242.204.124"  # From .env.production
+PRODUCTION_DNS="ec2-44-242-204-124.us-west-2.compute.amazonaws.com"  # From .env.production
+PRODUCTION_DOMAIN="henriqueteixeira.adv.br"  # From .env.production
+
+# For backward compatibility, still support PRODUCTION_DOMAIN_OR_IP override
+DOMAIN_OR_IP="${PRODUCTION_DOMAIN_OR_IP:-$PRODUCTION_DOMAIN}"
 
 print_status "Starting PRODUCTION environment deployment..."
+print_status "Production Server Configuration:"
+echo "   • Production IP: ${PRODUCTION_IP}"
+echo "   • Production DNS: ${PRODUCTION_DNS}"
+echo "   • Production Domain: ${PRODUCTION_DOMAIN}"
+echo "   • Nginx will respond to all three addresses"
+echo ""
 print_warning "⚠️  PRODUCTION DEPLOYMENT - Please ensure you have:"
 echo "   • Valid SSL certificates ready"
 echo "   • Production domain configured"
@@ -272,14 +285,14 @@ sudo tee /etc/nginx/sites-available/${NGINX_SITE_NAME} > /dev/null << EOF
 # HTTP server (redirects to HTTPS)
 server {
     listen 80;
-    server_name ${DOMAIN_OR_IP};
+    server_name ${PRODUCTION_IP} ${PRODUCTION_DNS} ${PRODUCTION_DOMAIN};
     return 301 https://\$server_name\$request_uri;
 }
 
 # HTTPS server
 server {
     listen 443 ssl http2;
-    server_name ${DOMAIN_OR_IP};
+    server_name ${PRODUCTION_IP} ${PRODUCTION_DNS} ${PRODUCTION_DOMAIN};
     
     # SSL Configuration (will be updated by certbot)
     # ssl_certificate /etc/letsencrypt/live/${DOMAIN_OR_IP}/fullchain.pem;
@@ -360,19 +373,45 @@ fi
 # 18. Configure SSL with Let's Encrypt
 print_status "Setting up SSL certificate..."
 print_warning "Setting up SSL certificate with Let's Encrypt..."
-echo "Make sure your domain ${DOMAIN_OR_IP} points to this server's IP address"
-read -p "Continue with SSL setup? (y/N): " -n 1 -r
+echo "Available domains for SSL:"
+echo "   • Production IP: ${PRODUCTION_IP} (IP addresses don't support SSL certificates)"
+echo "   • Production DNS: ${PRODUCTION_DNS}"
+echo "   • Production Domain: ${PRODUCTION_DOMAIN}"
 echo ""
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    sudo certbot --nginx -d ${DOMAIN_OR_IP} --non-interactive --agree-tos --email admin@${DOMAIN_OR_IP}
-    if [ $? -eq 0 ]; then
-        print_success "SSL certificate installed successfully"
-    else
-        print_warning "SSL certificate installation failed. You can run it manually later:"
-        echo "sudo certbot --nginx -d ${DOMAIN_OR_IP}"
-    fi
+echo "Choose SSL setup option:"
+echo "   1. SSL for domain only (${PRODUCTION_DOMAIN}) - RECOMMENDED"
+echo "   2. SSL for all domains (${PRODUCTION_DNS} and ${PRODUCTION_DOMAIN})"
+echo "   3. Skip SSL setup"
+read -p "Enter choice (1/2/3): " ssl_choice
+
+case $ssl_choice in
+    1)
+        echo "Setting up SSL for domain: ${PRODUCTION_DOMAIN}"
+        sudo certbot --nginx -d ${PRODUCTION_DOMAIN} --non-interactive --agree-tos --email admin@${PRODUCTION_DOMAIN}
+        ;;
+    2)
+        echo "Setting up SSL for multiple domains: ${PRODUCTION_DNS} and ${PRODUCTION_DOMAIN}"
+        sudo certbot --nginx -d ${PRODUCTION_DNS} -d ${PRODUCTION_DOMAIN} --non-interactive --agree-tos --email admin@${PRODUCTION_DOMAIN}
+        ;;
+    3)
+        print_warning "SSL setup skipped. Configure manually later."
+        echo "Manual commands:"
+        echo "   • Domain only: sudo certbot --nginx -d ${PRODUCTION_DOMAIN}"
+        echo "   • Multiple domains: sudo certbot --nginx -d ${PRODUCTION_DNS} -d ${PRODUCTION_DOMAIN}"
+        ;;
+    *)
+        print_warning "Invalid choice. SSL setup skipped."
+        ;;
+esac
+
+if [ $? -eq 0 ] && [ "$ssl_choice" != "3" ]; then
+    print_success "SSL certificate installed successfully"
 else
-    print_warning "SSL setup skipped. Configure manually later."
+    if [ "$ssl_choice" != "3" ]; then
+        print_warning "SSL certificate installation failed. You can run it manually later:"
+        echo "   • Domain only: sudo certbot --nginx -d ${PRODUCTION_DOMAIN}"
+        echo "   • Multiple domains: sudo certbot --nginx -d ${PRODUCTION_DNS} -d ${PRODUCTION_DOMAIN}"
+    fi
 fi
 
 # 19. Configure firewall
@@ -495,8 +534,8 @@ echo "   • Project Directory: ${PROJECT_DIR}"
 echo "   • Log Directory: /var/log/${PROJECT_NAME}"
 echo "   • Gunicorn Service: ${GUNICORN_SERVICE_NAME}"
 echo "   • Nginx Site: ${NGINX_SITE_NAME}"
-echo "   • Domain: ${DOMAIN_OR_IP}"
-echo "   • SSL: $([ -f /etc/letsencrypt/live/${DOMAIN_OR_IP}/fullchain.pem ] && echo 'Configured' || echo 'Manual setup needed')"
+echo "   • Server Names: ${PRODUCTION_IP}, ${PRODUCTION_DNS}, ${PRODUCTION_DOMAIN}"
+echo "   • SSL: $([ -f /etc/letsencrypt/live/${PRODUCTION_DOMAIN}/fullchain.pem ] && echo 'Configured' || echo 'Manual setup needed')"
 echo "   • Firewall: Enabled"
 echo "   • Fail2ban: Enabled"
 echo "   • Backups: Scheduled daily at 2 AM"
@@ -508,9 +547,18 @@ echo "   • View logs: sudo journalctl -u ${GUNICORN_SERVICE_NAME} -f"
 echo "   • Check status: sudo systemctl status ${GUNICORN_SERVICE_NAME}"
 echo "   • SSL renewal: sudo certbot renew"
 echo ""
-echo "🌐 Access your application:"
-echo "   • Web: https://${DOMAIN_OR_IP}/"
-echo "   • Admin: https://${DOMAIN_OR_IP}/admin/"
+echo "🌐 Access your production application via any of these URLs:"
+echo "   • IP (HTTP): http://${PRODUCTION_IP}/ (redirects to HTTPS)"
+echo "   • DNS (HTTP): http://${PRODUCTION_DNS}/ (redirects to HTTPS)"
+echo "   • Domain (HTTP): http://${PRODUCTION_DOMAIN}/ (redirects to HTTPS)"
+echo ""
+echo "🔒 Secure HTTPS access (after SSL setup):"
+echo "   • DNS (HTTPS): https://${PRODUCTION_DNS}/"
+echo "   • Domain (HTTPS): https://${PRODUCTION_DOMAIN}/"
+echo ""
+echo "🔑 Django Admin access:"
+echo "   • DNS: https://${PRODUCTION_DNS}/admin/"
+echo "   • Domain: https://${PRODUCTION_DOMAIN}/admin/"
 echo ""
 echo "🔒 Security Features Enabled:"
 echo "   • SSL/TLS encryption"
