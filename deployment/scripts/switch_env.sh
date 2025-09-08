@@ -29,12 +29,12 @@ if [ "$ENVIRONMENT" != "local" ]; then
 fi
 
 # Install/update requirements
-if [ -f "venv/bin/activate" ]; then
-    source venv/bin/activate
-else
-    python3 -m venv venv
-    source venv/bin/activate
-fi
+#if [ -f "venv/bin/activate" ]; then
+#    source venv/bin/activate
+#else
+#    python3 -m venv venv
+#    source venv/bin/activate
+#fi
 
 pip install -r requirements.txt
 
