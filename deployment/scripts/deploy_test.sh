@@ -76,6 +76,7 @@ print_status "Setting up directory structure..."
 sudo mkdir -p ${PROJECT_DIR}
 sudo mkdir -p /var/log/${PROJECT_NAME}
 sudo mkdir -p /var/www/${PROJECT_NAME}/static
+sudo mkdir -p /var/www/${PROJECT_NAME}/logs
 # Create media directory as fallback (even if using S3)
 sudo mkdir -p /var/www/${PROJECT_NAME}/media
 
@@ -86,17 +87,17 @@ sudo chmod -R 775 ${PROJECT_DIR}
 sudo chmod -R 775 /var/log/${PROJECT_NAME}
 
 # 4. Clone or update repository
-#print_status "Setting up project repository..."
-#if [ -d "${PROJECT_DIR}/.git" ]; then
-#    print_status "Repository exists, updating..."
-#    cd ${PROJECT_DIR}
-#    git pull origin main
-#else
-#    print_status "Cloning repository..."
-#    sudo rm -rf ${PROJECT_DIR}/*
-#    git clone ${REPO_URL} ${PROJECT_DIR}
-#    cd ${PROJECT_DIR}
-#fi
+print_status "Setting up project repository..."
+if [ -d "${PROJECT_DIR}/.git" ]; then
+    print_status "Repository exists, updating..."
+    cd ${PROJECT_DIR}
+    git pull origin main
+else
+    print_status "Cloning repository..."
+    sudo rm -rf ${PROJECT_DIR}/*
+    git clone ${REPO_URL} ${PROJECT_DIR}
+    cd ${PROJECT_DIR}
+fi
 
 # 5. Create and activate virtual environment
 #print_status "Setting up Python virtual environment..."
@@ -105,12 +106,14 @@ sudo chmod -R 775 /var/log/${PROJECT_NAME}
 
 # 6. Upgrade pip and install Python dependencies
 print_status "Installing Python dependencies..."
+cd ${PROJECT_DIR}
 pip install --upgrade pip
 pip install gunicorn
 pip install -r requirements.txt
 
 # 7. Setup environment configuration
 print_status "Configuring environment settings..."
+cd ${PROJECT_DIR}
 cp deployment/environments/.env.test .env
 
 # Load environment variables from .env.test for the deployment script
@@ -171,19 +174,8 @@ print_status "Collecting static files..."
 python3 manage.py collectstatic --noinput
 
 # 13. Create superuser (if needed)
-print_status "Setting up thiago user..."
-echo "Creating superuser account..."
-python3 manage.py shell -c "
-from django.contrib.auth import get_user_model
-User = get_user_model()
-if not User.objects.filter(username='thiago').exists():
-    print('Creating thiago user...')
-    import os
-    User.objects.create_superuser('thiago', 'thiago@test.com', os.environ.get('ADMIN_PASSWORD', 'admin123'))
-    print('Thiago user created successfully')
-else:
-    print('Thiago user already exists')
-"
+print_status "Setting up admin user for TEST environment..."
+python3 manage.py create_admin --username=thiago --password="${ADMIN_PASSWORD:-thiago123}" --email=thiago@test.com
 
 # 14. Configure Gunicorn service
 print_status "Configuring Gunicorn service..."
@@ -196,8 +188,8 @@ After=network.target
 User=$USER
 Group=www-data
 WorkingDirectory=${PROJECT_DIR}
-Environment="PATH=/usr/local/bin:/usr/bin:/bin"
-ExecStart=/usr/local/bin/gunicorn \\
+Environment="PATH=/home/$USER/.local/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/$USER/.local/bin/gunicorn \\
     --workers 3 \\
     --bind unix:/tmp/${PROJECT_NAME}_test.sock \\
     --timeout 120 \\
@@ -242,7 +234,7 @@ else
 fi
 
 # Check if using S3 for media files
-USE_S3=$(python manage.py shell -c "
+USE_S3=$(python3 manage.py shell -c "
 from django.conf import settings
 print(getattr(settings, 'USE_S3', False))
 " | tail -1)
