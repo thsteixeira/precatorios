@@ -133,8 +133,6 @@ class Command(BaseCommand):
         # Test download simulation
         self.stdout.write(f"\n🔄 Simulating Download:")
         try:
-            from precapp.views import stream_s3_file_direct
-            
             # Determine filename
             if precatorio.integra_precatorio_filename:
                 filename = precatorio.integra_precatorio_filename
@@ -145,8 +143,7 @@ class Command(BaseCommand):
             
             if getattr(settings, 'USE_S3', False):
                 self.stdout.write("   Attempting S3 stream simulation...")
-                # This would normally return a StreamingHttpResponse
-                # We'll just test the file opening part
+                # Test the same logic as the new download function
                 file_obj = default_storage.open(file_name, 'rb')
                 chunk = file_obj.read(1024)  # Read first 1KB
                 file_obj.close()
