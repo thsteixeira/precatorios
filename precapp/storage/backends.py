@@ -21,25 +21,14 @@ class LargeFileS3Storage(S3Boto3Storage):
         # Enhanced configuration for large files
         kwargs.update({
             'region_name': getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1'),
-            'config': Config(
-                region_name=getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1'),
-                retries=getattr(settings, 'AWS_S3_RETRIES', {
-                    'max_attempts': 10,
-                    'mode': 'adaptive'
-                }),
-                max_pool_connections=50,
-                # Multipart configuration
-                s3={
-                    'multipart_threshold': getattr(settings, 'AWS_S3_MULTIPART_THRESHOLD', 1024 * 1024 * 25),
-                    'multipart_chunksize': getattr(settings, 'AWS_S3_MULTIPART_CHUNKSIZE', 1024 * 1024 * 25),
-                    'max_concurrency': getattr(settings, 'AWS_S3_MAX_CONCURRENCY', 10),
-                    'use_threads': getattr(settings, 'AWS_S3_USE_THREADS', True),
-                    'max_io_queue': getattr(settings, 'AWS_S3_MAX_IO_QUEUE', 1000),
-                }
-            ),
             'signature_version': getattr(settings, 'AWS_S3_SIGNATURE_VERSION', 's3v4'),
         })
+        
         super().__init__(*args, **kwargs)
+        
+        # Store multipart settings for later use
+        self.multipart_threshold = getattr(settings, 'AWS_S3_MULTIPART_THRESHOLD', 1024 * 1024 * 25)
+        self.multipart_chunksize = getattr(settings, 'AWS_S3_MULTIPART_CHUNKSIZE', 1024 * 1024 * 25)
     
     def _save(self, name, content):
         """
