@@ -2973,7 +2973,7 @@ def export_clientes_excel(request):
 def download_precatorio_file(request, precatorio_cnj):
     """
     Download the integra_precatorio file for a specific precatorio
-    Simplified approach with direct file streaming
+    Fixed to use direct file access instead of exists() check
     """
     from django.core.files.storage import default_storage
     from django.http import StreamingHttpResponse, Http404
@@ -2999,18 +2999,19 @@ def download_precatorio_file(request, precatorio_cnj):
     # Determine download filename
     if precatorio.integra_precatorio_filename:
         download_filename = precatorio.integra_precatorio_filename
+        logger.info(f"Using stored original filename: {download_filename}")
     else:
         import os
         base_filename = os.path.basename(file_name)
         if base_filename and '.' in base_filename:
             download_filename = base_filename
+            logger.info(f"Using filename from path: {download_filename}")
         else:
             download_filename = f"precatorio_{precatorio_cnj.replace('/', '_').replace('-', '_')}.pdf"
-    
-    logger.info(f"Download filename: {download_filename}")
+            logger.info(f"Using generated filename: {download_filename}")
     
     try:
-        # Try to open the file directly
+        # Try to open the file directly (same as test download)
         file_obj = default_storage.open(file_name, 'rb')
         logger.info(f"Successfully opened file: {file_name}")
         
@@ -3019,7 +3020,7 @@ def download_precatorio_file(request, precatorio_cnj):
         if not content_type:
             content_type = 'application/pdf'  # Default to PDF
         
-        # Create file iterator
+        # Create file iterator for streaming
         def file_iterator(file_obj, chunk_size=8192):
             try:
                 while True:
@@ -3030,7 +3031,7 @@ def download_precatorio_file(request, precatorio_cnj):
             finally:
                 file_obj.close()
         
-        # Create response
+        # Create streaming response
         response = StreamingHttpResponse(
             file_iterator(file_obj),
             content_type=content_type
@@ -3044,15 +3045,16 @@ def download_precatorio_file(request, precatorio_cnj):
         try:
             file_size = default_storage.size(file_name)
             response['Content-Length'] = str(file_size)
-        except:
-            pass  # Size not critical
+            logger.info(f"Set Content-Length: {file_size}")
+        except Exception as e:
+            logger.warning(f"Could not get file size: {e}")
         
         # Prevent caching
         response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response['Pragma'] = 'no-cache'
         response['Expires'] = '0'
         
-        logger.info(f"Returning download response for: {download_filename}")
+        logger.info(f"Returning streaming download response for: {download_filename}")
         return response
         
     except Exception as e:
