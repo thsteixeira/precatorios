@@ -54,16 +54,40 @@ class Command(BaseCommand):
         # Test file operations
         file_name = precatorio.integra_precatorio.name
         
-        # Test existence
-        try:
-            exists = default_storage.exists(file_name)
-            self.stdout.write(f"   File exists in storage: {exists}")
+        # Test file existence - use different methods for S3
+        if getattr(settings, 'USE_S3', False):
+            # For S3, test file access directly since exists() might not work properly
+            try:
+                test_file = default_storage.open(file_name, 'rb')
+                test_bytes = test_file.read(100)
+                test_file.close()
+                exists = True
+                self.stdout.write(f"   File accessible via S3: True ({len(test_bytes)} bytes read)")
+            except Exception as e:
+                exists = False
+                self.stdout.write(f"   File accessible via S3: False - {e}")
             
-            if not exists:
-                self.stdout.write("   ❌ File not found in storage - this is the main issue!")
-                return
-        except Exception as e:
-            self.stdout.write(f"   ❌ Error checking file existence: {e}")
+            # Also test the standard exists() method for comparison
+            try:
+                std_exists = default_storage.exists(file_name)
+                self.stdout.write(f"   Standard exists() check: {std_exists}")
+                if exists != std_exists:
+                    self.stdout.write("   ⚠️  Different results between direct access and exists() - this is normal for S3")
+            except Exception as e:
+                self.stdout.write(f"   Standard exists() error: {e}")
+        else:
+            # For local storage, use normal exists check
+            try:
+                exists = default_storage.exists(file_name)
+                self.stdout.write(f"   File exists: {exists}")
+            except Exception as e:
+                exists = False
+                self.stdout.write(f"   Error checking existence: {e}")
+        
+        if not exists:
+            self.stdout.write("   ❌ File not accessible - this is the main issue!")
+            if getattr(settings, 'USE_S3', False):
+                self.stdout.write("   💡 For S3, this could be a path/location mismatch")
             return
         
         # Test file size

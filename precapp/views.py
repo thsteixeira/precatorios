@@ -2973,7 +2973,7 @@ def export_clientes_excel(request):
 def download_precatorio_file(request, precatorio_cnj):
     """
     Download the integra_precatorio file for a specific precatorio
-    Enhanced with debugging and S3 compatibility for test environment
+    Enhanced with debugging and S3 path compatibility for test environment
     """
     from .storage.utils import handle_large_file_download, force_file_refresh
     from django.core.files.storage import default_storage
@@ -3002,13 +3002,28 @@ def download_precatorio_file(request, precatorio_cnj):
         file_name = precatorio.integra_precatorio.name
         logger.info(f"File name in storage: {file_name}")
         
-        # Verify file exists in storage
-        file_exists = default_storage.exists(file_name)
+        # For S3, we need to handle the path correctly
+        if getattr(settings, 'USE_S3', False):
+            # Try to access file directly first - sometimes exists() doesn't work properly with S3
+            try:
+                # Test if we can open the file - this is more reliable than exists() for S3
+                test_file = default_storage.open(file_name, 'rb')
+                test_file.read(1)  # Try to read 1 byte
+                test_file.close()
+                file_exists = True
+                logger.info(f"S3 file access test successful")
+            except Exception as e:
+                logger.error(f"S3 file access test failed: {e}")
+                file_exists = False
+        else:
+            # For local storage, use normal exists check
+            file_exists = default_storage.exists(file_name)
+        
         logger.info(f"File exists in storage: {file_exists}")
         
         if not file_exists:
-            logger.error(f"File not found in storage: {file_name}")
-            messages.error(request, "Arquivo não encontrado no armazenamento.")
+            logger.error(f"File not accessible in storage: {file_name}")
+            messages.error(request, "Arquivo não encontrado ou inacessível no armazenamento.")
             return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
         
         # Get file size for debugging
@@ -3081,7 +3096,7 @@ def download_precatorio_file(request, precatorio_cnj):
 
 def stream_s3_file_direct(file_field, filename):
     """
-    Stream file directly from S3 without signed URLs to avoid permission issues
+    Stream file directly from S3 with enhanced error handling and path resolution
     """
     from django.core.files.storage import default_storage
     from django.utils.encoding import smart_str
@@ -3104,11 +3119,16 @@ def stream_s3_file_direct(file_field, filename):
         def file_chunks(file_obj, chunk_size=65536):
             """Generator to read file in chunks"""
             try:
+                chunk_count = 0
                 while True:
                     chunk = file_obj.read(chunk_size)
                     if not chunk:
                         break
+                    chunk_count += 1
+                    if chunk_count % 100 == 0:  # Log every 100 chunks (6.4MB)
+                        logger.info(f"Streamed {chunk_count} chunks ({chunk_count * chunk_size / (1024*1024):.1f} MB)")
                     yield chunk
+                logger.info(f"Completed streaming {chunk_count} chunks")
             finally:
                 try:
                     file_obj.close()
@@ -3137,6 +3157,10 @@ def stream_s3_file_direct(file_field, filename):
         response['Pragma'] = 'no-cache'
         response['Expires'] = '0'
         response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
+        
+        # Add CORS headers for cross-origin downloads if needed
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Headers'] = 'Content-Disposition'
         
         logger.info(f"Successfully created streaming response for: {filename}")
         return response
