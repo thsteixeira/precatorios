@@ -208,7 +208,7 @@ elif ENVIRONMENT in ['test', 'production']:
             AWS_LOCATION = 'media/production'
         
         AWS_DEFAULT_ACL = 'private'
-        AWS_S3_FILE_OVERWRITE = False
+        AWS_S3_FILE_OVERWRITE = True  # Allow overwriting files to prevent multiple versions
         
         # Enhanced S3 Configuration for Large Files (50MB+)
         AWS_S3_OBJECT_PARAMETERS = {
