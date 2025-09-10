@@ -388,6 +388,15 @@ class Precatorio(models.Model):
         verbose_name="Íntegra do precatório"
     )
     
+    # Store the original filename for better downloads
+    integra_precatorio_filename = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Nome original do arquivo da íntegra",
+        verbose_name="Nome do arquivo original"
+    )
+    
     clientes = models.ManyToManyField('Cliente', related_name='precatorios')
 
     def __str__(self):

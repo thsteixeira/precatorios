@@ -11,6 +11,7 @@ from django.core.management import call_command
 import tempfile
 import os
 import logging
+import mimetypes
 from io import StringIO
 from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo, FaseHonorariosContratuais, TipoDiligencia, Diligencias, PedidoRequerimento
 from .forms import (
@@ -143,6 +144,15 @@ def novoPrec_view(request):
         form = PrecatorioForm(request.POST, request.FILES)
         if form.is_valid():
             precatorio = form.save()
+            
+            # Store the original filename if an integra file was uploaded
+            if 'integra_precatorio' in request.FILES:
+                uploaded_file = request.FILES['integra_precatorio']
+                original_filename = uploaded_file.name
+                precatorio.integra_precatorio_filename = original_filename
+                precatorio.save()
+                logger.info(f"Stored original filename for new precatorio {precatorio.cnj}: {original_filename}")
+            
             messages.success(request, f'Precatório {precatorio.cnj} criado com sucesso!')
             return redirect('precatorios')  # Redirect to the list view after successful creation
         else:
@@ -349,13 +359,22 @@ def precatorio_detalhe_view(request, precatorio_cnj):
                         logger.error(f"Error deleting old file manually: {str(e)}")
                 
                 # Save the form
-                updated_precatorio = precatorio_form.save()
+                updated_precatorio = precatorio_form.save(commit=False)
+                
+                # Store the original filename if a new file was uploaded
+                if new_file_uploaded:
+                    uploaded_file = request.FILES['integra_precatorio']
+                    updated_precatorio.integra_precatorio_filename = uploaded_file.name
+                    logger.info(f"Stored original filename: {uploaded_file.name}")
+                
+                # Save the instance
+                updated_precatorio.save()
                 
                 # Force refresh the instance to ensure we have the latest file info
                 updated_precatorio.refresh_from_db()
                 
                 if new_file_uploaded:
-                    messages.success(request, f'Precatório {precatorio.cnj} atualizado com sucesso! Novo arquivo carregado.')
+                    messages.success(request, f'Precatório {precatorio.cnj} atualizado com sucesso! Novo arquivo "{uploaded_file.name}" carregado.')
                 else:
                     messages.success(request, f'Precatório {precatorio.cnj} atualizado com sucesso!')
                     
@@ -2980,11 +2999,49 @@ def download_precatorio_file(request, precatorio_cnj):
         # Force refresh file metadata to ensure we have the latest version
         force_file_refresh(precatorio.integra_precatorio)
         
+        # Get the best available filename for download
+        download_filename = None
+        
+        try:
+            # Method 1: Use stored original filename if available
+            if precatorio.integra_precatorio_filename:
+                download_filename = precatorio.integra_precatorio_filename
+                logger.info(f"Using stored original filename: {download_filename}")
+            
+            # Method 2: Try to extract from file path
+            elif hasattr(precatorio.integra_precatorio, 'name') and precatorio.integra_precatorio.name:
+                import os
+                actual_filename = os.path.basename(precatorio.integra_precatorio.name)
+                
+                # Check if it's a meaningful filename (not just a hash)
+                if actual_filename and len(actual_filename) > 10 and '.' in actual_filename:
+                    download_filename = actual_filename
+                    logger.info(f"Using filename from path: {actual_filename}")
+            
+            # Method 3: Fallback to precatorio-based name
+            if not download_filename:
+                # Detect file extension from storage
+                try:
+                    content_type, _ = mimetypes.guess_type(precatorio.integra_precatorio.name)
+                    if content_type == 'application/pdf':
+                        ext = '.pdf'
+                    else:
+                        ext = '.pdf'  # Default to PDF
+                except:
+                    ext = '.pdf'
+                
+                download_filename = f"precatorio_{precatorio.cnj.replace('/', '_').replace('-', '_')}{ext}"
+                logger.info(f"Using generated filename: {download_filename}")
+                
+        except Exception as e:
+            logger.error(f"Error determining filename: {e}")
+            download_filename = f"precatorio_{precatorio.cnj.replace('/', '_')}.pdf"
+        
         # Use enhanced file download handler
         return handle_large_file_download(
             request, 
             precatorio.integra_precatorio,
-            filename=f"precatorio_{precatorio.cnj.replace('/', '_')}.pdf"
+            filename=download_filename
         )
     except Exception as e:
         logger.error(f"Error downloading file for {precatorio_cnj}: {str(e)}")
