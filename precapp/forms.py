@@ -1,8 +1,34 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
+from django.urls import reverse
+from django.utils.safestring import mark_safe
+from django.forms.widgets import ClearableFileInput
 import re
 from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, Diligencias, TipoDiligencia, Tipo, PedidoRequerimento
+
+
+class CustomFileWidget(ClearableFileInput):
+    """
+    Custom file widget that uses our download URL instead of direct file URL
+    """
+    def __init__(self, *args, **kwargs):
+        self.precatorio_cnj = kwargs.pop('precatorio_cnj', None)
+        super().__init__(*args, **kwargs)
+    
+    def format_value(self, value):
+        """Override to provide custom file link"""
+        if self.is_initial(value) and value:
+            if self.precatorio_cnj:
+                download_url = reverse('download_precatorio_file', kwargs={'precatorio_cnj': self.precatorio_cnj})
+                filename = getattr(value, 'name', str(value))
+                if filename:
+                    # Get just the filename without path
+                    import os
+                    filename = os.path.basename(filename)
+                    return mark_safe(f'<a href="{download_url}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="fas fa-download me-1"></i>Baixar: {filename}</a>')
+            return str(value)
+        return value
 
 
 def validate_cpf(cpf):
@@ -666,6 +692,13 @@ class PrecatorioForm(forms.ModelForm):
         # Set queryset to only show active tipos
         self.fields['tipo'].queryset = Tipo.objects.filter(ativa=True).order_by('ordem', 'nome')
         self.fields['tipo'].empty_label = "Selecione o tipo de precatório"
+        
+        # Use custom file widget for editing existing precatorios
+        if self.instance and self.instance.pk and self.instance.cnj:
+            self.fields['integra_precatorio'].widget = CustomFileWidget(
+                attrs={'class': 'form-control', 'accept': '.pdf'},
+                precatorio_cnj=self.instance.cnj
+            )
 
     def clean_percentual_contratuais_assinado(self):
         percentual = self.cleaned_data.get('percentual_contratuais_assinado')

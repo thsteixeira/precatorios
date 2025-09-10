@@ -9,6 +9,7 @@ from .models import (
     Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo,
     FaseHonorariosContratuais, TipoDiligencia, Diligencias, PedidoRequerimento
 )
+from .forms import CustomFileWidget
 
 # Custom admin configurations
 
@@ -95,6 +96,19 @@ class PrecatorioAdmin(admin.ModelAdmin):
     formfield_overrides = {
         models.TextField: {'widget': Textarea(attrs={'rows': 4, 'cols': 80})},
     }
+    
+    def get_form(self, request, obj=None, **kwargs):
+        """Customize form to use custom file widget for existing objects"""
+        form = super().get_form(request, obj, **kwargs)
+        
+        # Use custom file widget for editing existing precatorios
+        if obj and obj.pk and obj.cnj:
+            form.base_fields['integra_precatorio'].widget = CustomFileWidget(
+                attrs={'class': 'form-control', 'accept': '.pdf'},
+                precatorio_cnj=obj.cnj
+            )
+        
+        return form
     
     # Custom methods for display
     def origem_short(self, obj):
