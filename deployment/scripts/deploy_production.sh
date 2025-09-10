@@ -286,6 +286,11 @@ server {
     listen 443 ssl http2;
     server_name ${PRODUCTION_IP} ${PRODUCTION_DNS} ${PRODUCTION_DOMAIN};
     
+    # Large file upload configuration for 50MB precatorio files
+    client_max_body_size 50M;
+    client_body_timeout 300s;
+    client_body_buffer_size 128k;
+    
     # SSL Configuration (will be updated by certbot)
     # ssl_certificate /etc/letsencrypt/live/${DOMAIN_OR_IP}/fullchain.pem;
     # ssl_certificate_key /etc/letsencrypt/live/${DOMAIN_OR_IP}/privkey.pem;
@@ -319,10 +324,14 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_connect_timeout 120s;
-        proxy_send_timeout 120s;
-        proxy_read_timeout 120s;
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
         proxy_buffering off;
+        
+        # Large file upload configuration
+        proxy_request_buffering off;
+        proxy_max_temp_file_size 0;
         
         # Security
         proxy_hide_header X-Powered-By;

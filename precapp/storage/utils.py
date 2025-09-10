@@ -40,9 +40,10 @@ def handle_large_file_download(request, file_field, filename=None):
             logger.error(f"File does not exist in storage: {file_field.name}")
             raise Http404("Arquivo não encontrado no armazenamento")
         
-        # For S3 storage, redirect to signed URL for better performance
+        # For S3 storage, always stream through Django for proper authentication
+        # This avoids signed URL authentication issues
         if hasattr(settings, 'USE_S3') and settings.USE_S3:
-            return redirect_to_s3_file(file_field, filename)
+            return stream_s3_file(file_field, filename)
         else:
             return stream_local_file(file_field, filename)
             
@@ -59,37 +60,13 @@ def redirect_to_s3_file(file_field, filename):
     """
     try:
         # Generate signed URL with longer expiration for large files
-        signed_url = default_storage.url(
-            file_field.name,
-            expire=7200,  # 2 hours for large file downloads
-            http_method='GET'
-        )
+        # Use default_storage.url() for basic signed URL
+        signed_url = default_storage.url(file_field.name)
         
-        # Add content-disposition header to force download with correct filename
-        parsed_url = urllib.parse.urlparse(signed_url)
-        query_params = urllib.parse.parse_qs(parsed_url.query)
-        
-        # Add response-content-disposition to S3 URL
-        query_params['response-content-disposition'] = [f'attachment; filename="{filename}"']
-        
-        # Rebuild URL with new parameters
-        new_query = urllib.parse.urlencode(query_params, doseq=True)
-        final_url = urllib.parse.urlunparse((
-            parsed_url.scheme,
-            parsed_url.netloc,
-            parsed_url.path,
-            parsed_url.params,
-            new_query,
-            parsed_url.fragment
-        ))
-        
-        # Return redirect response
-        response = HttpResponse(status=302)
-        response['Location'] = final_url
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        
-        logger.info(f"Generated signed URL for download: {file_field.name}")
-        return response
+        # For S3, we'll stream the file instead of redirect to avoid 
+        # authentication issues with response headers
+        logger.info(f"Redirecting to S3 stream for: {file_field.name}")
+        return stream_s3_file(file_field, filename)
         
     except Exception as e:
         logger.error(f"Error generating signed URL for {file_field.name}: {str(e)}")
@@ -99,8 +76,8 @@ def redirect_to_s3_file(file_field, filename):
 
 def stream_s3_file(file_field, filename):
     """
-    Stream file from S3 through Django (less efficient but more control)
-    Use this as fallback when signed URLs don't work
+    Stream file from S3 through Django with proper authentication
+    More reliable than signed URLs for downloads
     """
     try:
         # Open file from storage
@@ -111,26 +88,32 @@ def stream_s3_file(file_field, filename):
         if content_type is None:
             content_type = 'application/octet-stream'
         
-        # Create streaming response
+        # Create streaming response with larger chunks for better performance
         response = StreamingHttpResponse(
-            file_chunks(file_obj),
+            file_chunks(file_obj, chunk_size=65536),  # 64KB chunks for better performance
             content_type=content_type
         )
         
-        response['Content-Disposition'] = f'attachment; filename="{smart_str(filename)}"'
+        # Set proper filename for download
+        safe_filename = smart_str(filename.replace('"', ''))
+        response['Content-Disposition'] = f'attachment; filename="{safe_filename}"'
         
         # Add content length if available
         try:
             file_size = default_storage.size(file_field.name)
             response['Content-Length'] = str(file_size)
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"Could not get file size for {file_field.name}: {str(e)}")
         
-        logger.info(f"Streaming file download: {file_field.name}")
+        # Add cache headers for better performance
+        response['Cache-Control'] = 'private, max-age=3600'  # 1 hour cache
+        response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering for large files
+        
+        logger.info(f"Streaming S3 file download: {file_field.name} ({filename})")
         return response
         
     except Exception as e:
-        logger.error(f"Error streaming file {file_field.name}: {str(e)}")
+        logger.error(f"Error streaming S3 file {file_field.name}: {str(e)}")
         raise Http404("Erro ao acessar o arquivo")
 
 
@@ -160,10 +143,10 @@ def stream_local_file(file_field, filename):
         raise Http404("Erro ao acessar o arquivo")
 
 
-def file_chunks(file_obj, chunk_size=8192):
+def file_chunks(file_obj, chunk_size=65536):
     """
     Generator to read file in chunks for streaming
-    Optimized chunk size for network transfer
+    Optimized chunk size (64KB) for better network transfer performance
     """
     try:
         while True:
@@ -172,7 +155,10 @@ def file_chunks(file_obj, chunk_size=8192):
                 break
             yield chunk
     finally:
-        file_obj.close()
+        try:
+            file_obj.close()
+        except:
+            pass  # File might already be closed
 
 
 def validate_file_upload(uploaded_file, max_size_mb=50, allowed_extensions=None):

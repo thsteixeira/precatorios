@@ -258,6 +258,11 @@ server {
     listen 80;
     server_name ${EC2_IP} ${EC2_DNS} ${CUSTOM_DOMAIN};
     
+    # Large file upload configuration for 50MB precatorio files
+    client_max_body_size 50M;
+    client_body_timeout 300s;
+    client_body_buffer_size 128k;
+    
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-XSS-Protection "1; mode=block" always;
@@ -278,10 +283,14 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_connect_timeout 120s;
-        proxy_send_timeout 120s;
-        proxy_read_timeout 120s;
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
         proxy_buffering off;
+        
+        # Large file upload configuration
+        proxy_request_buffering off;
+        proxy_max_temp_file_size 0;
     }
     
     # Health check endpoint
