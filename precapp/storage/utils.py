@@ -105,8 +105,12 @@ def stream_s3_file(file_field, filename):
         except Exception as e:
             logger.warning(f"Could not get file size for {file_field.name}: {str(e)}")
         
-        # Add cache headers for better performance
-        response['Cache-Control'] = 'private, max-age=3600'  # 1 hour cache
+        # Add cache-busting headers to prevent browser caching old files
+        import time
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        response['ETag'] = f'"{int(time.time())}"'  # Unique ETag based on current time
         response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering for large files
         
         logger.info(f"Streaming S3 file download: {file_field.name} ({filename})")
@@ -135,6 +139,13 @@ def stream_local_file(file_field, filename):
         
         response['Content-Disposition'] = f'attachment; filename="{smart_str(filename)}"'
         response['Content-Length'] = str(file_field.size)
+        
+        # Add cache-busting headers to prevent browser caching old files
+        import time
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        response['ETag'] = f'"{int(time.time())}"'  # Unique ETag based on current time
         
         return response
         
@@ -295,3 +306,30 @@ def clean_old_files(path_prefix, days_old=30):
         logger.error(f"Error during file cleanup: {str(e)}")
         errors.append(str(e))
         return files_deleted, errors
+
+
+def force_file_refresh(file_field):
+    """
+    Force refresh of file metadata and clear any caching issues
+    
+    Args:
+        file_field: Django FileField instance
+    
+    Returns:
+        dict: Updated file information
+    """
+    try:
+        if not file_field:
+            return None
+            
+        # Force refresh file information
+        file_info = get_file_info(file_field)
+        
+        # Log file refresh for debugging
+        logger.info(f"Forced refresh for file: {file_field.name}")
+        
+        return file_info
+        
+    except Exception as e:
+        logger.error(f"Error forcing file refresh: {str(e)}")
+        return None

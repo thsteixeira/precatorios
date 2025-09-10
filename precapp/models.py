@@ -2,9 +2,15 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
+from django.db.models.signals import pre_save, post_delete
+from django.dispatch import receiver
+from django.core.files.storage import default_storage
 from datetime import datetime
 import threading
+import logging
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 
 def validate_file_size(value):
@@ -391,6 +397,53 @@ class Precatorio(models.Model):
         verbose_name = "Precatório"
         verbose_name_plural = "Precatórios"
         ordering = ['cnj']  # Changed from data_oficio to cnj
+
+    def delete_old_file(self, field_name):
+        """Delete old file from storage when replacing with new file"""
+        try:
+            old_file = getattr(self, field_name)
+            if old_file and default_storage.exists(old_file.name):
+                default_storage.delete(old_file.name)
+                logger.info(f"Deleted old file: {old_file.name}")
+        except Exception as e:
+            logger.error(f"Error deleting old file: {str(e)}")
+
+
+# Signal handlers for automatic file cleanup
+@receiver(pre_save, sender=Precatorio)
+def precatorio_pre_save(sender, instance, **kwargs):
+    """Delete old integra_precatorio file when a new one is uploaded"""
+    if instance.pk:  # Only for existing instances (updates)
+        try:
+            # Get the old instance from database
+            old_instance = Precatorio.objects.get(pk=instance.pk)
+            
+            # Check if integra_precatorio field has changed
+            if (old_instance.integra_precatorio and 
+                old_instance.integra_precatorio != instance.integra_precatorio):
+                
+                # Delete the old file
+                if default_storage.exists(old_instance.integra_precatorio.name):
+                    default_storage.delete(old_instance.integra_precatorio.name)
+                    logger.info(f"Deleted old precatorio file: {old_instance.integra_precatorio.name}")
+                    
+        except Precatorio.DoesNotExist:
+            # New instance, no old file to delete
+            pass
+        except Exception as e:
+            logger.error(f"Error in precatorio_pre_save signal: {str(e)}")
+
+
+@receiver(post_delete, sender=Precatorio)
+def precatorio_post_delete(sender, instance, **kwargs):
+    """Delete integra_precatorio file when Precatorio instance is deleted"""
+    try:
+        if instance.integra_precatorio:
+            if default_storage.exists(instance.integra_precatorio.name):
+                default_storage.delete(instance.integra_precatorio.name)
+                logger.info(f"Deleted precatorio file on model deletion: {instance.integra_precatorio.name}")
+    except Exception as e:
+        logger.error(f"Error in precatorio_post_delete signal: {str(e)}")
 
 
 class Cliente(models.Model):

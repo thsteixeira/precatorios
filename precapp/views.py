@@ -2926,7 +2926,7 @@ def download_precatorio_file(request, precatorio_cnj):
     Download the integra_precatorio file for a specific precatorio
     Enhanced with large file support and proper error handling
     """
-    from .storage.utils import handle_large_file_download
+    from .storage.utils import handle_large_file_download, force_file_refresh
     
     # Get precatorio object
     precatorio = get_object_or_404(Precatorio, cnj=precatorio_cnj)
@@ -2937,6 +2937,9 @@ def download_precatorio_file(request, precatorio_cnj):
         return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
     
     try:
+        # Force refresh file metadata to ensure we have the latest version
+        force_file_refresh(precatorio.integra_precatorio)
+        
         # Use enhanced file download handler
         return handle_large_file_download(
             request, 
