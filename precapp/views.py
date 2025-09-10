@@ -2973,201 +2973,88 @@ def export_clientes_excel(request):
 def download_precatorio_file(request, precatorio_cnj):
     """
     Download the integra_precatorio file for a specific precatorio
-    Enhanced with debugging and S3 path compatibility for test environment
+    Simplified approach with direct file streaming
     """
-    from .storage.utils import handle_large_file_download, force_file_refresh
     from django.core.files.storage import default_storage
-    from django.http import HttpResponse, StreamingHttpResponse
+    from django.http import StreamingHttpResponse, Http404
     from django.utils.encoding import smart_str
     import mimetypes
     
-    # Get precatorio object and force refresh from database
-    precatorio = get_object_or_404(Precatorio, cnj=precatorio_cnj)
-    precatorio.refresh_from_db()  # Force fresh data from database
-    
-    # Enhanced debugging for test environment
-    logger.info(f"=== DOWNLOAD DEBUG INFO ===")
-    logger.info(f"Environment: {getattr(settings, 'ENVIRONMENT', 'unknown')}")
-    logger.info(f"USE_S3: {getattr(settings, 'USE_S3', 'not set')}")
-    logger.info(f"Precatorio CNJ: {precatorio_cnj}")
-    logger.info(f"File field value: {precatorio.integra_precatorio}")
+    # Get precatorio object
+    try:
+        precatorio = get_object_or_404(Precatorio, cnj=precatorio_cnj)
+        logger.info(f"Download request for precatorio: {precatorio_cnj}")
+    except Exception as e:
+        logger.error(f"Precatorio not found: {precatorio_cnj} - {e}")
+        raise Http404("Precatório não encontrado")
     
     # Check if file exists
     if not precatorio.integra_precatorio:
-        logger.error(f"No file field for precatorio {precatorio_cnj}")
-        messages.error(request, "Nenhum arquivo encontrado para este precatório.")
-        return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
+        logger.error(f"No file for precatorio: {precatorio_cnj}")
+        raise Http404("Nenhum arquivo encontrado para este precatório")
+    
+    file_name = precatorio.integra_precatorio.name
+    logger.info(f"Attempting to download file: {file_name}")
+    
+    # Determine download filename
+    if precatorio.integra_precatorio_filename:
+        download_filename = precatorio.integra_precatorio_filename
+    else:
+        import os
+        base_filename = os.path.basename(file_name)
+        if base_filename and '.' in base_filename:
+            download_filename = base_filename
+        else:
+            download_filename = f"precatorio_{precatorio_cnj.replace('/', '_').replace('-', '_')}.pdf"
+    
+    logger.info(f"Download filename: {download_filename}")
     
     try:
-        file_name = precatorio.integra_precatorio.name
-        logger.info(f"File name in storage: {file_name}")
-        
-        # For S3, we need to handle the path correctly
-        if getattr(settings, 'USE_S3', False):
-            # Try to access file directly first - sometimes exists() doesn't work properly with S3
-            try:
-                # Test if we can open the file - this is more reliable than exists() for S3
-                test_file = default_storage.open(file_name, 'rb')
-                test_file.read(1)  # Try to read 1 byte
-                test_file.close()
-                file_exists = True
-                logger.info(f"S3 file access test successful")
-            except Exception as e:
-                logger.error(f"S3 file access test failed: {e}")
-                file_exists = False
-        else:
-            # For local storage, use normal exists check
-            file_exists = default_storage.exists(file_name)
-        
-        logger.info(f"File exists in storage: {file_exists}")
-        
-        if not file_exists:
-            logger.error(f"File not accessible in storage: {file_name}")
-            messages.error(request, "Arquivo não encontrado ou inacessível no armazenamento.")
-            return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
-        
-        # Get file size for debugging
-        try:
-            file_size = default_storage.size(file_name)
-            logger.info(f"File size: {file_size} bytes ({file_size/(1024*1024):.2f} MB)")
-        except Exception as e:
-            logger.warning(f"Could not get file size: {e}")
-        
-        # Get the best available filename for download
-        download_filename = None
-        
-        try:
-            # Method 1: Use stored original filename if available
-            if precatorio.integra_precatorio_filename:
-                download_filename = precatorio.integra_precatorio_filename
-                logger.info(f"Using stored original filename: {download_filename}")
-            
-            # Method 2: Try to extract from file path
-            elif hasattr(precatorio.integra_precatorio, 'name') and precatorio.integra_precatorio.name:
-                import os
-                actual_filename = os.path.basename(precatorio.integra_precatorio.name)
-                
-                # Check if it's a meaningful filename (not just a hash)
-                if actual_filename and len(actual_filename) > 10 and '.' in actual_filename:
-                    download_filename = actual_filename
-                    logger.info(f"Using filename from path: {actual_filename}")
-            
-            # Method 3: Fallback to precatorio-based name
-            if not download_filename:
-                # Detect file extension from storage
-                try:
-                    content_type, _ = mimetypes.guess_type(precatorio.integra_precatorio.name)
-                    if content_type == 'application/pdf':
-                        ext = '.pdf'
-                    else:
-                        ext = '.pdf'  # Default to PDF
-                except:
-                    ext = '.pdf'
-                
-                download_filename = f"precatorio_{precatorio.cnj.replace('/', '_').replace('-', '_')}{ext}"
-                logger.info(f"Using generated filename: {download_filename}")
-                
-        except Exception as e:
-            logger.error(f"Error determining filename: {e}")
-            download_filename = f"precatorio_{precatorio.cnj.replace('/', '_')}.pdf"
-        
-        logger.info(f"Final download filename: {download_filename}")
-        
-        # For S3 environments, stream directly instead of using signed URLs
-        if getattr(settings, 'USE_S3', False):
-            logger.info("Using S3 streaming download method")
-            return stream_s3_file_direct(precatorio.integra_precatorio, download_filename)
-        else:
-            logger.info("Using local file download method")
-            # Use enhanced file download handler for local environment
-            return handle_large_file_download(
-                request, 
-                precatorio.integra_precatorio,
-                filename=download_filename
-            )
-    except Exception as e:
-        logger.error(f"Error downloading file for {precatorio_cnj}: {str(e)}")
-        logger.error(f"Exception type: {type(e).__name__}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        messages.error(request, f"Erro ao baixar arquivo: {str(e)}")
-        return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
-
-
-def stream_s3_file_direct(file_field, filename):
-    """
-    Stream file directly from S3 with enhanced error handling and path resolution
-    """
-    from django.core.files.storage import default_storage
-    from django.utils.encoding import smart_str
-    import mimetypes
-    
-    try:
-        logger.info(f"Starting direct S3 stream for: {file_field.name}")
-        
-        # Open file from storage - this uses boto3 internally
-        file_obj = default_storage.open(file_field.name, 'rb')
+        # Try to open the file directly
+        file_obj = default_storage.open(file_name, 'rb')
+        logger.info(f"Successfully opened file: {file_name}")
         
         # Get content type
-        content_type, _ = mimetypes.guess_type(filename)
-        if content_type is None:
-            content_type = 'application/octet-stream'
+        content_type, _ = mimetypes.guess_type(download_filename)
+        if not content_type:
+            content_type = 'application/pdf'  # Default to PDF
         
-        logger.info(f"Content type: {content_type}")
-        
-        # Create streaming response with optimized chunks
-        def file_chunks(file_obj, chunk_size=65536):
-            """Generator to read file in chunks"""
+        # Create file iterator
+        def file_iterator(file_obj, chunk_size=8192):
             try:
-                chunk_count = 0
                 while True:
                     chunk = file_obj.read(chunk_size)
                     if not chunk:
                         break
-                    chunk_count += 1
-                    if chunk_count % 100 == 0:  # Log every 100 chunks (6.4MB)
-                        logger.info(f"Streamed {chunk_count} chunks ({chunk_count * chunk_size / (1024*1024):.1f} MB)")
                     yield chunk
-                logger.info(f"Completed streaming {chunk_count} chunks")
             finally:
-                try:
-                    file_obj.close()
-                except:
-                    pass
+                file_obj.close()
         
+        # Create response
         response = StreamingHttpResponse(
-            file_chunks(file_obj, chunk_size=65536),  # 64KB chunks
+            file_iterator(file_obj),
             content_type=content_type
         )
         
-        # Set proper filename for download
-        safe_filename = smart_str(filename.replace('"', ''))
+        # Set download headers
+        safe_filename = smart_str(download_filename.replace('"', ''))
         response['Content-Disposition'] = f'attachment; filename="{safe_filename}"'
         
-        # Add content length if available
+        # Add file size if available
         try:
-            file_size = default_storage.size(file_field.name)
+            file_size = default_storage.size(file_name)
             response['Content-Length'] = str(file_size)
-            logger.info(f"Set Content-Length: {file_size}")
-        except Exception as e:
-            logger.warning(f"Could not get file size for {file_field.name}: {str(e)}")
+        except:
+            pass  # Size not critical
         
-        # Add headers to prevent caching and ensure download
+        # Prevent caching
         response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response['Pragma'] = 'no-cache'
         response['Expires'] = '0'
-        response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
         
-        # Add CORS headers for cross-origin downloads if needed
-        response['Access-Control-Allow-Origin'] = '*'
-        response['Access-Control-Allow-Headers'] = 'Content-Disposition'
-        
-        logger.info(f"Successfully created streaming response for: {filename}")
+        logger.info(f"Returning download response for: {download_filename}")
         return response
         
     except Exception as e:
-        logger.error(f"Error in direct S3 stream for {file_field.name}: {str(e)}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        from django.http import Http404
-        raise Http404(f"Erro ao acessar o arquivo: {str(e)}")
+        logger.error(f"Error accessing file {file_name}: {str(e)}")
+        raise Http404(f"Erro ao acessar arquivo: {str(e)}")
