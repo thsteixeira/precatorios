@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.core.management import call_command
 import tempfile
 import os
+import logging
 from io import StringIO
 from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo, FaseHonorariosContratuais, TipoDiligencia, Diligencias, PedidoRequerimento
 from .forms import (
@@ -18,6 +19,8 @@ from .forms import (
     AlvaraSimpleForm, FaseForm, TipoForm, FaseHonorariosContratuaisForm, TipoDiligenciaForm,
     DiligenciasForm, DiligenciasUpdateForm, PedidoRequerimentoForm
 )
+
+logger = logging.getLogger(__name__)
 
 # ===============================
 # AUTHENTICATION VIEWS
@@ -325,11 +328,37 @@ def precatorio_detalhe_view(request, precatorio_cnj):
     
     if request.method == 'POST':
         if 'edit_precatorio' in request.POST:
-            # Handle precatorio editing
+            # Handle precatorio editing with explicit file management
+            old_file = None
+            if precatorio.integra_precatorio:
+                old_file = precatorio.integra_precatorio.name
+                
             precatorio_form = PrecatorioForm(request.POST, request.FILES, instance=precatorio)
             if precatorio_form.is_valid():
-                precatorio_form.save()
-                messages.success(request, f'Precatório {precatorio.cnj} atualizado com sucesso!')
+                # Check if a new file was uploaded
+                new_file_uploaded = 'integra_precatorio' in request.FILES
+                
+                if new_file_uploaded and old_file:
+                    # Delete the old file before saving the new one
+                    try:
+                        from django.core.files.storage import default_storage
+                        if default_storage.exists(old_file):
+                            default_storage.delete(old_file)
+                            logger.info(f"Manually deleted old file: {old_file}")
+                    except Exception as e:
+                        logger.error(f"Error deleting old file manually: {str(e)}")
+                
+                # Save the form
+                updated_precatorio = precatorio_form.save()
+                
+                # Force refresh the instance to ensure we have the latest file info
+                updated_precatorio.refresh_from_db()
+                
+                if new_file_uploaded:
+                    messages.success(request, f'Precatório {precatorio.cnj} atualizado com sucesso! Novo arquivo carregado.')
+                else:
+                    messages.success(request, f'Precatório {precatorio.cnj} atualizado com sucesso!')
+                    
                 return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
             else:
                 messages.error(request, 'Por favor, corrija os erros abaixo.')
@@ -2927,9 +2956,11 @@ def download_precatorio_file(request, precatorio_cnj):
     Enhanced with large file support and proper error handling
     """
     from .storage.utils import handle_large_file_download, force_file_refresh
+    from django.core.files.storage import default_storage
     
-    # Get precatorio object
+    # Get precatorio object and force refresh from database
     precatorio = get_object_or_404(Precatorio, cnj=precatorio_cnj)
+    precatorio.refresh_from_db()  # Force fresh data from database
     
     # Check if file exists
     if not precatorio.integra_precatorio:
@@ -2937,6 +2968,15 @@ def download_precatorio_file(request, precatorio_cnj):
         return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
     
     try:
+        # Log current file info for debugging
+        logger.info(f"Downloading file for precatorio {precatorio_cnj}: {precatorio.integra_precatorio.name}")
+        
+        # Verify file exists in storage
+        if not default_storage.exists(precatorio.integra_precatorio.name):
+            logger.error(f"File not found in storage: {precatorio.integra_precatorio.name}")
+            messages.error(request, "Arquivo não encontrado no armazenamento.")
+            return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
+        
         # Force refresh file metadata to ensure we have the latest version
         force_file_refresh(precatorio.integra_precatorio)
         
@@ -2947,5 +2987,6 @@ def download_precatorio_file(request, precatorio_cnj):
             filename=f"precatorio_{precatorio.cnj.replace('/', '_')}.pdf"
         )
     except Exception as e:
+        logger.error(f"Error downloading file for {precatorio_cnj}: {str(e)}")
         messages.error(request, f"Erro ao baixar arquivo: {str(e)}")
         return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
