@@ -209,21 +209,56 @@ elif ENVIRONMENT in ['test', 'production']:
         
         AWS_DEFAULT_ACL = 'private'
         AWS_S3_FILE_OVERWRITE = False
+        
+        # Enhanced S3 Configuration for Large Files (50MB+)
         AWS_S3_OBJECT_PARAMETERS = {
             'CacheControl': 'max-age=86400',
         }
         
-        # Use S3 for media files
-        DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+        # Multipart Upload Configuration for Large Files
+        AWS_S3_MULTIPART_THRESHOLD = 1024 * 1024 * 25  # 25MB threshold for multipart
+        AWS_S3_MULTIPART_CHUNKSIZE = 1024 * 1024 * 25  # 25MB chunk size
+        AWS_S3_MAX_MEMORY_SIZE = 1024 * 1024 * 25       # 25MB max memory per chunk
+        
+        # Transfer Configuration for Reliability
+        AWS_S3_USE_THREADS = True
+        AWS_S3_MAX_CONCURRENCY = 10
+        AWS_S3_MAX_IO_QUEUE = 1000
+        
+        # URL Configuration for Downloads
+        AWS_S3_URL_PROTOCOL = 'https:'
+        AWS_QUERYSTRING_AUTH = True          # Generate signed URLs for private files
+        AWS_QUERYSTRING_EXPIRE = 3600        # URLs expire in 1 hour
+        AWS_S3_SIGNATURE_VERSION = 's3v4'    # Use latest signature version
+        
+        # Connection and Retry Configuration
+        AWS_S3_RETRIES = {
+            'max_attempts': 10,
+            'mode': 'adaptive'
+        }
+        
+        # Use S3 for media files with custom storage class
+        DEFAULT_FILE_STORAGE = 'precapp.storage.backends.MediaS3Storage'
         MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION}/'
     else:
         # Fallback to local filesystem for test/production
         MEDIA_ROOT = config('MEDIA_ROOT_PATH', default='/var/www/precatorios/media')
 
-# File upload settings
-FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB in bytes
-DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB in bytes
+# File upload settings - Enhanced for Large Files
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 50     # 50MB in bytes (corrected limit)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 50     # 50MB in bytes (corrected limit)
 FILE_UPLOAD_PERMISSIONS = 0o644
+
+# Additional upload settings for better handling
+FILE_UPLOAD_TEMP_DIR = None  # Use system temp directory
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.MemoryFileUploadHandler',
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+]
+
+# Session and CSRF settings for large uploads
+SESSION_COOKIE_AGE = 7200    # 2 hours for large file uploads
+CSRF_COOKIE_AGE = 7200       # 2 hours for large file uploads
 
 # Authentication settings
 LOGIN_URL = 'login'

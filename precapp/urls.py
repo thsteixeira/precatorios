@@ -15,7 +15,8 @@ from .views import (
     tipos_diligencia_view, novo_tipo_diligencia_view, editar_tipo_diligencia_view,
     deletar_tipo_diligencia_view, ativar_tipo_diligencia_view,
     nova_diligencia_view, editar_diligencia_view, deletar_diligencia_view, marcar_diligencia_concluida_view,
-    diligencias_list_view, update_priority_by_age, import_excel_view, export_precatorios_excel, export_clientes_excel
+    diligencias_list_view, update_priority_by_age, import_excel_view, export_precatorios_excel, export_clientes_excel,
+    download_precatorio_file
 )
 
 urlpatterns = [
@@ -31,6 +32,7 @@ urlpatterns = [
     path('precatorios/export/', export_precatorios_excel, name='export_precatorios_excel'),
     path('precatorios/<str:precatorio_cnj>/', precatorio_detalhe_view, name='precatorio_detalhe'),
     path('precatorios/<str:precatorio_cnj>/delete/', delete_precatorio_view, name='delete_precatorio'),
+    path('precatorios/<str:precatorio_cnj>/download/', download_precatorio_file, name='download_precatorio_file'),
     path('clientes/', clientes_view, name='clientes'),
     path('clientes/export/', export_clientes_excel, name='export_clientes_excel'),
     path('clientes/update-priority/', update_priority_by_age, name='update_priority_by_age'),

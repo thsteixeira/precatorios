@@ -310,7 +310,7 @@
                         <div class="col-md-6 mb-3">
                             <strong><i class="fas fa-file-pdf me-1"></i>Arquivo da Íntegra do Precatório:</strong><br>
                             {% if precatorio.integra_precatorio %}
-                                <a href="{{ precatorio.integra_precatorio.url }}" target="_blank" class="btn btn-outline-danger btn-sm">
+                                <a href="{% url 'download_precatorio_file' precatorio.cnj %}" target="_blank" class="btn btn-outline-danger btn-sm">
                                     <i class="fas fa-download me-1"></i>Baixar PDF
                                 </a>
                                 <small class="text-muted d-block mt-1">{{ precatorio.integra_precatorio.name|slice:"20:" }}</small>

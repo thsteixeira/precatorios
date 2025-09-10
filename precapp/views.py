@@ -2914,3 +2914,35 @@ def export_clientes_excel(request):
     wb.save(response)
     
     return response
+
+
+# ===============================
+# FILE DOWNLOAD VIEWS
+# ===============================
+
+@login_required
+def download_precatorio_file(request, precatorio_cnj):
+    """
+    Download the integra_precatorio file for a specific precatorio
+    Enhanced with large file support and proper error handling
+    """
+    from .storage.utils import handle_large_file_download
+    
+    # Get precatorio object
+    precatorio = get_object_or_404(Precatorio, cnj=precatorio_cnj)
+    
+    # Check if file exists
+    if not precatorio.integra_precatorio:
+        messages.error(request, "Nenhum arquivo encontrado para este precatório.")
+        return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
+    
+    try:
+        # Use enhanced file download handler
+        return handle_large_file_download(
+            request, 
+            precatorio.integra_precatorio,
+            filename=f"precatorio_{precatorio.cnj.replace('/', '_')}.pdf"
+        )
+    except Exception as e:
+        messages.error(request, f"Erro ao baixar arquivo: {str(e)}")
+        return redirect('precatorio_detalhe', precatorio_cnj=precatorio_cnj)
