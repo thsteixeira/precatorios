@@ -341,24 +341,100 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <strong><i class="fas fa-file-pdf me-1"></i>Arquivo da Íntegra do Precatório:</strong><br>
-                            {% if precatorio.integra_precatorio %}
-                                <a href="{% url 'download_precatorio_file' precatorio.cnj %}" target="_blank" class="btn btn-outline-danger btn-sm">
-                                    <i class="fas fa-download me-1"></i>Baixar PDF
-                                </a>
-                                <small class="text-muted d-block mt-1">{{ precatorio.integra_precatorio.name|slice:"20:" }}</small>
-                            {% else %}
-                                <span class="text-muted">Nenhum arquivo disponível</span>
-                            {% endif %}
+                            
+                            <!-- File Display -->
+                            <div id="file-display">
+                                {% if precatorio.integra_precatorio %}
+                                    <div class="btn-group" role="group" aria-label="Ações do arquivo">
+                                        <a href="{% url 'download_precatorio_file' precatorio.cnj %}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-download me-1"></i>Baixar PDF
+                                        </a>
+                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="toggleFileEdit()">
+                                            <i class="fas fa-edit me-1"></i>Substituir
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmFileDelete()">
+                                            <i class="fas fa-trash me-1"></i>Excluir
+                                        </button>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">{{ precatorio.integra_precatorio.name|slice:"20:" }}</small>
+                                {% else %}
+                                    <span class="text-muted d-block mb-2">Nenhum arquivo disponível</span>
+                                    <button type="button" class="btn btn-outline-success btn-sm" onclick="toggleFileEdit()">
+                                        <i class="fas fa-upload me-1"></i>Enviar Arquivo
+                                    </button>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- File Edit Form -->
+                            <div id="file-edit" style="display: none;">
+                                <form method="post" enctype="multipart/form-data" class="inline-edit-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="update_file" value="1">
+                                    <div class="mb-2">
+                                        <input type="file" name="integra_precatorio" class="form-control" accept=".pdf" required>
+                                        <small class="form-text text-muted">
+                                            {% if precatorio.integra_precatorio %}
+                                                Selecione um arquivo PDF para substituir o arquivo atual
+                                            {% else %}
+                                                Selecione um arquivo PDF para enviar
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="fas fa-save me-1"></i>
+                                            {% if precatorio.integra_precatorio %}Substituir{% else %}Enviar{% endif %}
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="toggleFileEdit()">
+                                            <i class="fas fa-times me-1"></i>Cancelar
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- File Delete Form (hidden) -->
+                            <form id="delete-file-form" method="post" style="display: none;">
+                                {% csrf_token %}
+                                <input type="hidden" name="delete_file" value="1">
+                            </form>
                         </div>
                         <div class="col-12 mb-3">
-                            <strong><i class="fas fa-comment me-1"></i>Observações:</strong><br>
-                            {% if precatorio.observacao %}
-                                <div class="border rounded p-3 bg-light">
-                                    {{ precatorio.observacao|linebreaks }}
-                                </div>
-                            {% else %}
-                                <span class="text-muted">Nenhuma observação</span>
-                            {% endif %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <strong><i class="fas fa-comment me-1"></i>Observações:</strong>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleObservacaoEdit()">
+                                    <i class="fas fa-edit me-1"></i>Editar Observações
+                                </button>
+                            </div>
+                            
+                            <!-- Observacao Display -->
+                            <div id="observacao-display">
+                                {% if precatorio.observacao %}
+                                    <div class="border rounded p-3 bg-light">
+                                        {{ precatorio.observacao|linebreaks }}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">Nenhuma observação</span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Observacao Edit Form -->
+                            <div id="observacao-edit" style="display: none;">
+                                <form method="post" class="inline-edit-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="update_observacao" value="1">
+                                    <div class="mb-2">
+                                        <textarea name="observacao" class="form-control" rows="4" placeholder="Digite observações gerais sobre o precatório...">{{ precatorio.observacao|default:"" }}</textarea>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="fas fa-save me-1"></i>Salvar
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="toggleObservacaoEdit()">
+                                            <i class="fas fa-times me-1"></i>Cancelar
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                     
@@ -1645,5 +1721,56 @@
         font-size: 0.875rem;
         letter-spacing: 0.5px;
     }
+    
+    .inline-edit-form {
+        margin-top: 10px;
+    }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleObservacaoEdit() {
+    const display = document.getElementById('observacao-display');
+    const edit = document.getElementById('observacao-edit');
+    
+    if (display.style.display === 'none') {
+        display.style.display = 'block';
+        edit.style.display = 'none';
+    } else {
+        display.style.display = 'none';
+        edit.style.display = 'block';
+        // Focus on the textarea when editing
+        const textarea = edit.querySelector('textarea');
+        if (textarea) {
+            textarea.focus();
+        }
+    }
+}
+
+function toggleFileEdit() {
+    const display = document.getElementById('file-display');
+    const edit = document.getElementById('file-edit');
+    
+    if (display.style.display === 'none') {
+        display.style.display = 'block';
+        edit.style.display = 'none';
+    } else {
+        display.style.display = 'none';
+        edit.style.display = 'block';
+        // Focus on the file input when editing
+        const fileInput = edit.querySelector('input[type="file"]');
+        if (fileInput) {
+            fileInput.focus();
+        }
+    }
+}
+
+function confirmFileDelete() {
+    if (confirm('Tem certeza que deseja excluir o arquivo PDF? Esta ação não pode ser desfeita.')) {
+        // Submit the hidden delete form
+        document.getElementById('delete-file-form').submit();
+    }
+}
+</script>
 {% endblock %}

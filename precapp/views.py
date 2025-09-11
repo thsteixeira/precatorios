@@ -383,6 +383,71 @@ def precatorio_detalhe_view(request, precatorio_cnj):
             else:
                 messages.error(request, 'Por favor, corrija os erros abaixo.')
         
+        elif 'update_observacao' in request.POST:
+            # Handle inline observacao update
+            observacao = request.POST.get('observacao', '').strip()
+            precatorio.observacao = observacao
+            precatorio.save(update_fields=['observacao'])
+            if observacao:
+                messages.success(request, 'Observações atualizadas com sucesso!')
+            else:
+                messages.success(request, 'Observações removidas com sucesso!')
+            return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
+            
+        elif 'update_file' in request.POST:
+            # Handle inline file update
+            if 'integra_precatorio' in request.FILES:
+                old_file = None
+                if precatorio.integra_precatorio:
+                    old_file = precatorio.integra_precatorio.name
+                
+                # Delete the old file before saving the new one
+                if old_file:
+                    try:
+                        from django.core.files.storage import default_storage
+                        if default_storage.exists(old_file):
+                            default_storage.delete(old_file)
+                            logger.info(f"Manually deleted old file: {old_file}")
+                    except Exception as e:
+                        logger.error(f"Error deleting old file manually: {str(e)}")
+                
+                # Save the new file
+                uploaded_file = request.FILES['integra_precatorio']
+                precatorio.integra_precatorio = uploaded_file
+                precatorio.integra_precatorio_filename = uploaded_file.name
+                precatorio.save(update_fields=['integra_precatorio', 'integra_precatorio_filename'])
+                
+                messages.success(request, f'Arquivo "{uploaded_file.name}" enviado com sucesso!')
+                logger.info(f"Stored original filename: {uploaded_file.name}")
+            else:
+                messages.error(request, 'Nenhum arquivo foi selecionado.')
+            return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
+            
+        elif 'delete_file' in request.POST:
+            # Handle inline file deletion
+            if precatorio.integra_precatorio:
+                old_file = precatorio.integra_precatorio.name
+                filename = precatorio.integra_precatorio_filename or "arquivo"
+                
+                # Delete the file from storage
+                try:
+                    from django.core.files.storage import default_storage
+                    if default_storage.exists(old_file):
+                        default_storage.delete(old_file)
+                        logger.info(f"Deleted file: {old_file}")
+                except Exception as e:
+                    logger.error(f"Error deleting file: {str(e)}")
+                
+                # Clear the file fields
+                precatorio.integra_precatorio = None
+                precatorio.integra_precatorio_filename = None
+                precatorio.save(update_fields=['integra_precatorio', 'integra_precatorio_filename'])
+                
+                messages.success(request, f'Arquivo "{filename}" excluído com sucesso!')
+            else:
+                messages.warning(request, 'Nenhum arquivo para excluir.')
+            return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
+        
         elif 'link_cliente' in request.POST:
             # Handle client linking
             client_search_form = ClienteSearchForm(request.POST)  # This creates the form with POST data
