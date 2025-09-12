@@ -326,6 +326,7 @@ class Precatorio(models.Model):
         ('parcial', 'Parcial'),
         ('quitado', 'Quitado'),
         ('vendido', 'Vendido'),
+        ('inaplicável', 'Inaplicável'),
     ]
     
     cnj = models.CharField(max_length=200, primary_key=True)

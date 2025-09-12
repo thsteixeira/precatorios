@@ -73,10 +73,9 @@
                         <label for="honorarios_sucumbenciais" class="form-label">Hon. Sucumbenciais</label>
                         <select class="form-control" id="honorarios_sucumbenciais" name="honorarios_sucumbenciais">
                             <option value="">Todos</option>
-                            <option value="pendente" {% if current_honorarios_sucumbenciais == 'pendente' %}selected{% endif %}>Pendente</option>
-                            <option value="parcial" {% if current_honorarios_sucumbenciais == 'parcial' %}selected{% endif %}>Parcial</option>
-                            <option value="quitado" {% if current_honorarios_sucumbenciais == 'quitado' %}selected{% endif %}>Quitado</option>
-                            <option value="vendido" {% if current_honorarios_sucumbenciais == 'vendido' %}selected{% endif %}>Vendido</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if current_honorarios_sucumbenciais == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-2">
