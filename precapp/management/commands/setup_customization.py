@@ -615,33 +615,61 @@ class Command(BaseCommand):
         
         tipos_pedido = [
             {
-                'nome': 'Expedição de Alvará',
-                'descricao': 'Pedido para expedição de alvará judicial de levantamento',
+                'nome': 'Prioridade por idade',
+                'descricao': 'Pedido para prioridade na tramitação devido à idade do requerente',
                 'cor': '#007bff',
                 'ordem': 1,
                 'ativo': True
             },
             {
-                'nome': 'Pedido de Atualização de Valores',
-                'descricao': 'Solicitação de atualização monetária dos valores',
-                'cor': '#28a745',
+                'nome': 'Prioridade por doença',
+                'descricao': 'Pedido para prioridade na tramitação devido à doença do requerente',
+                'cor': "#ff0000",
                 'ordem': 2,
+                'ativo': True
+            },
+            {
+                'nome': 'Acordo Principal',
+                'descricao': 'Pedido para homologação de acordo do crédito principal',
+                'cor': "#eeff00",
+                'ordem': 3,
+                'ativo': True
+            },
+            {
+                'nome': 'Acordo Honorários Contratuais',
+                'descricao': 'Pedido para homologação de acordo dos honorários contratuais',
+                'cor': "#37ff00",
+                'ordem': 4,
+                'ativo': True
+            },
+            {
+                'nome': 'Acordo Honorários Sucumbenciais',
+                'descricao': 'Pedido para homologação de acordo dos honorários sucumbenciais',
+                'cor': "#d400ff",
+                'ordem': 5,
                 'ativo': True
             },
             {
                 'nome': 'Execução dos Honorários Contratuais',
                 'descricao': 'Execução judicial dos honorários contratuais devidos',
                 'cor': '#fd7e14',
-                'ordem': 3,
+                'ordem': 6,
                 'ativo': True
             },
             {
                 'nome': 'Cessão de Crédito',
                 'descricao': 'Pedido de cessão de direitos creditórios do precatório',
                 'cor': '#6f42c1',
-                'ordem': 4,
+                'ordem': 7,
                 'ativo': True
-            }
+            },
+            {
+                'nome': 'Repartição de Honorários',
+                'descricao': 'Pedido para repartição dos honorários entre advogados',
+                'cor': "#4000ff",
+                'ordem': 8,
+                'ativo': True
+            },
         ]
         
         created_count = 0

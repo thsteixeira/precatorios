@@ -52,8 +52,8 @@ class SetupCustomizationCommandTest(TestCase):
         self.assertEqual(Fase.objects.count(), 11)  # 4 requerimento + 7 alvara
         self.assertEqual(FaseHonorariosContratuais.objects.count(), 5)  # Updated from 4 to 5
         self.assertEqual(TipoDiligencia.objects.count(), 5)
-        self.assertEqual(Tipo.objects.count(), 7)  # Updated from 4 to 7
-        self.assertEqual(PedidoRequerimento.objects.count(), 4)
+        self.assertEqual(Tipo.objects.count(), 7)  # Updated from 3 to 7
+        self.assertEqual(PedidoRequerimento.objects.count(), 8)  # Updated from 4 to 8
 
         # Check output contains success message
         output = out.getvalue()
@@ -225,27 +225,31 @@ class SetupCustomizationCommandTest(TestCase):
 
         # Verify all request types were created
         pedidos = PedidoRequerimento.objects.all().order_by('ordem')
-        self.assertEqual(pedidos.count(), 4)
+        self.assertEqual(pedidos.count(), 8)  # Updated from 4 to 8
 
         expected_names = [
-            'Expedição de Alvará',
-            'Pedido de Atualização de Valores',
+            'Prioridade por idade',
+            'Prioridade por doença',
+            'Acordo Principal',
+            'Acordo Honorários Contratuais',
+            'Acordo Honorários Sucumbenciais',
             'Execução dos Honorários Contratuais',
-            'Cessão de Crédito'
+            'Cessão de Crédito',
+            'Repartição de Honorários'
         ]
         actual_names = list(pedidos.values_list('nome', flat=True))
         self.assertEqual(actual_names, expected_names)
 
         # Test specific attributes
-        expedicao = PedidoRequerimento.objects.get(nome='Expedição de Alvará')
-        self.assertEqual(expedicao.descricao, 'Pedido para expedição de alvará judicial de levantamento')
-        self.assertEqual(expedicao.cor, '#007bff')
-        self.assertTrue(expedicao.ativo)
-        self.assertEqual(expedicao.ordem, 1)
+        prioridade_idade = PedidoRequerimento.objects.get(nome='Prioridade por idade')
+        self.assertEqual(prioridade_idade.descricao, 'Pedido para prioridade na tramitação devido à idade do requerente')
+        self.assertEqual(prioridade_idade.cor, '#007bff')
+        self.assertTrue(prioridade_idade.ativo)
+        self.assertEqual(prioridade_idade.ordem, 1)
 
         cessao = PedidoRequerimento.objects.get(nome='Cessão de Crédito')
         self.assertEqual(cessao.cor, '#6f42c1')
-        self.assertEqual(cessao.ordem, 4)
+        self.assertEqual(cessao.ordem, 7)
         self.assertTrue(cessao.ativo)
 
     def test_partial_existing_data(self):
@@ -410,12 +414,12 @@ class SetupCustomizationCommandTest(TestCase):
         # Test Tipo ordem
         tipos = Tipo.objects.all().order_by('ordem')
         tipo_ordens = list(tipos.values_list('ordem', flat=True))
-        self.assertEqual(tipo_ordens, [1, 2, 3, 4, 5, 6, 7])  # Updated from [1, 2, 3, 4] to [1, 2, 3, 4, 5, 6, 7]
+        self.assertEqual(tipo_ordens, [1, 2, 3, 4, 5, 6, 7])  # Updated from [1, 2, 3] to [1, 2, 3, 4, 5, 6, 7]
         
         # Test PedidoRequerimento ordem
         pedidos = PedidoRequerimento.objects.all().order_by('ordem')
         pedido_ordens = list(pedidos.values_list('ordem', flat=True))
-        self.assertEqual(pedido_ordens, [1, 2, 3, 4])
+        self.assertEqual(pedido_ordens, [1, 2, 3, 4, 5, 6, 7, 8])  # Updated from [1, 2, 3, 4] to [1, 2, 3, 4, 5, 6, 7, 8]
 
     def test_all_items_active_by_default(self):
         """Test that all created items are active by default where applicable."""
