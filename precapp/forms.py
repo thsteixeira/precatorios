@@ -781,6 +781,12 @@ class ClienteForm(forms.ModelForm):
             - Used for expedited processing cases
             - Checkbox input with Bootstrap styling
             
+        falecido (BooleanField): Deceased status indicator
+            - Optional nullable field (can be True, False, or None)
+            - Used to mark clients who have passed away
+            - Checkbox input with Bootstrap styling
+            - Affects legal processing and inheritance rights
+            
     Validation:
         - CPF: 11-digit validation with algorithm verification
         - CNPJ: 14-digit validation with algorithm verification
@@ -898,7 +904,7 @@ class ClienteForm(forms.ModelForm):
 
     class Meta:
         model = Cliente
-        fields = ["cpf", "nome", "nascimento", "prioridade", "observacao"]
+        fields = ["cpf", "nome", "nascimento", "prioridade", "falecido", "observacao"]
         
         widgets = {
             'nome': forms.TextInput(attrs={
@@ -907,6 +913,9 @@ class ClienteForm(forms.ModelForm):
             }),
             'nascimento': BrazilianDateInput(),
             'prioridade': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'falecido': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
             'observacao': forms.Textarea(attrs={
@@ -920,6 +929,7 @@ class ClienteForm(forms.ModelForm):
             'nome': 'Nome Completo',
             'nascimento': 'Data de Nascimento',
             'prioridade': 'Cliente com Prioridade Legal',
+            'falecido': 'Falecido(a)',
             'observacao': 'Observações',
         }
 
@@ -988,6 +998,13 @@ class ClienteSimpleForm(forms.ModelForm):
             - Checkbox input with Bootstrap styling
             - Used for special case handling
             - Inherited from model definition
+            
+        falecido (BooleanField): Deceased status indicator
+            - Optional nullable field (can be True, False, or None)
+            - Used to mark clients who have passed away
+            - Checkbox input with Bootstrap styling
+            - Inherited from model definition
+            - Affects legal processing and inheritance rights
             
     Validation:
         - CPF: 11-digit validation with Brazilian algorithm
@@ -1080,7 +1097,7 @@ class ClienteSimpleForm(forms.ModelForm):
 
     class Meta:
         model = Cliente
-        fields = ["cpf", "nome", "nascimento", "prioridade", "observacao"]
+        fields = ["cpf", "nome", "nascimento", "prioridade", "falecido", "observacao"]
         
         widgets = {
             'nome': forms.TextInput(attrs={
@@ -1089,6 +1106,9 @@ class ClienteSimpleForm(forms.ModelForm):
             }),
             'nascimento': BrazilianDateInput(),
             'prioridade': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'falecido': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
             'observacao': forms.Textarea(attrs={
@@ -1102,6 +1122,7 @@ class ClienteSimpleForm(forms.ModelForm):
             'nome': 'Nome Completo',
             'nascimento': 'Data de Nascimento',
             'prioridade': 'Cliente com Prioridade Legal',
+            'falecido': 'Falecido(a)',
             'observacao': 'Observações',
         }
 

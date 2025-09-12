@@ -170,14 +170,14 @@ class PrecatorioAdmin(admin.ModelAdmin):
 class ClienteAdmin(admin.ModelAdmin):
     """Admin configuration for Cliente model"""
     
-    list_display = ('cpf', 'nome', 'nascimento', 'idade', 'prioridade', 'has_observacao', 'precatorios_count', 'diligencias_count')
-    list_filter = ('prioridade', 'nascimento')
+    list_display = ('cpf', 'nome', 'nascimento', 'idade', 'prioridade', 'falecido_status', 'has_observacao', 'precatorios_count', 'diligencias_count')
+    list_filter = ('prioridade', 'falecido', 'nascimento')
     search_fields = ('cpf', 'nome')
     ordering = ('nome',)
     
     fieldsets = (
         ('Dados Pessoais', {
-            'fields': ('cpf', 'nome', 'nascimento', 'prioridade')
+            'fields': ('cpf', 'nome', 'nascimento', 'prioridade', 'falecido')
         }),
         ('Observações', {
             'fields': ('observacao',),
@@ -202,6 +202,16 @@ class ClienteAdmin(admin.ModelAdmin):
             return f'{age} anos'
         return '-'
     idade.short_description = 'Idade'
+    
+    def falecido_status(self, obj):
+        """Display deceased status with visual indicators"""
+        if obj.falecido is True:
+            return format_html('<span style="color: red;" title="Cliente falecido">✝️ Sim</span>')
+        elif obj.falecido is False:
+            return format_html('<span style="color: green;" title="Cliente vivo">✓ Não</span>')
+        else:
+            return format_html('<span style="color: #ccc;" title="Status não informado">❓ N/I</span>')
+    falecido_status.short_description = 'Falecido(a)'
     
     def has_observacao(self, obj):
         """Display if client has observations"""

@@ -1694,7 +1694,7 @@ class AlvaraSimpleFormComprehensiveTest(TestCase):
         """Test that form fields have correct labels"""
         form = AlvaraSimpleForm()
         
-        self.assertEqual(form.fields['cliente_cpf'].label, 'CPF do Cliente')
+        self.assertEqual(form.fields['cliente_cpf'].label, 'CPF/CNPJ do Cliente')
         self.assertEqual(form.fields['valor_principal'].label, 'Valor Principal')
         self.assertEqual(form.fields['honorarios_contratuais'].label, 'Honorários Contratuais')
         self.assertEqual(form.fields['honorarios_sucumbenciais'].label, 'Honorários Sucumbenciais')
@@ -1706,7 +1706,7 @@ class AlvaraSimpleFormComprehensiveTest(TestCase):
         """Test that form fields have appropriate help texts"""
         form = AlvaraSimpleForm()
         
-        self.assertIn('CPF do cliente', form.fields['cliente_cpf'].help_text)
+        self.assertIn('CPF ou CNPJ do cliente', form.fields['cliente_cpf'].help_text)
         self.assertIn('reais', form.fields['valor_principal'].help_text)
         self.assertIn('específica para acompanhar', form.fields['fase_honorarios_contratuais'].help_text)
     
@@ -1928,7 +1928,7 @@ class RequerimentoFormComprehensiveTest(TestCase):
         # Test cliente_cpf field configuration
         cpf_field = form.fields['cliente_cpf']
         self.assertEqual(cpf_field.max_length, 18)
-        self.assertEqual(cpf_field.label, 'CPF do Cliente')
+        self.assertEqual(cpf_field.label, 'CPF/CNPJ do Cliente')
         self.assertIn('form-control', cpf_field.widget.attrs['class'])
         self.assertIn('000.000.000-00', cpf_field.widget.attrs['placeholder'])
         
@@ -2987,7 +2987,7 @@ class ClienteFormComprehensiveTest(TestCase):
         form = ClienteForm()
         
         # Check Meta.fields
-        expected_fields = ["cpf", "nome", "nascimento", "prioridade", "observacao"]
+        expected_fields = ["cpf", "nome", "nascimento", "prioridade", "falecido", "observacao"]
         self.assertEqual(form._meta.fields, expected_fields)
         
         # Check that additional fields (not in Meta.fields) are still in form
@@ -3029,6 +3029,44 @@ class ClienteFormComprehensiveTest(TestCase):
         form = ClienteForm(data=data)
         self.assertTrue(form.is_valid())
         self.assertEqual(form.cleaned_data['precatorio_cnj'], precatorio2.cnj)
+    
+    def test_falecido_field_configuration(self):
+        """Test falecido field is properly configured as checkbox"""
+        form = ClienteForm()
+        falecido_field = form.fields['falecido']
+        
+        # Test field type and properties
+        self.assertIsInstance(falecido_field, forms.BooleanField)
+        self.assertFalse(falecido_field.required)  # Should be optional
+        self.assertEqual(falecido_field.label, 'Falecido(a)')
+        
+        # Test widget type and attributes
+        falecido_widget = falecido_field.widget
+        self.assertIsInstance(falecido_widget, forms.CheckboxInput)
+        self.assertEqual(falecido_widget.attrs['class'], 'form-check-input')
+    
+    def test_falecido_field_validation(self):
+        """Test falecido field accepts valid boolean values"""
+        # Test with falecido=True
+        data = self.valid_form_data.copy()
+        data['falecido'] = True
+        form = ClienteForm(data=data)
+        self.assertTrue(form.is_valid())
+        self.assertTrue(form.cleaned_data['falecido'])
+        
+        # Test with falecido=False
+        data['falecido'] = False
+        form = ClienteForm(data=data)
+        self.assertTrue(form.is_valid())
+        self.assertFalse(form.cleaned_data['falecido'])
+        
+        # Test with falecido not provided (should be None/False)
+        data = self.valid_form_data.copy()
+        if 'falecido' in data:
+            del data['falecido']
+        form = ClienteForm(data=data)
+        self.assertTrue(form.is_valid())
+        self.assertFalse(form.cleaned_data.get('falecido', False))
 
 
 class TipoDiligenciaFormTest(TestCase):
@@ -3784,7 +3822,7 @@ class ClienteSimpleFormComprehensiveTest(TestCase):
         form = ClienteSimpleForm()
         
         # Test form has correct fields
-        expected_fields = ['cpf', 'nome', 'nascimento', 'prioridade', 'observacao']
+        expected_fields = ['cpf', 'nome', 'nascimento', 'prioridade', 'falecido', 'observacao']
         self.assertEqual(list(form.fields.keys()), expected_fields)
         
         # Test CPF field configuration
@@ -4051,7 +4089,7 @@ class ClienteSimpleFormComprehensiveTest(TestCase):
         self.assertEqual(form._meta.model, Cliente)
         
         # Test fields configuration
-        expected_fields = ["cpf", "nome", "nascimento", "prioridade", "observacao"]
+        expected_fields = ["cpf", "nome", "nascimento", "prioridade", "falecido", "observacao"]
         self.assertEqual(form._meta.fields, expected_fields)
         
         # Test widget configuration
@@ -4086,6 +4124,47 @@ class ClienteSimpleFormComprehensiveTest(TestCase):
         pattern = cpf_widget.attrs['pattern']
         self.assertIn(r'\d{3}\.\d{3}\.\d{3}-\d{2}', pattern)  # Formatted
         self.assertIn(r'\d{11}', pattern)  # Unformatted
+    
+    def test_falecido_field_configuration(self):
+        """Test falecido field is properly configured as checkbox"""
+        form = ClienteSimpleForm()
+        falecido_field = form.fields['falecido']
+        
+        # Test field type and properties
+        self.assertIsInstance(falecido_field, forms.BooleanField)
+        self.assertFalse(falecido_field.required)  # Should be optional
+        self.assertEqual(falecido_field.label, 'Falecido(a)')
+        
+        # Test widget type and attributes
+        falecido_widget = falecido_field.widget
+        self.assertIsInstance(falecido_widget, forms.CheckboxInput)
+        self.assertEqual(falecido_widget.attrs['class'], 'form-check-input')
+    
+    def test_falecido_field_validation(self):
+        """Test falecido field accepts valid boolean values"""
+        # Test with falecido=True
+        form_data = {
+            'cpf': '11144477735',
+            'nome': 'Cliente Teste',
+            'nascimento': '15/05/1990',
+            'prioridade': False,
+            'falecido': True
+        }
+        form = ClienteSimpleForm(data=form_data)
+        self.assertTrue(form.is_valid())
+        self.assertTrue(form.cleaned_data['falecido'])
+        
+        # Test with falecido=False
+        form_data['falecido'] = False
+        form = ClienteSimpleForm(data=form_data)
+        self.assertTrue(form.is_valid())
+        self.assertFalse(form.cleaned_data['falecido'])
+        
+        # Test with falecido not provided (should be None/False)
+        del form_data['falecido']
+        form = ClienteSimpleForm(data=form_data)
+        self.assertTrue(form.is_valid())
+        self.assertFalse(form.cleaned_data.get('falecido', False))
 
 
 class PrecatorioSearchFormComprehensiveTest(TestCase):

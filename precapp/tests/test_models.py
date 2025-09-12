@@ -1535,6 +1535,66 @@ class ClienteModelTest(TestCase):
         cliente_long_obs = Cliente.objects.create(**data_long_observacao)
         self.assertGreater(len(cliente_long_obs.observacao), 200)  # Verify the long text was stored
         self.assertIn('histórico médico', cliente_long_obs.observacao)
+        
+    def test_cliente_falecido_field(self):
+        """
+        Test the falecido field functionality.
+        
+        Validates that:
+        - Falecido field can be None (null=True)
+        - Falecido field can be True or False
+        - Falecido field doesn't affect model creation when empty
+        - Falecido field persists correctly when saved
+        - Default value is None/False for living clients
+        """
+        # Test with falecido=True (deceased client)
+        data_deceased = self.cliente_data.copy()
+        data_deceased['cpf'] = '55555555555'
+        data_deceased['falecido'] = True
+        
+        cliente_deceased = Cliente.objects.create(**data_deceased)
+        self.assertTrue(cliente_deceased.falecido)
+        
+        # Test with falecido=False (living client)
+        data_living = self.cliente_data.copy()
+        data_living['cpf'] = '66666666666'
+        data_living['falecido'] = False
+        
+        cliente_living = Cliente.objects.create(**data_living)
+        self.assertFalse(cliente_living.falecido)
+        
+        # Test without falecido field (should default to None)
+        data_without_falecido = self.cliente_data.copy()
+        data_without_falecido['cpf'] = '77777777777'
+        
+        cliente_without_falecido = Cliente.objects.create(**data_without_falecido)
+        self.assertIsNone(cliente_without_falecido.falecido)
+        
+        # Test that falecido field is valid in model validation
+        data_for_validation = self.cliente_data.copy()
+        data_for_validation['cpf'] = '88888888888'
+        data_for_validation['falecido'] = True
+        cliente_for_validation = Cliente(**data_for_validation)
+        cliente_for_validation.full_clean()  # Should not raise ValidationError
+        
+        # Test business logic: deceased clients should not have priority
+        # (This would typically be enforced at the business logic level, not model level)
+        data_deceased_priority = self.cliente_data.copy()
+        data_deceased_priority['cpf'] = '99999999999'
+        data_deceased_priority['falecido'] = True
+        data_deceased_priority['prioridade'] = False  # Deceased clients should not have priority
+        
+        cliente_deceased_no_priority = Cliente.objects.create(**data_deceased_priority)
+        self.assertTrue(cliente_deceased_no_priority.falecido)
+        self.assertFalse(cliente_deceased_no_priority.prioridade)
+        
+        # Test verbose name
+        falecido_field = Cliente._meta.get_field('falecido')
+        self.assertEqual(falecido_field.verbose_name, "Falecido(a)")
+        
+        # Test field properties
+        self.assertTrue(falecido_field.null)
+        self.assertTrue(falecido_field.blank)
 
 
 class AlvaraModelTest(TestCase):

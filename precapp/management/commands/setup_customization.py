@@ -670,6 +670,13 @@ class Command(BaseCommand):
                 'ordem': 8,
                 'ativo': True
             },
+            {
+                'nome': 'Habilitação de Herdeiros',
+                'descricao': 'Pedido para habilitação de herdeiros',
+                'cor': "#000000",
+                'ordem': 9,
+                'ativo': True
+            }
         ]
         
         created_count = 0

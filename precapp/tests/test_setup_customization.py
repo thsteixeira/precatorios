@@ -53,7 +53,7 @@ class SetupCustomizationCommandTest(TestCase):
         self.assertEqual(FaseHonorariosContratuais.objects.count(), 5)  # Updated from 4 to 5
         self.assertEqual(TipoDiligencia.objects.count(), 5)
         self.assertEqual(Tipo.objects.count(), 7)  # Updated from 3 to 7
-        self.assertEqual(PedidoRequerimento.objects.count(), 8)  # Updated from 4 to 8
+        self.assertEqual(PedidoRequerimento.objects.count(), 9)  # Updated from 8 to 9
 
         # Check output contains success message
         output = out.getvalue()
@@ -225,7 +225,7 @@ class SetupCustomizationCommandTest(TestCase):
 
         # Verify all request types were created
         pedidos = PedidoRequerimento.objects.all().order_by('ordem')
-        self.assertEqual(pedidos.count(), 8)  # Updated from 4 to 8
+        self.assertEqual(pedidos.count(), 9)  # Updated from 8 to 9
 
         expected_names = [
             'Prioridade por idade',
@@ -235,7 +235,8 @@ class SetupCustomizationCommandTest(TestCase):
             'Acordo Honorários Sucumbenciais',
             'Execução dos Honorários Contratuais',
             'Cessão de Crédito',
-            'Repartição de Honorários'
+            'Repartição de Honorários',
+            'Habilitação de Herdeiros'  # Added the 9th item
         ]
         actual_names = list(pedidos.values_list('nome', flat=True))
         self.assertEqual(actual_names, expected_names)
@@ -251,6 +252,11 @@ class SetupCustomizationCommandTest(TestCase):
         self.assertEqual(cessao.cor, '#6f42c1')
         self.assertEqual(cessao.ordem, 7)
         self.assertTrue(cessao.ativo)
+
+        habilitacao = PedidoRequerimento.objects.get(nome='Habilitação de Herdeiros')
+        self.assertEqual(habilitacao.cor, '#000000')
+        self.assertEqual(habilitacao.ordem, 9)
+        self.assertTrue(habilitacao.ativo)
 
     def test_partial_existing_data(self):
         """Test behavior when some data already exists."""
@@ -419,7 +425,7 @@ class SetupCustomizationCommandTest(TestCase):
         # Test PedidoRequerimento ordem
         pedidos = PedidoRequerimento.objects.all().order_by('ordem')
         pedido_ordens = list(pedidos.values_list('ordem', flat=True))
-        self.assertEqual(pedido_ordens, [1, 2, 3, 4, 5, 6, 7, 8])  # Updated from [1, 2, 3, 4] to [1, 2, 3, 4, 5, 6, 7, 8]
+        self.assertEqual(pedido_ordens, [1, 2, 3, 4, 5, 6, 7, 8, 9])  # Updated from [1, 2, 3, 4, 5, 6, 7, 8] to [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
     def test_all_items_active_by_default(self):
         """Test that all created items are active by default where applicable."""

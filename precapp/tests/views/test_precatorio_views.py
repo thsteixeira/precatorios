@@ -783,7 +783,10 @@ class PrecatorioDetalheViewTest(TestCase):
         # Should return form with errors
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context['is_editing'])
-        self.assertFormError(response, 'form', 'cnj', 'Este campo é obrigatório.')
+        
+        # Check that form has errors for the cnj field
+        self.assertTrue(response.context['form'].errors)
+        self.assertIn('cnj', response.context['form'].errors)
 
     # ============== CLIENT LINKING TESTS ==============
     

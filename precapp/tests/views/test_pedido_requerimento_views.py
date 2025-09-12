@@ -357,7 +357,10 @@ class PedidoRequerimentoViewsTest(TestCase):
         self.assertEqual(PedidoRequerimento.objects.count(), initial_count)
         
         # Check form errors
-        self.assertFormError(response, 'form', 'nome', 'Este campo é obrigatório.')
+        self.assertIn('form', response.context)
+        form = response.context['form']
+        self.assertIn('nome', form.errors)
+        self.assertIn('Este campo é obrigatório.', form.errors['nome'])
         
         # Check error message
         messages = list(get_messages(response.wsgi_request))

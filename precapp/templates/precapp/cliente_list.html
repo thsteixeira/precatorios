@@ -49,16 +49,24 @@
                             <input type="number" class="form-control" id="idade" name="idade" 
                                    placeholder="58" value="{{ current_idade }}" min="0" max="120">
                         </div>
-                        <div class="col-md-2">
-                            <label for="prioridade" class="form-label">Prioridade Cliente</label>
+                        <div class="col-md-1">
+                            <label for="prioridade" class="form-label">Prioridade</label>
                             <select class="form-control" id="prioridade" name="prioridade">
                                 <option value="">Todas</option>
                                 <option value="true" {% if current_prioridade == 'true' %}selected{% endif %}>Prioritário</option>
                                 <option value="false" {% if current_prioridade == 'false' %}selected{% endif %}>Normal</option>
                             </select>
                         </div>
+                        <div class="col-md-1">
+                            <label for="falecido" class="form-label">Status</label>
+                            <select class="form-control" id="falecido" name="falecido">
+                                <option value="">Todos</option>
+                                <option value="false" {% if current_falecido == 'false' %}selected{% endif %}>Vivo(a)</option>
+                                <option value="true" {% if current_falecido == 'true' %}selected{% endif %}>Falecido(a)</option>
+                            </select>
+                        </div>
                         <div class="col-md-2">
-                            <label for="requerimento_prioridade" class="form-label">Requerimento Prioridade</label>
+                            <label for="requerimento_prioridade" class="form-label">Req. Prioridade</label>
                             <select class="form-control" id="requerimento_prioridade" name="requerimento_prioridade">
                                 <option value="">Todos</option>
                                 <option value="deferido" {% if current_requerimento_prioridade == 'deferido' %}selected{% endif %}>Deferido</option>
@@ -109,6 +117,7 @@
                                 <th>CPF</th>
                                 <th>Data de Nascimento</th>
                                 <th>Prioridade Cliente</th>
+                                <th>Status</th>
                                 <th>Requerimento Prioridade</th>
                                 <th>Precatório</th>
                             </tr>
@@ -147,6 +156,17 @@
                                     {% else %}
                                         <span class="badge bg-secondary">
                                             <i class="fas fa-user"></i> Normal
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if cliente.falecido %}
+                                        <span class="badge bg-dark text-white">
+                                            <i class="fas fa-skull"></i> Falecido(a)
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success text-white">
+                                            <i class="fas fa-heart-pulse"></i> Vivo(a)
                                         </span>
                                     {% endif %}
                                 </td>

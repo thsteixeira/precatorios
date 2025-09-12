@@ -284,6 +284,14 @@ else:
     # Test and Production - Environment-based logging
     LOG_LEVEL = config('LOG_LEVEL', default='INFO')
 
+# Override log level for tests to reduce noise
+import sys
+if 'test' in sys.argv:
+    LOG_LEVEL = 'ERROR'  # Only show ERROR and CRITICAL messages during tests
+    # Disable Django warnings during tests
+    import logging
+    logging.disable(logging.WARNING)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -315,7 +323,22 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console', 'file'] if ENVIRONMENT != 'local' else ['console'],
-            'level': LOG_LEVEL,
+            'level': 'WARNING' if 'test' in sys.argv else LOG_LEVEL,  # Reduce Django noise during tests
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': [],
+            'level': 'INFO',  # This will disable SQL DEBUG messages
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': [],  # Suppress request logging during tests
+            'level': 'CRITICAL' if 'test' in sys.argv else 'WARNING',
+            'propagate': False,
+        },
+        'django.security.csrf': {
+            'handlers': [],  # Suppress CSRF warnings during tests
+            'level': 'CRITICAL' if 'test' in sys.argv else 'WARNING',
             'propagate': False,
         },
         'precapp': {

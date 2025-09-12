@@ -588,7 +588,7 @@
                                             {% endif %}
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-3">
                                         <div class="mb-3">
                                             <div class="form-check">
                                                 {{ cliente_form.prioridade }}
@@ -599,6 +599,24 @@
                                                 {% if cliente_form.prioridade.errors %}
                                                     <div class="text-danger small">
                                                         {% for error in cliente_form.prioridade.errors %}{{ error }}{% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ cliente_form.falecido }}
+                                                <label class="form-check-label" for="{{ cliente_form.falecido.id_for_label }}">
+                                                    <i class="fas fa-cross me-1"></i>{{ cliente_form.falecido.label }}
+                                                </label>
+                                                {% if cliente_form.falecido.help_text %}
+                                                    <small class="form-text text-muted d-block">{{ cliente_form.falecido.help_text }}</small>
+                                                {% endif %}
+                                                {% if cliente_form.falecido.errors %}
+                                                    <div class="text-danger small">
+                                                        {% for error in cliente_form.falecido.errors %}{{ error }}{% endfor %}
                                                     </div>
                                                 {% endif %}
                                             </div>
@@ -687,6 +705,7 @@
                                     <th><i class="fas fa-id-card me-1"></i>CPF ou CNPJ</th>
                                     <th><i class="fas fa-calendar me-1"></i>Nascimento</th>
                                     <th><i class="fas fa-star me-1"></i>Prioridade</th>
+                                    <th><i class="fas fa-info-circle me-1"></i>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -717,6 +736,17 @@
                                             </span>
                                         {% else %}
                                             <span class="badge bg-light text-dark">Normal</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if cliente.falecido %}
+                                            <span class="badge bg-dark text-white">
+                                                <i class="fas fa-cross me-1"></i>Falecido(a)
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-success text-white">
+                                                <i class="fas fa-heartbeat me-1"></i>Ativo
+                                            </span>
                                         {% endif %}
                                     </td>
                                 </tr>

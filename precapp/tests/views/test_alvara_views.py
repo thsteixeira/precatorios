@@ -652,21 +652,21 @@ class DeleteAlvaraViewTest(TestCase):
         self.assertIn(cliente_nome, success_message)
     
     def test_delete_alvara_view_get_redirects_to_alvaras_list(self):
-        """Test that GET request tries to redirect but fails due to missing alvara_detail URL"""
+        """Test that GET request redirects to alvaras list"""
         self.client.force_login(self.user)
         
         # Verify alvara exists before request
         self.assertTrue(Alvara.objects.filter(id=self.alvara.id).exists())
         
-        # This test documents the current implementation bug where GET requests 
-        # try to redirect to non-existent 'alvara_detail' URL
-        with self.assertRaises(NoReverseMatch) as context:
-            self.client.get(self.delete_alvara_url)
+        # GET request should redirect to alvaras list (not delete anything)
+        response = self.client.get(self.delete_alvara_url)
         
-        # Verify the error is specifically about the missing alvara_detail URL
-        self.assertIn("alvara_detail", str(context.exception))
+        # Should redirect to alvaras list
+        self.assertEqual(response.status_code, 302)
+        expected_redirect_url = reverse('alvaras')
+        self.assertRedirects(response, expected_redirect_url)
         
-        # Verify the alvara still exists (GET request didn't delete it)
+        # Verify the alvara still exists (GET request doesn't delete it)
         self.assertTrue(Alvara.objects.filter(id=self.alvara.id).exists())
     
     def test_delete_alvara_view_nonexistent_alvara_404(self):

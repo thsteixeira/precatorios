@@ -120,6 +120,20 @@
                                 </div>
                                 <div class="form-text">Marque se o cliente possui prioridade legal</div>
                             </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check mt-4">
+                                    {{ client_form.falecido }}
+                                    <label class="form-check-label" for="{{ client_form.falecido.id_for_label }}">
+                                        <strong><i class="fas fa-skull text-dark me-1"></i>{{ client_form.falecido.label }}</strong>
+                                    </label>
+                                    {% if client_form.falecido.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ client_form.falecido.errors|first }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-text">Marque se o cliente é falecido(a)</div>
+                            </div>
                         </div>
                         
                         <!-- Observações Section -->
@@ -190,6 +204,18 @@
                             {% else %}
                                 <span class="badge bg-secondary fs-6">
                                     <i class="fas fa-user me-1"></i>Cliente Normal
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong><i class="fas fa-heart-pulse me-1"></i>Status Vital:</strong><br>
+                            {% if cliente.falecido %}
+                                <span class="badge bg-dark text-white fs-6">
+                                    <i class="fas fa-skull me-1"></i>Falecido(a)
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success text-white fs-6">
+                                    <i class="fas fa-heart-pulse me-1"></i>Vivo(a)
                                 </span>
                             {% endif %}
                         </div>

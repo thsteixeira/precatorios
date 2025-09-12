@@ -725,6 +725,7 @@ def clientes_view(request):
     prioridade_filter = request.GET.get('prioridade', '')
     requerimento_prioridade_filter = request.GET.get('requerimento_prioridade', '')
     precatorio_filter = request.GET.get('precatorio', '').strip()
+    falecido_filter = request.GET.get('falecido', '')
     
     if nome_filter:
         clientes = clientes.filter(nome__icontains=nome_filter)
@@ -757,6 +758,10 @@ def clientes_view(request):
     if prioridade_filter in ['true', 'false']:
         prioridade_bool = prioridade_filter == 'true'
         clientes = clientes.filter(prioridade=prioridade_bool)
+    
+    if falecido_filter in ['true', 'false']:
+        falecido_bool = falecido_filter == 'true'
+        clientes = clientes.filter(falecido=falecido_bool)
     
     # Filter by requerimento prioridade (based on Deferido/Não Deferido status)
     if requerimento_prioridade_filter:
@@ -802,6 +807,7 @@ def clientes_view(request):
         'current_prioridade': prioridade_filter,
         'current_requerimento_prioridade': requerimento_prioridade_filter,
         'current_precatorio': precatorio_filter,
+        'current_falecido': falecido_filter,
     }
     
     return render(request, 'precapp/cliente_list.html', context)
@@ -1084,8 +1090,8 @@ def delete_alvara_view(request, alvara_id):
         messages.success(request, f'Alvará de {cliente_nome} foi excluído com sucesso!')
         return redirect('alvaras')
     
-    # If GET request, redirect back to alvara detail
-    return redirect('alvara_detail', alvara_id=alvara_id)
+    # If GET request, redirect back to alvaras list instead of detail (which doesn't exist)
+    return redirect('alvaras')
 
 
 # ===============================

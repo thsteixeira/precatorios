@@ -469,6 +469,8 @@ class Cliente(models.Model):
         nome (CharField): Full name or company name (max 400 characters)
         nascimento (DateField): Birth date or company founding date
         prioridade (BooleanField): Whether client has priority status
+        falecido (BooleanField): Whether client is deceased (nullable)
+        observacao (TextField): General observations about the client
     
     Business Rules:
         - CPF/CNPJ must be unique across all clients
@@ -510,6 +512,12 @@ class Cliente(models.Model):
     nome = models.CharField(max_length=400)
     nascimento = models.DateField(null=True, blank=True)
     prioridade = models.BooleanField()
+    falecido = models.BooleanField(
+        null=True,
+        blank=True,
+        verbose_name="Falecido(a)",
+        help_text="Indica se o cliente está falecido"
+    )
     observacao = models.TextField(
         blank=True,
         null=True,

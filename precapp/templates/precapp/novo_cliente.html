@@ -144,6 +144,21 @@
                                     </div>
                                 {% endif %}
                             </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.falecido }}
+                                    <label class="form-check-label" for="{{ form.falecido.id_for_label }}">
+                                        <strong><i class="fas fa-skull text-dark me-1"></i>{{ form.falecido.label }}</strong>
+                                    </label>
+                                </div>
+                                <div class="form-text">Marque se o cliente é falecido(a)</div>
+                                {% if form.falecido.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.falecido.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                         
                         <!-- Observações Section -->
