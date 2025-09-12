@@ -282,3 +282,22 @@ downloads/
 backups/
 precapp/static/precapp/xlsx/PRECATORIOS 2026.xlsx
 precatorios/__pycache__/settings.cpython-313.pyc
+
+# VS Code workspace files
+*.code-workspace
+
+# SSH keys and certificates
+*.pem
+*.key
+*.crt
+*.cer
+
+# Database configuration files
+postgresql.txt
+mysql.txt
+*_config.txt
+
+# Temporary development files
+debug_*.py
+test_*.xlsx
+temp_*.py
