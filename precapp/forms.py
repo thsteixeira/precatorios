@@ -1503,13 +1503,13 @@ class RequerimentoForm(forms.ModelForm):
     """
     cliente_cpf = forms.CharField(
             max_length=18,
-        label='CPF do Cliente',
-        help_text='Digite o CPF do cliente. Formato: 000.000.000-00 ou 00000000000',
+        label='CPF/CNPJ do Cliente',
+        help_text='Digite o CPF ou CNPJ do cliente. Formato: 000.000.000-00 ou 00.000.000/0000-00',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '000.000.000-00 ou 00000000000',
-            'pattern': r'(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})',
-            'title': 'CPF no formato: 000.000.000-00 ou 00000000000'
+            'placeholder': '000.000.000-00 ou 00.000.000/0000-00',
+            'pattern': r'(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11}|\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}|\d{14})',
+            'title': 'CPF no formato: 000.000.000-00 ou CNPJ: 00.000.000/0000-00'
         })
     )
     
@@ -1812,13 +1812,13 @@ class AlvaraSimpleForm(forms.ModelForm):
     
     cliente_cpf = forms.CharField(
             max_length=18,
-        label='CPF do Cliente',
-        help_text='Digite o CPF do cliente. Formato: 000.000.000-00 ou 00000000000',
+        label='CPF/CNPJ do Cliente',
+        help_text='Digite o CPF ou CNPJ do cliente. Formato: 000.000.000-00 ou 00.000.000/0000-00',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '000.000.000-00 ou 00000000000',
-            'pattern': r'(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})',
-            'title': 'CPF no formato: 000.000.000-00 ou 00000000000'
+            'placeholder': '000.000.000-00 ou 00.000.000/0000-00',
+            'pattern': r'(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11}|\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}|\d{14})',
+            'title': 'CPF no formato: 000.000.000-00 ou CNPJ: 00.000.000/0000-00'
         })
     )
     
@@ -1904,15 +1904,19 @@ class AlvaraSimpleForm(forms.ModelForm):
         self.fields['fase_honorarios_contratuais'].queryset = FaseHonorariosContratuais.get_fases_ativas()
     
     def clean_cliente_cpf(self):
-        """Validate that the CPF corresponds to an existing cliente"""
+        """Validate that the CPF or CNPJ corresponds to an existing cliente"""
         cpf = self.cleaned_data.get('cliente_cpf')
         if cpf:
             # Remove dots and dashes, keep only numbers
             cpf_numbers = ''.join(filter(str.isdigit, cpf))
-            if len(cpf_numbers) != 11 and len(cpf_numbers) != 14:
-                raise forms.ValidationError('CPF deve ter exatamente 11 dígitos.')
-            if not validate_cpf(cpf_numbers):
-                raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
+            if len(cpf_numbers) == 11:
+                if not validate_cpf(cpf_numbers):
+                    raise forms.ValidationError('CPF inválido. Verifique se o número está correto.')
+            elif len(cpf_numbers) == 14:
+                if not validate_cnpj(cpf_numbers):
+                    raise forms.ValidationError('CNPJ inválido. Verifique se o número está correto.')
+            else:
+                raise forms.ValidationError('Documento deve ser um CPF (11 dígitos) ou CNPJ (14 dígitos).')
             try:
                 from .models import Cliente
                 cliente = Cliente.objects.get(cpf=cpf_numbers)
@@ -1920,13 +1924,13 @@ class AlvaraSimpleForm(forms.ModelForm):
                 # Additional validation: check if cliente is linked to the precatorio
                 if self.precatorio and not self.precatorio.clientes.filter(cpf=cpf_numbers).exists():
                     raise forms.ValidationError(
-                        f'O cliente {cliente.nome} (CPF: {cpf}) não está vinculado ao precatório {self.precatorio.cnj}. '
+                        f'O cliente {cliente.nome} (CPF/CNPJ: {cpf}) não está vinculado ao precatório {self.precatorio.cnj}. '
                         'Vincule o cliente ao precatório antes de criar o alvará.'
                     )
                 
                 return cpf
             except Cliente.DoesNotExist:
-                raise forms.ValidationError(f'Não foi encontrado um cliente com o CPF "{cpf}". Verifique se o número está correto ou cadastre o cliente primeiro.')
+                raise forms.ValidationError(f'Não foi encontrado um cliente com o documento "{cpf}". Verifique se o número está correto ou cadastre o cliente primeiro.')
         return cpf
     
     def clean_honorarios_contratuais(self):
