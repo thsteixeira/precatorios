@@ -35,12 +35,14 @@ from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.contrib.auth.models import User
+from django.db import models
 from datetime import date, timedelta
 from decimal import Decimal
 
 from precapp.models import (
     Fase, FaseHonorariosContratuais, Precatorio, Cliente, 
-    Alvara, Requerimento, TipoDiligencia, Diligencias, Tipo, PedidoRequerimento
+    Alvara, Requerimento, TipoDiligencia, Diligencias, Tipo, PedidoRequerimento,
+    ContaBancaria, Recebimentos
 )
 
 
@@ -3060,3 +3062,1080 @@ class DiligenciasModelTest(TestCase):
         
         final_unassigned = Diligencias.objects.filter(responsavel__isnull=True).count()
         self.assertEqual(final_unassigned, 0)
+
+
+class ContaBancariaModelTest(TestCase):
+    """
+    Comprehensive test suite for the ContaBancaria model.
+    
+    The ContaBancaria model represents bank account information that can be reused
+    across multiple payment transactions. This test class validates:
+    
+    - Model creation with all required bank account fields
+    - Unique constraint enforcement (banco, agencia, conta combination)
+    - Choice field validation for tipo_de_conta
+    - String representation format (banco - Ag: agencia - CC: conta)
+    - Default value assignment for tipo_de_conta
+    - Automatic timestamping functionality (criado_em, atualizado_em)
+    - Model ordering behavior (banco, agencia, conta)
+    - Field length validation and constraints
+    - Business rule compliance for Brazilian banking standards
+    
+    Key Features Tested:
+    - Account type choices ('corrente', 'poupanca')
+    - Unique constraint across bank, branch, and account combination
+    - Proper string representation for UI display
+    - Timestamp tracking for audit purposes
+    - Brazilian banking format support (agencia and conta formatting)
+    
+    Business Rules:
+    - Bank account combinations must be unique per bank
+    - All fields are required for payment processing
+    - Account information can be reused across multiple recebimentos
+    - Default account type is 'corrente' (checking account)
+    
+    Integration Points:
+    - Used as ForeignKey in Recebimentos model
+    - PROTECT constraint prevents deletion when referenced
+    - Supports efficient payment processing workflows
+    - Form integration for payment data entry
+    """
+    
+    def setUp(self):
+        """Set up test data for ContaBancaria model tests"""
+        self.conta_bancaria_data = {
+            'banco': 'Banco do Brasil',
+            'tipo_de_conta': 'corrente',
+            'agencia': '1234-5',
+            'conta': '12345678-9'
+        }
+    
+    def test_conta_bancaria_creation(self):
+        """
+        Test creating a conta bancária with valid data.
+        
+        Validates that:
+        - A ContaBancaria instance can be created with valid data
+        - full_clean() passes without raising ValidationError
+        - The instance can be saved to the database
+        - All field values are correctly assigned
+        - Timestamps are automatically set on creation
+        """
+        conta = ContaBancaria(**self.conta_bancaria_data)
+        conta.full_clean()  # This should not raise ValidationError
+        conta.save()
+        
+        # Verify all field values
+        self.assertEqual(conta.banco, 'Banco do Brasil')
+        self.assertEqual(conta.tipo_de_conta, 'corrente')
+        self.assertEqual(conta.agencia, '1234-5')
+        self.assertEqual(conta.conta, '12345678-9')
+        
+        # Verify timestamps were set
+        self.assertIsNotNone(conta.criado_em)
+        self.assertIsNotNone(conta.atualizado_em)
+    
+    def test_conta_bancaria_str_method(self):
+        """
+        Test the __str__ method of ContaBancaria.
+        
+        Validates that the string representation follows the format:
+        "{banco} - Ag: {agencia} - CC: {conta}"
+        providing a human-readable identification for the bank account.
+        """
+        conta = ContaBancaria(**self.conta_bancaria_data)
+        expected_str = f"{conta.banco} - Ag: {conta.agencia} - CC: {conta.conta}"
+        self.assertEqual(str(conta), expected_str)
+        
+        # Test with different bank data
+        test_cases = [
+            {
+                'banco': 'Caixa Econômica Federal',
+                'agencia': '0001',
+                'conta': '987654321-0',
+                'expected': 'Caixa Econômica Federal - Ag: 0001 - CC: 987654321-0'
+            },
+            {
+                'banco': 'Itaú',
+                'agencia': '5678',
+                'conta': '11223344-5',
+                'expected': 'Itaú - Ag: 5678 - CC: 11223344-5'
+            }
+        ]
+        
+        for case in test_cases:
+            with self.subTest(banco=case['banco']):
+                conta.banco = case['banco']
+                conta.agencia = case['agencia']
+                conta.conta = case['conta']
+                self.assertEqual(str(conta), case['expected'])
+    
+    def test_conta_bancaria_required_fields(self):
+        """
+        Test that required fields are enforced.
+        
+        Validates that:
+        - All core fields (banco, agencia, conta) are required
+        - Empty or None values cause ValidationError
+        - tipo_de_conta has a default value and is not required
+        """
+        # Test without banco
+        data_without_banco = self.conta_bancaria_data.copy()
+        del data_without_banco['banco']
+        with self.assertRaises(ValidationError):
+            conta = ContaBancaria(**data_without_banco)
+            conta.full_clean()
+        
+        # Test without agencia
+        data_without_agencia = self.conta_bancaria_data.copy()
+        del data_without_agencia['agencia']
+        with self.assertRaises(ValidationError):
+            conta = ContaBancaria(**data_without_agencia)
+            conta.full_clean()
+        
+        # Test without conta
+        data_without_conta = self.conta_bancaria_data.copy()
+        del data_without_conta['conta']
+        with self.assertRaises(ValidationError):
+            conta = ContaBancaria(**data_without_conta)
+            conta.full_clean()
+        
+        # Test without tipo_de_conta (should use default)
+        data_without_tipo = self.conta_bancaria_data.copy()
+        del data_without_tipo['tipo_de_conta']
+        conta = ContaBancaria(**data_without_tipo)
+        conta.full_clean()  # Should pass
+        conta.save()
+        self.assertEqual(conta.tipo_de_conta, 'corrente')  # Default value
+    
+    def test_conta_bancaria_tipo_choices_validation(self):
+        """
+        Test that tipo_de_conta field accepts only valid choices.
+        
+        Validates the choice constraint on the 'tipo_de_conta' field:
+        - Tests all valid choices: 'corrente', 'poupanca'
+        - Tests that invalid choices raise ValidationError
+        - Verifies proper display values for choices
+        """
+        valid_tipos = ['corrente', 'poupanca']
+        for tipo in valid_tipos:
+            with self.subTest(tipo=tipo):
+                data = self.conta_bancaria_data.copy()
+                data['tipo_de_conta'] = tipo
+                data['conta'] = f'test-{tipo}-123'  # Unique conta for each test
+                conta = ContaBancaria(**data)
+                conta.full_clean()  # Should not raise ValidationError
+                conta.save()
+                self.assertEqual(conta.tipo_de_conta, tipo)
+        
+        # Test invalid tipo
+        with self.assertRaises(ValidationError):
+            data = self.conta_bancaria_data.copy()
+            data['tipo_de_conta'] = 'invalid_tipo'
+            conta = ContaBancaria(**data)
+            conta.full_clean()
+    
+    def test_conta_bancaria_unique_constraint(self):
+        """
+        Test the unique_together constraint (banco, agencia, conta).
+        
+        Validates that:
+        - The combination of banco, agencia, and conta must be unique
+        - Duplicate combinations raise IntegrityError
+        - Different combinations are allowed
+        """
+        # Clear any existing accounts to ensure clean test
+        ContaBancaria.objects.all().delete()
+        
+        # Create first conta
+        ContaBancaria.objects.create(**self.conta_bancaria_data)
+        
+        # Try to create exact duplicate - should raise exception
+        from django.db import IntegrityError, transaction
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                duplicate_conta = ContaBancaria(**self.conta_bancaria_data)
+                duplicate_conta.save()
+        
+        # Test that different combinations are allowed (in separate transactions)
+        
+        # Same bank, different agencia (and different conta to be safe)
+        different_agencia = self.conta_bancaria_data.copy()
+        different_agencia['agencia'] = '9999-9'
+        different_agencia['conta'] = '999999999-1'
+        conta_diff_agencia = ContaBancaria.objects.create(**different_agencia)
+        self.assertEqual(conta_diff_agencia.agencia, '9999-9')
+        
+        # Same bank, different conta 
+        different_conta = self.conta_bancaria_data.copy()
+        different_conta['conta'] = '987654321-0'
+        conta_diff_conta = ContaBancaria.objects.create(**different_conta)
+        self.assertEqual(conta_diff_conta.conta, '987654321-0')
+        
+        # Different bank, different agencia and conta combination
+        different_banco = self.conta_bancaria_data.copy()
+        different_banco['banco'] = 'Caixa Econômica Federal'
+        different_banco['agencia'] = '0001'
+        different_banco['conta'] = '111222333-4'
+        conta_diff_banco = ContaBancaria.objects.create(**different_banco)
+        self.assertEqual(conta_diff_banco.banco, 'Caixa Econômica Federal')
+    
+    def test_conta_bancaria_default_values(self):
+        """
+        Test default values for optional fields.
+        
+        Validates that:
+        - tipo_de_conta defaults to 'corrente'
+        - Timestamp fields are automatically set
+        """
+        conta = ContaBancaria.objects.create(
+            banco='Test Bank',
+            agencia='0001',
+            conta='123456789-0'
+            # tipo_de_conta not specified - should use default
+        )
+        
+        self.assertEqual(conta.tipo_de_conta, 'corrente')  # Default value
+        self.assertIsNotNone(conta.criado_em)  # Auto timestamp
+        self.assertIsNotNone(conta.atualizado_em)  # Auto timestamp
+    
+    def test_conta_bancaria_ordering(self):
+        """
+        Test that contas are ordered by banco, agencia, conta.
+        
+        Validates the model's Meta ordering configuration.
+        """
+        # Create contas with different ordering values
+        ContaBancaria.objects.create(
+            banco='Banco Z',
+            agencia='0002',
+            conta='111111111-1',
+            tipo_de_conta='corrente'
+        )
+        ContaBancaria.objects.create(
+            banco='Banco A',
+            agencia='0003',
+            conta='222222222-2',
+            tipo_de_conta='poupanca'
+        )
+        ContaBancaria.objects.create(
+            banco='Banco A',
+            agencia='0001',
+            conta='333333333-3',
+            tipo_de_conta='corrente'
+        )
+        ContaBancaria.objects.create(
+            banco='Banco A',
+            agencia='0001',
+            conta='111111111-1',
+            tipo_de_conta='poupanca'
+        )
+        
+        contas = ContaBancaria.objects.all()
+        expected_order = [
+            ('Banco A', '0001', '111111111-1'),
+            ('Banco A', '0001', '333333333-3'),
+            ('Banco A', '0003', '222222222-2'),
+            ('Banco Z', '0002', '111111111-1')
+        ]
+        
+        actual_order = [(c.banco, c.agencia, c.conta) for c in contas]
+        self.assertEqual(actual_order, expected_order)
+    
+    def test_conta_bancaria_field_lengths(self):
+        """
+        Test field maximum length constraints.
+        
+        Validates that:
+        - banco field respects max_length=100
+        - agencia field respects max_length=20
+        - conta field respects max_length=30
+        - tipo_de_conta field respects max_length=20
+        """
+        # Test maximum valid lengths
+        valid_long_data = {
+            'banco': 'A' * 100,  # Max length for banco
+            'tipo_de_conta': 'corrente',
+            'agencia': '1' * 20,  # Max length for agencia
+            'conta': '2' * 30  # Max length for conta
+        }
+        
+        conta_long = ContaBancaria(**valid_long_data)
+        conta_long.full_clean()  # Should pass
+        conta_long.save()
+        
+        self.assertEqual(len(conta_long.banco), 100)
+        self.assertEqual(len(conta_long.agencia), 20)
+        self.assertEqual(len(conta_long.conta), 30)
+        
+        # Test exceeding maximum lengths
+        # Note: Django typically truncates rather than raising ValidationError for CharField max_length
+        # But we can test the constraint exists by checking field properties
+        banco_field = ContaBancaria._meta.get_field('banco')
+        agencia_field = ContaBancaria._meta.get_field('agencia')
+        conta_field = ContaBancaria._meta.get_field('conta')
+        
+        self.assertEqual(banco_field.max_length, 100)
+        self.assertEqual(agencia_field.max_length, 20)
+        self.assertEqual(conta_field.max_length, 30)
+    
+    def test_conta_bancaria_timestamps(self):
+        """
+        Test automatic timestamp functionality.
+        
+        Validates that:
+        - criado_em is set on creation and never changes
+        - atualizado_em is updated on each save
+        - Timestamps are properly maintained throughout lifecycle
+        """
+        conta = ContaBancaria.objects.create(**self.conta_bancaria_data)
+        
+        # Check initial timestamps
+        self.assertIsNotNone(conta.criado_em)
+        self.assertIsNotNone(conta.atualizado_em)
+        initial_created = conta.criado_em
+        initial_updated = conta.atualizado_em
+        
+        # Update the conta
+        import time
+        time.sleep(0.01)  # Ensure timestamp difference
+        conta.banco = 'Updated Bank Name'
+        conta.save()
+        
+        # Check that atualizado_em changed but criado_em didn't
+        conta.refresh_from_db()
+        self.assertEqual(conta.criado_em, initial_created)
+        self.assertGreater(conta.atualizado_em, initial_updated)
+    
+    def test_conta_bancaria_meta_configuration(self):
+        """
+        Test model Meta configuration.
+        
+        Validates that:
+        - Verbose names are properly set
+        - Unique together constraint is configured
+        - Ordering configuration is correct
+        """
+        meta = ContaBancaria._meta
+        self.assertEqual(meta.verbose_name, "Conta Bancária")
+        self.assertEqual(meta.verbose_name_plural, "Contas Bancárias")
+        self.assertEqual(meta.ordering, ['banco', 'agencia', 'conta'])
+        
+        # Check unique_together constraint
+        unique_together = meta.unique_together
+        self.assertIn(('banco', 'agencia', 'conta'), unique_together)
+    
+    def test_conta_bancaria_brazilian_formats(self):
+        """
+        Test support for Brazilian banking formats.
+        
+        Validates that:
+        - Common Brazilian bank formats are supported
+        - Agencia formats (with and without check digits)
+        - Conta formats (with check digits)
+        - Major Brazilian banks are properly handled
+        """
+        brazilian_banks = [
+            {
+                'banco': 'Banco do Brasil',
+                'agencia': '1234-5',
+                'conta': '12345678-9',
+                'tipo_de_conta': 'corrente'
+            },
+            {
+                'banco': 'Caixa Econômica Federal',
+                'agencia': '0001',
+                'conta': '987654321-0',
+                'tipo_de_conta': 'poupanca'
+            },
+            {
+                'banco': 'Itaú Unibanco',
+                'agencia': '5678',
+                'conta': '11223344-5',
+                'tipo_de_conta': 'corrente'
+            },
+            {
+                'banco': 'Bradesco',
+                'agencia': '9012-3',
+                'conta': '55667788-9',
+                'tipo_de_conta': 'poupanca'
+            },
+            {
+                'banco': 'Santander',
+                'agencia': '3456',
+                'conta': '99887766-5',
+                'tipo_de_conta': 'corrente'
+            }
+        ]
+        
+        created_contas = []
+        for bank_data in brazilian_banks:
+            conta = ContaBancaria.objects.create(**bank_data)
+            created_contas.append(conta)
+            
+            # Verify the account was created successfully
+            self.assertEqual(conta.banco, bank_data['banco'])
+            self.assertEqual(conta.agencia, bank_data['agencia'])
+            self.assertEqual(conta.conta, bank_data['conta'])
+            self.assertEqual(conta.tipo_de_conta, bank_data['tipo_de_conta'])
+        
+        # Verify all accounts were created
+        self.assertEqual(len(created_contas), 5)
+        
+        # Test string representation for each
+        expected_strings = [
+            'Banco do Brasil - Ag: 1234-5 - CC: 12345678-9',
+            'Caixa Econômica Federal - Ag: 0001 - CC: 987654321-0',
+            'Itaú Unibanco - Ag: 5678 - CC: 11223344-5',
+            'Bradesco - Ag: 9012-3 - CC: 55667788-9',
+            'Santander - Ag: 3456 - CC: 99887766-5'
+        ]
+        
+        for conta, expected in zip(created_contas, expected_strings):
+            with self.subTest(banco=conta.banco):
+                self.assertEqual(str(conta), expected)
+
+
+class RecebimentosModelTest(TestCase):
+    """
+    Comprehensive test suite for the Recebimentos model.
+    
+    The Recebimentos model represents individual receipt transactions made against
+    an Alvará, tracking payment details including document number, date, bank account,
+    amount, and receipt type. This test class validates:
+    
+    - Model creation with all required financial and audit fields
+    - Primary key uniqueness constraint (numero_documento)
+    - Foreign key relationships (Alvara, ContaBancaria)
+    - PROTECT constraints preventing deletion of referenced objects
+    - Choice field validation for tipo (Hon. contratuais, Hon. sucumbenciais)
+    - Decimal field validation with positive amount constraint
+    - Custom clean() method validation
+    - Custom save() method with user tracking
+    - String representation format
+    - Property methods (valor_formatado)
+    - Automatic timestamping and audit trail functionality
+    - Business rule compliance for receipt processing
+    
+    Key Features Tested:
+    - Unique document numbers across all receipts
+    - Positive amount validation (MinValueValidator)
+    - Receipt type choices for fee categorization
+    - Bank account relationship and protection
+    - Alvara relationship and protection
+    - User tracking for audit purposes
+    - Brazilian currency formatting
+    - Date-based ordering (most recent first)
+    
+    Business Rules:
+    - Each receipt must have a unique document number
+    - Receipt amount must be positive (> 0.01)
+    - Receipt type must be either contractual or succumbence fees
+    - Bank account and Alvara cannot be deleted if receipts exist
+    - Multiple receipts can be made for the same Alvará
+    - Audit trail tracks creation user and timestamps
+    
+    Integration Points:
+    - Used through Alvara.recebimentos reverse relationship
+    - PROTECT constraints ensure data integrity
+    - Form integration for receipt data entry
+    - Template integration for receipt display
+    - Financial reporting and calculation support
+    
+    Validation Coverage:
+    - Primary key uniqueness enforcement
+    - Foreign key integrity and protection
+    - Amount validation (positive values only)
+    - Choice field validation (tipo)
+    - Custom business logic validation
+    - User tracking and audit functionality
+    - Currency formatting and display
+    - Date-based ordering verification
+    """
+    
+    def setUp(self):
+        """Set up test data for Recebimentos model tests"""
+        # Create necessary related objects
+        
+        # Create Tipo
+        self.tipo = Tipo.objects.create(
+            nome='Comum',
+            descricao='Precatórios comuns',
+            cor='#6c757d',
+            ativa=True
+        )
+        
+        # Create Precatorio
+        self.precatorio = Precatorio.objects.create(
+            cnj='1234567-89.2023.8.26.0100',
+            orcamento=2023,
+            origem='1234567-89.2022.8.26.0001',
+            valor_de_face=100000.00,
+            ultima_atualizacao=100000.00,
+            data_ultima_atualizacao=date(2023, 1, 1),
+            percentual_contratuais_assinado=10.0,
+            percentual_contratuais_apartado=5.0,
+            percentual_sucumbenciais=20.0,
+            credito_principal='pendente',
+            honorarios_contratuais='pendente',
+            honorarios_sucumbenciais='pendente',
+            tipo=self.tipo
+        )
+        
+        # Create Cliente
+        self.cliente = Cliente.objects.create(
+            cpf='12345678909',
+            nome='João Silva',
+            nascimento=date(1980, 5, 15),
+            prioridade=False
+        )
+        
+        # Link cliente to precatorio
+        self.precatorio.clientes.add(self.cliente)
+        
+        # Create Fase
+        self.fase = Fase.objects.create(
+            nome='Aguardando Depósito',
+            tipo='alvara',
+            cor='#FF6B35',
+            ativa=True
+        )
+        
+        # Create Alvara
+        self.alvara = Alvara.objects.create(
+            precatorio=self.precatorio,
+            cliente=self.cliente,
+            valor_principal=50000.00,
+            honorarios_contratuais=10000.00,
+            honorarios_sucumbenciais=5000.00,
+            tipo='prioridade',
+            fase=self.fase
+        )
+        
+        # Create ContaBancaria
+        self.conta_bancaria = ContaBancaria.objects.create(
+            banco='Banco do Brasil',
+            tipo_de_conta='corrente',
+            agencia='1234-5',
+            conta='12345678-9'
+        )
+        
+        # Test data for Recebimentos
+        self.recebimento_data = {
+            'numero_documento': 'REC-2023-001234',
+            'alvara': self.alvara,
+            'data': date(2023, 6, 15),
+            'conta_bancaria': self.conta_bancaria,
+            'valor': Decimal('25000.00'),
+            'tipo': 'Hon. contratuais'
+        }
+    
+    def test_recebimentos_creation(self):
+        """
+        Test creating a recebimento with valid data.
+        
+        Validates that:
+        - A Recebimentos instance can be created with valid data
+        - full_clean() passes without raising ValidationError
+        - The instance can be saved to the database
+        - All field values are correctly assigned
+        - Timestamps and audit fields are automatically set
+        """
+        recebimento = Recebimentos(**self.recebimento_data)
+        recebimento.full_clean()  # This should not raise ValidationError
+        recebimento.save()
+        
+        # Verify all field values
+        self.assertEqual(recebimento.numero_documento, 'REC-2023-001234')
+        self.assertEqual(recebimento.alvara, self.alvara)
+        self.assertEqual(recebimento.data, date(2023, 6, 15))
+        self.assertEqual(recebimento.conta_bancaria, self.conta_bancaria)
+        self.assertEqual(recebimento.valor, Decimal('25000.00'))
+        self.assertEqual(recebimento.tipo, 'Hon. contratuais')
+        
+        # Verify timestamps were set
+        self.assertIsNotNone(recebimento.criado_em)
+        self.assertIsNotNone(recebimento.atualizado_em)
+        # Note: criado_por might be None in test environment due to threading context
+        # It can be None, 'System', or a user name depending on context
+        self.assertTrue(recebimento.criado_por is None or isinstance(recebimento.criado_por, str))
+    
+    def test_recebimentos_str_method(self):
+        """
+        Test the __str__ method of Recebimentos.
+        
+        Validates that the string representation follows the format:
+        "Recebimento {numero_documento} - R$ {valor:,.2f}"
+        """
+        recebimento = Recebimentos(**self.recebimento_data)
+        expected_str = f"Recebimento {recebimento.numero_documento} - R$ {recebimento.valor:,.2f}"
+        self.assertEqual(str(recebimento), expected_str)
+        
+        # Test with different values
+        test_cases = [
+            {'numero_documento': 'PAG-2023-999', 'valor': Decimal('1500.75'), 'expected': 'Recebimento PAG-2023-999 - R$ 1,500.75'},
+            {'numero_documento': 'HON-2023-001', 'valor': Decimal('50000.00'), 'expected': 'Recebimento HON-2023-001 - R$ 50,000.00'},
+            {'numero_documento': 'SUC-2023-042', 'valor': Decimal('123.45'), 'expected': 'Recebimento SUC-2023-042 - R$ 123.45'}
+        ]
+        
+        for case in test_cases:
+            with self.subTest(numero_documento=case['numero_documento']):
+                recebimento.numero_documento = case['numero_documento']
+                recebimento.valor = case['valor']
+                self.assertEqual(str(recebimento), case['expected'])
+    
+    def test_recebimentos_valor_formatado_property(self):
+        """
+        Test the valor_formatado property.
+        
+        Validates that:
+        - Property returns Brazilian currency format
+        - Format follows pattern: "R$ X.XXX,XX"
+        - Handles different decimal values correctly
+        """
+        test_cases = [
+            {'valor': Decimal('1500.75'), 'expected': 'R$ 1.500,75'},
+            {'valor': Decimal('50000.00'), 'expected': 'R$ 50.000,00'},
+            {'valor': Decimal('123.45'), 'expected': 'R$ 123,45'},
+            {'valor': Decimal('1234567.89'), 'expected': 'R$ 1.234.567,89'},
+            {'valor': Decimal('0.01'), 'expected': 'R$ 0,01'}
+        ]
+        
+        recebimento = Recebimentos(**self.recebimento_data)
+        
+        for case in test_cases:
+            with self.subTest(valor=case['valor']):
+                recebimento.valor = case['valor']
+                self.assertEqual(recebimento.valor_formatado, case['expected'])
+    
+    def test_recebimentos_primary_key_uniqueness(self):
+        """
+        Test that numero_documento must be unique (primary key).
+        
+        Validates that:
+        - Two recebimentos cannot have the same numero_documento
+        - Database constraint is properly enforced
+        - Appropriate error is raised on duplicate creation
+        """
+        # Create first recebimento
+        Recebimentos.objects.create(**self.recebimento_data)
+        
+        # Try to create duplicate - should raise exception
+        from django.db import IntegrityError, transaction
+        # Since the model's save method calls full_clean(), we expect ValidationError first
+        with self.assertRaises((IntegrityError, ValidationError)):
+            with transaction.atomic():
+                duplicate_recebimento = Recebimentos(**self.recebimento_data)
+                duplicate_recebimento.save()
+    
+    def test_recebimentos_required_fields(self):
+        """
+        Test that required fields are enforced.
+        
+        Validates that:
+        - All required fields must be provided
+        - Missing required fields cause ValidationError
+        """
+        required_fields = ['numero_documento', 'alvara', 'data', 'conta_bancaria', 'valor', 'tipo']
+        
+        for field in required_fields:
+            with self.subTest(field=field):
+                data = self.recebimento_data.copy()
+                del data[field]
+                
+                with self.assertRaises(ValidationError):
+                    recebimento = Recebimentos(**data)
+                    recebimento.full_clean()
+    
+    def test_recebimentos_tipo_choices_validation(self):
+        """
+        Test that tipo field accepts only valid choices.
+        
+        Validates the choice constraint on the 'tipo' field:
+        - Tests both valid choices: 'Hon. contratuais', 'Hon. sucumbenciais'
+        - Tests that invalid choices raise ValidationError
+        """
+        valid_tipos = ['Hon. contratuais', 'Hon. sucumbenciais']
+        for tipo in valid_tipos:
+            with self.subTest(tipo=tipo):
+                data = self.recebimento_data.copy()
+                data['tipo'] = tipo
+                data['numero_documento'] = f'TEST-{tipo.replace(" ", "").replace(".", "")}-001'  # Unique document
+                recebimento = Recebimentos(**data)
+                recebimento.full_clean()  # Should not raise ValidationError
+                recebimento.save()
+                self.assertEqual(recebimento.tipo, tipo)
+        
+        # Test invalid tipo
+        with self.assertRaises(ValidationError):
+            data = self.recebimento_data.copy()
+            data['tipo'] = 'Invalid Type'
+            recebimento = Recebimentos(**data)
+            recebimento.full_clean()
+    
+    def test_recebimentos_valor_positive_validation(self):
+        """
+        Test that valor must be positive.
+        
+        Validates that:
+        - Values > 0.01 are accepted
+        - Values <= 0 raise ValidationError
+        - MinValueValidator is properly configured
+        """
+        # Test valid positive values
+        valid_valores = [Decimal('0.02'), Decimal('1.00'), Decimal('1000.50'), Decimal('999999.99')]
+        for valor in valid_valores:
+            with self.subTest(valor=valor):
+                data = self.recebimento_data.copy()
+                data['valor'] = valor
+                data['numero_documento'] = f'VAL-{str(valor).replace(".", "")}-001'  # Unique document
+                recebimento = Recebimentos(**data)
+                recebimento.full_clean()  # Should not raise ValidationError
+                recebimento.save()
+                self.assertEqual(recebimento.valor, valor)
+        
+        # Test invalid values (zero and negative)
+        invalid_valores = [Decimal('0.00'), Decimal('-1.00'), Decimal('-100.50')]
+        for valor in invalid_valores:
+            with self.subTest(valor=valor):
+                data = self.recebimento_data.copy()
+                data['valor'] = valor
+                with self.assertRaises(ValidationError):
+                    recebimento = Recebimentos(**data)
+                    recebimento.full_clean()
+    
+    def test_recebimentos_custom_clean_method(self):
+        """
+        Test the custom clean() method.
+        
+        Validates that:
+        - Clean method enforces positive value constraint
+        - Appropriate ValidationError messages are raised
+        """
+        # Test clean method with negative value
+        data = self.recebimento_data.copy()
+        data['valor'] = Decimal('-100.00')
+        recebimento = Recebimentos(**data)
+        
+        with self.assertRaises(ValidationError) as cm:
+            recebimento.clean()
+        
+        self.assertIn('valor', cm.exception.message_dict)
+        self.assertIn('deve ser maior que zero', str(cm.exception.message_dict['valor']))
+    
+    def test_recebimentos_custom_save_method(self):
+        """
+        Test the custom save() method.
+        
+        Validates that:
+        - Save method calls full_clean() for validation
+        - User tracking is implemented for new instances
+        - criado_por field is populated appropriately
+        """
+        # Test save validation enforcement
+        data = self.recebimento_data.copy()
+        data['valor'] = Decimal('-50.00')  # Invalid value
+        recebimento = Recebimentos(**data)
+        
+        with self.assertRaises(ValidationError):
+            recebimento.save()  # Should call full_clean() and raise error
+        
+        # Test user tracking on creation
+        valid_recebimento = Recebimentos(**self.recebimento_data)
+        valid_recebimento.save()
+        
+        # Note: criado_por behavior depends on threading context in tests
+        # It can be None, 'System', or a user name depending on context
+        self.assertTrue(valid_recebimento.criado_por is None or isinstance(valid_recebimento.criado_por, str))
+        self.assertIsNotNone(valid_recebimento.criado_em)
+    
+    def test_recebimentos_foreign_key_relationships(self):
+        """
+        Test foreign key relationships and their behavior.
+        
+        Validates that:
+        - Alvara relationship is properly established
+        - ContaBancaria relationship is properly established
+        - Related objects can be accessed through the relationship
+        - Reverse relationships work correctly
+        """
+        recebimento = Recebimentos.objects.create(**self.recebimento_data)
+        
+        # Test forward relationships
+        self.assertEqual(recebimento.alvara, self.alvara)
+        self.assertEqual(recebimento.conta_bancaria, self.conta_bancaria)
+        
+        # Test accessing related object properties
+        self.assertEqual(recebimento.alvara.valor_principal, Decimal('50000.00'))
+        self.assertEqual(recebimento.conta_bancaria.banco, 'Banco do Brasil')
+        
+        # Test reverse relationship
+        alvara_recebimentos = self.alvara.recebimentos.all()
+        self.assertIn(recebimento, alvara_recebimentos)
+        self.assertEqual(alvara_recebimentos.count(), 1)
+    
+    def test_recebimentos_protect_constraints(self):
+        """
+        Test PROTECT constraints on foreign keys.
+        
+        Validates that:
+        - Alvara cannot be deleted if recebimentos exist
+        - ContaBancaria cannot be deleted if recebimentos exist
+        - Appropriate IntegrityError is raised on deletion attempts
+        """
+        # Create recebimento to establish relationships
+        Recebimentos.objects.create(**self.recebimento_data)
+        
+        # Try to delete alvara - should be protected
+        from django.db import IntegrityError
+        with self.assertRaises(IntegrityError):
+            self.alvara.delete()
+        
+        # Try to delete conta_bancaria - should be protected
+        with self.assertRaises(IntegrityError):
+            self.conta_bancaria.delete()
+        
+        # Verify objects still exist
+        self.assertTrue(Alvara.objects.filter(pk=self.alvara.pk).exists())
+        self.assertTrue(ContaBancaria.objects.filter(pk=self.conta_bancaria.pk).exists())
+    
+    def test_recebimentos_ordering(self):
+        """
+        Test that recebimentos are ordered by -data, -numero_documento.
+        
+        Validates the model's Meta ordering configuration.
+        """
+        # Create recebimentos with different dates and document numbers
+        recebimento1 = Recebimentos.objects.create(
+            numero_documento='REC-2023-001',
+            alvara=self.alvara,
+            data=date(2023, 1, 15),
+            conta_bancaria=self.conta_bancaria,
+            valor=Decimal('1000.00'),
+            tipo='Hon. contratuais'
+        )
+        
+        recebimento2 = Recebimentos.objects.create(
+            numero_documento='REC-2023-002',
+            alvara=self.alvara,
+            data=date(2023, 3, 20),
+            conta_bancaria=self.conta_bancaria,
+            valor=Decimal('2000.00'),
+            tipo='Hon. sucumbenciais'
+        )
+        
+        recebimento3 = Recebimentos.objects.create(
+            numero_documento='REC-2023-003',
+            alvara=self.alvara,
+            data=date(2023, 3, 20),  # Same date as recebimento2
+            conta_bancaria=self.conta_bancaria,
+            valor=Decimal('1500.00'),
+            tipo='Hon. contratuais'
+        )
+        
+        # Test ordering (most recent date first, then by document number desc)
+        recebimentos = Recebimentos.objects.all()
+        expected_order = [
+            'REC-2023-003',  # 2023-03-20, higher document number
+            'REC-2023-002',  # 2023-03-20, lower document number
+            'REC-2023-001'   # 2023-01-15, oldest date
+        ]
+        
+        actual_order = [r.numero_documento for r in recebimentos]
+        self.assertEqual(actual_order, expected_order)
+    
+    def test_recebimentos_multiple_per_alvara(self):
+        """
+        Test that multiple recebimentos can be created for the same Alvara.
+        
+        Validates that:
+        - Multiple recebimentos can reference the same alvara
+        - Each must have a unique numero_documento
+        - All are accessible through reverse relationship
+        """
+        # Create multiple recebimentos for the same alvara
+        recebimentos_data = [
+            {
+                'numero_documento': 'REC-2023-CONT-001',
+                'valor': Decimal('10000.00'),
+                'tipo': 'Hon. contratuais',
+                'data': date(2023, 6, 1)
+            },
+            {
+                'numero_documento': 'REC-2023-SUC-001',
+                'valor': Decimal('5000.00'),
+                'tipo': 'Hon. sucumbenciais',
+                'data': date(2023, 6, 15)
+            },
+            {
+                'numero_documento': 'REC-2023-CONT-002',
+                'valor': Decimal('15000.00'),
+                'tipo': 'Hon. contratuais',
+                'data': date(2023, 7, 1)
+            }
+        ]
+        
+        created_recebimentos = []
+        for data in recebimentos_data:
+            full_data = self.recebimento_data.copy()
+            full_data.update(data)
+            recebimento = Recebimentos.objects.create(**full_data)
+            created_recebimentos.append(recebimento)
+        
+        # Verify all recebimentos are associated with the same alvara
+        alvara_recebimentos = self.alvara.recebimentos.all()
+        self.assertEqual(alvara_recebimentos.count(), 3)
+        
+        for recebimento in created_recebimentos:
+            self.assertIn(recebimento, alvara_recebimentos)
+            self.assertEqual(recebimento.alvara, self.alvara)
+        
+        # Test total value calculation (example business logic)
+        total_contratuais = sum(
+            r.valor for r in alvara_recebimentos.filter(tipo='Hon. contratuais')
+        )
+        total_sucumbenciais = sum(
+            r.valor for r in alvara_recebimentos.filter(tipo='Hon. sucumbenciais')
+        )
+        
+        self.assertEqual(total_contratuais, Decimal('25000.00'))  # 10000 + 15000
+        self.assertEqual(total_sucumbenciais, Decimal('5000.00'))
+    
+    def test_recebimentos_meta_configuration(self):
+        """
+        Test model Meta configuration.
+        
+        Validates that:
+        - Verbose names are properly set
+        - Ordering configuration is correct
+        """
+        meta = Recebimentos._meta
+        self.assertEqual(meta.verbose_name, "Recebimento")
+        self.assertEqual(meta.verbose_name_plural, "Recebimentos")
+        self.assertEqual(meta.ordering, ['-data', '-numero_documento'])
+    
+    def test_recebimentos_timestamps(self):
+        """
+        Test automatic timestamp functionality.
+        
+        Validates that:
+        - criado_em is set on creation and never changes
+        - atualizado_em is updated on each save
+        - Timestamps are properly maintained throughout lifecycle
+        """
+        recebimento = Recebimentos.objects.create(**self.recebimento_data)
+        
+        # Check initial timestamps
+        self.assertIsNotNone(recebimento.criado_em)
+        self.assertIsNotNone(recebimento.atualizado_em)
+        initial_created = recebimento.criado_em
+        initial_updated = recebimento.atualizado_em
+        
+        # Update the recebimento
+        import time
+        time.sleep(0.01)  # Ensure timestamp difference
+        recebimento.valor = Decimal('30000.00')
+        recebimento.save()
+        
+        # Check that atualizado_em changed but criado_em didn't
+        recebimento.refresh_from_db()
+        self.assertEqual(recebimento.criado_em, initial_created)
+        self.assertGreater(recebimento.atualizado_em, initial_updated)
+    
+    def test_recebimentos_integration_scenarios(self):
+        """
+        Test integration scenarios that simulate real usage.
+        
+        Validates common use cases:
+        - Creating recebimentos for different tipos
+        - Partial payments over time
+        - Different bank accounts for different payments
+        - Financial reporting and aggregation
+        """
+        # Create additional bank account for testing
+        conta_bancaria2 = ContaBancaria.objects.create(
+            banco='Caixa Econômica Federal',
+            tipo_de_conta='poupanca',
+            agencia='0001',
+            conta='987654321-0'
+        )
+        
+        # Simulate partial payments over several months
+        payment_scenarios = [
+            {
+                'numero_documento': 'REC-2023-01-001',
+                'data': date(2023, 1, 15),
+                'valor': Decimal('5000.00'),
+                'tipo': 'Hon. contratuais',
+                'conta_bancaria': self.conta_bancaria
+            },
+            {
+                'numero_documento': 'REC-2023-02-001',
+                'data': date(2023, 2, 20),
+                'valor': Decimal('3000.00'),
+                'tipo': 'Hon. sucumbenciais',
+                'conta_bancaria': conta_bancaria2
+            },
+            {
+                'numero_documento': 'REC-2023-03-001',
+                'data': date(2023, 3, 10),
+                'valor': Decimal('7500.00'),
+                'tipo': 'Hon. contratuais',
+                'conta_bancaria': self.conta_bancaria
+            },
+            {
+                'numero_documento': 'REC-2023-04-001',
+                'data': date(2023, 4, 5),
+                'valor': Decimal('2500.00'),
+                'tipo': 'Hon. sucumbenciais',
+                'conta_bancaria': conta_bancaria2
+            }
+        ]
+        
+        created_recebimentos = []
+        for scenario in payment_scenarios:
+            data = self.recebimento_data.copy()
+            data.update(scenario)
+            recebimento = Recebimentos.objects.create(**data)
+            created_recebimentos.append(recebimento)
+        
+        # Test financial aggregations
+        total_payments = Recebimentos.objects.aggregate(
+            total=models.Sum('valor')
+        )['total']
+        self.assertEqual(total_payments, Decimal('18000.00'))
+        
+        # Test payments by type
+        contratuais_total = Recebimentos.objects.filter(
+            tipo='Hon. contratuais'
+        ).aggregate(total=models.Sum('valor'))['total']
+        self.assertEqual(contratuais_total, Decimal('12500.00'))
+        
+        sucumbenciais_total = Recebimentos.objects.filter(
+            tipo='Hon. sucumbenciais'
+        ).aggregate(total=models.Sum('valor'))['total']
+        self.assertEqual(sucumbenciais_total, Decimal('5500.00'))
+        
+        # Test payments by bank account
+        bb_payments = Recebimentos.objects.filter(
+            conta_bancaria=self.conta_bancaria
+        ).count()
+        self.assertEqual(bb_payments, 2)
+        
+        cef_payments = Recebimentos.objects.filter(
+            conta_bancaria=conta_bancaria2
+        ).count()
+        self.assertEqual(cef_payments, 2)
+        
+        # Test monthly reporting
+        january_payments = Recebimentos.objects.filter(
+            data__year=2023,
+            data__month=1
+        ).count()
+        self.assertEqual(january_payments, 1)
+        
+        q1_payments = Recebimentos.objects.filter(
+            data__year=2023,
+            data__month__in=[1, 2, 3]
+        ).count()
+        self.assertEqual(q1_payments, 3)

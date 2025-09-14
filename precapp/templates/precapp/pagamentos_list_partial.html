@@ -1,0 +1,15 @@
+{% comment %}
+Simple test template for recebimentos list view
+{% endcomment %}
+<div class="recebimentos-list">
+    {% for recebimento in recebimentos %}
+        <div class="recebimento-item">
+            <span class="numero">{{ recebimento.numero_documento }}</span>
+            <span class="valor">{{ recebimento.valor_formatado }}</span>
+            <span class="tipo">{{ recebimento.tipo }}</span>
+            <span class="data">{{ recebimento.data|date:"d/m/Y" }}</span>
+        </div>
+    {% empty %}
+        <div class="no-recebimentos">Nenhum recebimento encontrado</div>
+    {% endfor %}
+</div>

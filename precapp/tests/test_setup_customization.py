@@ -49,7 +49,7 @@ class SetupCustomizationCommandTest(TestCase):
         call_command('setup_customization', stdout=out, verbosity=2)
 
         # Verify all data was created
-        self.assertEqual(Fase.objects.count(), 11)  # 4 requerimento + 7 alvara
+        self.assertEqual(Fase.objects.count(), 12)  # 4 requerimento + 8 alvara
         self.assertEqual(FaseHonorariosContratuais.objects.count(), 5)  # Updated from 4 to 5
         self.assertEqual(TipoDiligencia.objects.count(), 5)
         self.assertEqual(Tipo.objects.count(), 7)  # Updated from 3 to 7
@@ -108,7 +108,7 @@ class SetupCustomizationCommandTest(TestCase):
 
         # Verify Alvará phases
         alvara_phases = Fase.objects.filter(tipo='alvara').order_by('ordem')
-        self.assertEqual(alvara_phases.count(), 7)
+        self.assertEqual(alvara_phases.count(), 8)
         
         expected_alv_names = [
             'Aguardando Depósito Judicial',
@@ -117,7 +117,8 @@ class SetupCustomizationCommandTest(TestCase):
             'Cálculos impugnados',
             'Para informar conta',
             'Contas bancárias informadas',
-            'Recebido Pelo Cliente'
+            'Recebido Pelo Cliente',
+            'Alvará no Escritório'
         ]
         actual_alv_names = list(alvara_phases.values_list('nome', flat=True))
         self.assertEqual(actual_alv_names, expected_alv_names)
@@ -405,7 +406,7 @@ class SetupCustomizationCommandTest(TestCase):
         # Test Alvará phases ordem
         alv_phases = Fase.objects.filter(tipo='alvara').order_by('ordem')
         alv_ordens = list(alv_phases.values_list('ordem', flat=True))
-        self.assertEqual(alv_ordens, [1, 2, 3, 4, 5, 6, 7])
+        self.assertEqual(alv_ordens, [1, 2, 3, 4, 5, 6, 7, 8])
         
         # Test Honorários phases ordem
         hon_phases = FaseHonorariosContratuais.objects.all().order_by('ordem')
