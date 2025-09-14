@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirmar Exclusão de Recebimento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão de Recebimento
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-money-bill-wave fa-4x text-danger mb-3"></i>
+                        <h5>Tem certeza que deseja excluir este recebimento?</h5>
+                    </div>
+                    
+                    <!-- Receipt Details -->
+                    <div class="alert alert-warning">
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <strong><i class="fas fa-hashtag me-1"></i>Documento:</strong> {{ recebimento.numero_documento }}<br>
+                                <strong><i class="fas fa-calendar me-1"></i>Data:</strong> {{ recebimento.data|date:"d/m/Y" }}<br>
+                                <strong><i class="fas fa-tag me-1"></i>Tipo:</strong> <span class="badge bg-info text-dark">{{ recebimento.get_tipo_display }}</span><br>
+                                <strong><i class="fas fa-dollar-sign me-1"></i>Valor:</strong> {{ recebimento.valor_formatado }}<br>
+                                <strong><i class="fas fa-university me-1"></i>Conta:</strong> {{ recebimento.conta_bancaria.banco }} - Ag: {{ recebimento.conta_bancaria.agencia }}
+                            </div>
+                            <div class="col-12">
+                                <strong><i class="fas fa-user me-1"></i>Cliente:</strong> {{ alvara.cliente.nome }}<br>
+                                <strong><i class="fas fa-gavel me-1"></i>Precatório:</strong> {{ alvara.precatorio.cnj }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-danger">
+                        <strong><i class="fas fa-exclamation-triangle me-2"></i>Atenção:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Esta ação não pode ser desfeita</li>
+                            <li>O registro do recebimento será permanentemente removido</li>
+                            <li>Relatórios e históricos serão afetados</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'precatorio_detalhe' alvara.precatorio.cnj %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Cancelar
+                        </a>
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-1"></i>Excluir Definitivamente
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-danger:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
+    }
+    
+    .alert {
+        border-radius: 0.5rem;
+    }
+    
+    .fa-4x {
+        opacity: 0.8;
+    }
+</style>
+{% endblock %}

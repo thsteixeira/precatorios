@@ -8,7 +8,7 @@ initial system setup or when resetting the system to default configurations.
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from precapp.models import Fase, FaseHonorariosContratuais, TipoDiligencia, Tipo, PedidoRequerimento
+from precapp.models import Fase, FaseHonorariosContratuais, TipoDiligencia, Tipo, PedidoRequerimento, ContaBancaria
 
 
 class Command(BaseCommand):
@@ -72,6 +72,7 @@ class Command(BaseCommand):
                 self.create_tipos_diligencia()
                 self.create_tipos_precatorio()
                 self.create_tipos_pedido_requerimento()
+                self.create_contas_bancarias()
                 
             self.stdout.write(self.style.SUCCESS('System customization setup completed successfully!'))
             
@@ -205,7 +206,7 @@ class Command(BaseCommand):
             {
                 'nome': 'Para informar conta',
                 'descricao': 'Solicitado informações de conta bancária',
-                'cor': '#20c997',
+                'cor': "#a220c9",
                 'ativa': True,
                 'ordem': 5,
                 'tipo': 'alvara',
@@ -224,6 +225,14 @@ class Command(BaseCommand):
                 'cor': "#001aff",
                 'ativa': True,
                 'ordem': 7,
+                'tipo': 'alvara',
+            },
+            {
+                'nome': 'Alvará no Escritório',
+                'descricao': 'Alvará no escritório aguardando retirada pelo cliente',
+                'cor': "#00ff2a",
+                'ativa': True,
+                'ordem': 8,
                 'tipo': 'alvara',
             }
         ]
@@ -701,5 +710,86 @@ class Command(BaseCommand):
             self.stdout.write(f'Created {created_count} new tipos de pedido requerimento')
         else:
             self.stdout.write('All tipos de pedido requerimento already exist')
+        
+        self.stdout.write('')
+    
+    def create_contas_bancarias(self):
+        """
+        Create default bank accounts for the system.
+        
+        Sets up the standard bank accounts that can be used for receiving
+        payments in the precatory system. These accounts provide pre-configured
+        options for payment processing.
+        
+        Created Bank Accounts:
+        1. Banco do Brasil - Agência 2972-6, Conta Corrente 18741-0
+        2. Banco do Brasil - Agência 5750-0, Conta Corrente 736-6
+        3. Bradesco - Agência 2293, Conta Corrente 17578-1
+        
+        Each account includes:
+        - banco (str): Bank name
+        - tipo_de_conta (str): Account type (corrente/poupanca)
+        - agencia (str): Branch code
+        - conta (str): Account number
+        
+        Model Used:
+        - ContaBancaria: Stores bank account information
+        
+        Behavior:
+        - Uses get_or_create() to prevent duplicate accounts
+        - Only creates accounts that don't already exist
+        - Provides detailed creation feedback
+        - Reports count of newly created accounts
+        
+        Side Effects:
+        - Creates database records for bank accounts
+        - Enables payment processing functionality
+        - Provides pre-configured account options
+        """
+        
+        self.stdout.write('\\n=== CREATING CONTAS BANCÁRIAS ===')
+        
+        contas_bancarias = [
+            {
+                'banco': 'Banco do Brasil',
+                'tipo_de_conta': 'corrente',
+                'agencia': '2972-6',
+                'conta': '18741-0'
+            },
+            {
+                'banco': 'Banco do Brasil',
+                'tipo_de_conta': 'corrente',
+                'agencia': '5750-0',
+                'conta': '736-6'
+            },
+            {
+                'banco': 'Bradesco',
+                'tipo_de_conta': 'corrente',
+                'agencia': '2293',
+                'conta': '17578-1'
+            }
+        ]
+        
+        created_count = 0
+        
+        for conta_data in contas_bancarias:
+            conta, created = ContaBancaria.objects.get_or_create(
+                banco=conta_data['banco'],
+                agencia=conta_data['agencia'],
+                conta=conta_data['conta'],
+                defaults={
+                    'tipo_de_conta': conta_data['tipo_de_conta']
+                }
+            )
+            
+            if created:
+                created_count += 1
+                self.stdout.write(f'✓ Created ContaBancaria: {conta.banco} - Ag: {conta.agencia} - CC: {conta.conta}')
+        
+        if created_count > 0:
+            self.stdout.write(f'\\n=== CONTAS BANCÁRIAS CREATED ===')
+            self.stdout.write(f'Created {created_count} new bank accounts')
+        else:
+            self.stdout.write('All bank accounts already exist')
         
         self.stdout.write('')

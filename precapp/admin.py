@@ -7,7 +7,8 @@ from django.urls import reverse
 from django.http import HttpResponseRedirect
 from .models import (
     Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo,
-    FaseHonorariosContratuais, TipoDiligencia, Diligencias, PedidoRequerimento
+    FaseHonorariosContratuais, TipoDiligencia, Diligencias, PedidoRequerimento,
+    ContaBancaria, Recebimentos
 )
 from .forms import CustomFileWidget
 
@@ -43,6 +44,14 @@ class DiligenciasInline(admin.TabularInline):
     extra = 0
     fields = ('tipo', 'data_final', 'urgencia', 'responsavel', 'concluida', 'descricao')
     readonly_fields = ('data_criacao',)
+
+
+class RecebimentosInline(admin.TabularInline):
+    """Inline for managing payments within alvara admin"""
+    model = Recebimentos
+    extra = 0
+    fields = ('numero_documento', 'data', 'conta_bancaria', 'valor', 'tipo', 'criado_por')
+    readonly_fields = ('criado_por',)
 
 
 @admin.register(Precatorio)
@@ -267,6 +276,7 @@ class AlvaraAdmin(admin.ModelAdmin):
     
     autocomplete_fields = ['precatorio', 'cliente']
     readonly_fields = ('fase_ultima_alteracao', 'fase_alterada_por', 'fase_honorarios_ultima_alteracao', 'fase_honorarios_alterada_por')
+    inlines = [RecebimentosInline]
     
     def cliente_nome(self, obj):
         return obj.cliente.nome
@@ -661,6 +671,103 @@ class DiligenciasAdmin(admin.ModelAdmin):
         else:
             return format_html('<span style="color: blue;">{} dias restantes</span>', days)
     days_remaining.short_description = 'Prazo'
+
+
+@admin.register(ContaBancaria)
+class ContaBancariaAdmin(admin.ModelAdmin):
+    """Admin configuration for ContaBancaria model"""
+    
+    list_display = ('banco', 'tipo_de_conta', 'agencia', 'conta', 'usage_count', 'criado_em')
+    list_filter = ('tipo_de_conta', 'banco')
+    search_fields = ('banco', 'agencia', 'conta')
+    ordering = ('banco', 'agencia', 'conta')
+    
+    fieldsets = (
+        ('Informações Bancárias', {
+            'fields': ('banco', 'tipo_de_conta', 'agencia', 'conta')
+        }),
+        ('Auditoria', {
+            'fields': ('criado_em', 'atualizado_em'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('criado_em', 'atualizado_em')
+    
+    def usage_count(self, obj):
+        count = obj.recebimentos_set.count()
+        if count > 0:
+            return format_html('<span style="color: green;">{} recebimentos</span>', count)
+        return format_html('<span style="color: #6c757d;">Não utilizada</span>')
+    usage_count.short_description = 'Uso'
+
+
+@admin.register(Recebimentos)
+class RecebimentosAdmin(admin.ModelAdmin):
+    """Admin configuration for Recebimentos model"""
+    
+    list_display = (
+        'numero_documento', 'alvara_info', 'data', 'conta_bancaria_info', 
+        'valor_formatado', 'tipo', 'criado_por', 'criado_em'
+    )
+    list_filter = ('data', 'tipo', 'conta_bancaria__banco', 'conta_bancaria__tipo_de_conta')
+    search_fields = (
+        'numero_documento', 'alvara__cliente__nome', 'alvara__precatorio__cnj',
+        'conta_bancaria__banco', 'conta_bancaria__agencia', 'conta_bancaria__conta'
+    )
+    date_hierarchy = 'data'
+    ordering = ('-data', '-numero_documento')
+    
+    fieldsets = (
+        ('Informações do Recebimento', {
+            'fields': ('numero_documento', 'data', 'valor', 'tipo')
+        }),
+        ('Relacionamentos', {
+            'fields': ('alvara', 'conta_bancaria')
+        }),
+        ('Auditoria', {
+            'fields': ('criado_por', 'criado_em', 'atualizado_em'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ('criado_por', 'criado_em', 'atualizado_em')
+    autocomplete_fields = ['alvara']
+    
+    def alvara_info(self, obj):
+        """Display alvara information with client and precatorio"""
+        alvara = obj.alvara
+        return format_html(
+            '<strong>Alvará #{}</strong><br>'
+            '<span style="color: #007bff;">{}</span><br>'
+            '<span style="color: #6c757d; font-size: 0.9em;">{}</span>',
+            alvara.id,
+            alvara.cliente.nome,
+            alvara.precatorio.cnj
+        )
+    alvara_info.short_description = 'Alvará'
+    
+    def conta_bancaria_info(self, obj):
+        """Display bank account information"""
+        conta = obj.conta_bancaria
+        return format_html(
+            '<strong>{}</strong><br>'
+            '<span style="color: #6c757d; font-size: 0.9em;">Ag: {} - CC: {}</span><br>'
+            '<span style="color: #28a745; font-size: 0.9em;">{}</span>',
+            conta.banco,
+            conta.agencia,
+            conta.conta,
+            conta.get_tipo_de_conta_display()
+        )
+    conta_bancaria_info.short_description = 'Conta Bancária'
+    
+    def valor_formatado(self, obj):
+        """Display formatted currency value"""
+        return format_html(
+            '<strong style="color: #28a745;">R$ {:,.2f}</strong>',
+            obj.valor
+        ).replace(',', 'X').replace('.', ',').replace('X', '.')
+    valor_formatado.short_description = 'Valor'
 
 
 # Customize admin site header and title

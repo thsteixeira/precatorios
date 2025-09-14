@@ -14,12 +14,12 @@ import os
 import logging
 import mimetypes
 from io import StringIO
-from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo, FaseHonorariosContratuais, TipoDiligencia, Diligencias, PedidoRequerimento
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo, FaseHonorariosContratuais, TipoDiligencia, Diligencias, PedidoRequerimento, ContaBancaria, Recebimentos
 from .forms import (
     PrecatorioForm, ClienteForm, PrecatorioSearchForm, 
     ClienteSearchForm, RequerimentoForm, ClienteSimpleForm, 
     AlvaraSimpleForm, FaseForm, TipoForm, FaseHonorariosContratuaisForm, TipoDiligenciaForm,
-    DiligenciasForm, DiligenciasUpdateForm, PedidoRequerimentoForm
+    DiligenciasForm, DiligenciasUpdateForm, PedidoRequerimentoForm, ContaBancariaForm, RecebimentosForm
 )
 
 logger = logging.getLogger(__name__)
@@ -668,6 +668,7 @@ def precatorio_detalhe_view(request, precatorio_cnj):
         'requerimento_fases': Fase.get_fases_for_requerimento(),
         'fases_honorarios_contratuais': FaseHonorariosContratuais.objects.filter(ativa=True),  # Uses model's default ordering: ['ordem', 'nome']
         'available_pedidos': PedidoRequerimento.get_ativos(),
+        'contas_bancarias': ContaBancaria.objects.all().order_by('banco', 'agencia'),
     }
     
     return render(request, 'precapp/precatorio_detail.html', context)
@@ -1802,6 +1803,7 @@ def customizacao_view(request):
     tipos_precatorio = Tipo.objects.all()
     tipos_diligencia = TipoDiligencia.objects.all()
     tipos_pedido_requerimento = PedidoRequerimento.objects.all()
+    contas_bancarias = ContaBancaria.objects.all()
     
     context = {
         # Fases Principais stats
@@ -1829,12 +1831,16 @@ def customizacao_view(request):
         'tipos_diligencia_ativos': tipos_diligencia.filter(ativo=True).count(),
         'tipos_diligencia_inativos': tipos_diligencia.filter(ativo=False).count(),
         
+        # ContaBancaria stats
+        'total_contas_bancarias': contas_bancarias.count(),
+        
         # Recent items (last 5 of each type)
         'recent_fases_principais': fases_principais.order_by('-criado_em')[:5],
         'recent_fases_honorarios': fases_honorarios.order_by('-criado_em')[:5],
         'recent_tipos_precatorio': tipos_precatorio.order_by('-criado_em')[:5],
         'recent_tipos_pedido_requerimento': tipos_pedido_requerimento.order_by('-criado_em')[:5],
         'recent_tipos_diligencia': tipos_diligencia.order_by('-criado_em')[:5],
+        'recent_contas_bancarias': contas_bancarias.order_by('-criado_em')[:5],
     }
     
     return render(request, 'precapp/customizacao.html', context)
@@ -3124,10 +3130,236 @@ def download_precatorio_file(request, precatorio_cnj):
         response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response['Pragma'] = 'no-cache'
         response['Expires'] = '0'
-        
+
         logger.info(f"Returning streaming download response for: {download_filename}")
         return response
-        
+
     except Exception as e:
         logger.error(f"Error accessing file {file_name}: {str(e)}")
         raise Http404(f"Erro ao acessar arquivo: {str(e)}")
+
+
+# ==============================
+# ContaBancaria CRUD Views
+# ==============================
+
+@login_required
+def contas_bancarias_view(request):
+    """View to list all bank accounts"""
+    contas = ContaBancaria.objects.all()  # Uses model's default ordering: ['banco', 'agencia']
+    
+    # Add recebimentos count for each conta
+    for conta in contas:
+        conta.recebimentos_count = conta.recebimentos_set.count()
+    
+    # Statistics
+    total_contas = contas.count()
+    contas_com_recebimentos = sum(1 for conta in contas if conta.recebimentos_count > 0)
+    contas_sem_recebimentos = total_contas - contas_com_recebimentos
+    
+    # Get count of total recebimentos using the reverse relationship
+    total_recebimentos = sum(conta.recebimentos_count for conta in contas)
+    
+    context = {
+        'contas_bancarias': contas,
+        'total_contas': total_contas,
+        'contas_com_recebimentos': contas_com_recebimentos,
+        'contas_sem_recebimentos': contas_sem_recebimentos,
+        'total_recebimentos': total_recebimentos,
+    }
+    
+    return render(request, 'precapp/contas_bancarias_list.html', context)
+
+
+@login_required
+def nova_conta_bancaria_view(request):
+    """View to create a new bank account"""
+    if request.method == 'POST':
+        form = ContaBancariaForm(request.POST)
+        if form.is_valid():
+            conta = form.save()
+            messages.success(request, f'Conta Bancária "{conta.banco} - Ag: {conta.agencia}" criada com sucesso!')
+            return redirect('contas_bancarias')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = ContaBancariaForm()
+    
+    context = {
+        'form': form,
+        'title': 'Nova Conta Bancária',
+        'action': 'Criar'
+    }
+    
+    return render(request, 'precapp/conta_bancaria_form.html', context)
+
+
+@login_required
+def editar_conta_bancaria_view(request, conta_id):
+    """View to edit an existing bank account"""
+    conta = get_object_or_404(ContaBancaria, id=conta_id)
+    
+    if request.method == 'POST':
+        # Check if this is an update from the dropdown form in list view
+        if 'update_conta' in request.POST:
+            # Handle direct field updates from dropdown form
+            banco = request.POST.get('banco')
+            tipo_de_conta = request.POST.get('tipo_de_conta')
+            agencia = request.POST.get('agencia')
+            conta_numero = request.POST.get('conta')
+            
+            if banco and tipo_de_conta and agencia and conta_numero:
+                conta.banco = banco
+                conta.tipo_de_conta = tipo_de_conta
+                conta.agencia = agencia
+                conta.conta = conta_numero
+                conta.save()
+                messages.success(request, f'Conta Bancária "{conta.banco} - Ag: {conta.agencia}" atualizada com sucesso!')
+                return redirect('contas_bancarias')
+            else:
+                messages.error(request, 'Todos os campos são obrigatórios.')
+                return redirect('contas_bancarias')
+        else:
+            # Handle regular form update
+            form = ContaBancariaForm(request.POST, instance=conta)
+            if form.is_valid():
+                conta = form.save()
+                messages.success(request, f'Conta Bancária "{conta.banco} - Ag: {conta.agencia}" atualizada com sucesso!')
+                return redirect('contas_bancarias')
+            else:
+                messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = ContaBancariaForm(instance=conta)
+    
+    context = {
+        'form': form,
+        'conta': conta,
+        'title': f'Editar Conta: {conta.banco}',
+        'action': 'Atualizar'
+    }
+    
+    return render(request, 'precapp/conta_bancaria_form.html', context)
+
+
+@login_required
+def deletar_conta_bancaria_view(request, conta_id):
+    """View to delete a bank account"""
+    conta = get_object_or_404(ContaBancaria, id=conta_id)
+    
+    if request.method == 'POST':
+        try:
+            nome_conta = f"{conta.banco} - Ag: {conta.agencia}"
+            conta.delete()
+            messages.success(request, f'Conta Bancária "{nome_conta}" excluída com sucesso!')
+        except Exception as e:
+            messages.error(request, f'Erro ao excluir conta: {str(e)}')
+        
+        return redirect('contas_bancarias')
+    
+    # Count related recebimentos
+    recebimentos_count = conta.recebimentos_set.count()
+    
+    context = {
+        'conta': conta,
+        'recebimentos_count': recebimentos_count,
+        'can_delete': recebimentos_count == 0
+    }
+    
+    return render(request, 'precapp/confirmar_delete_conta_bancaria.html', context)
+
+
+# ===============================
+# RECEBIMENTOS VIEWS
+# ===============================
+
+@login_required
+def novo_recebimento_view(request, alvara_id):
+    """View to create a new payment for a specific alvará"""
+    alvara = get_object_or_404(Alvara, id=alvara_id)
+    
+    if request.method == 'POST':
+        form = RecebimentosForm(request.POST, alvara_id=alvara_id)
+        if form.is_valid():
+            recebimento = form.save(commit=False)
+            recebimento.alvara = alvara
+            recebimento.save()
+            messages.success(request, f'Recebimento {recebimento.numero_documento} criado com sucesso!')
+            return redirect('precatorio_detalhe', precatorio_cnj=alvara.precatorio.cnj)
+        else:
+            messages.error(request, 'Por favor, corrija os erros no formulário de recebimento.')
+    else:
+        form = RecebimentosForm(alvara_id=alvara_id)
+    
+    context = {
+        'form': form,
+        'alvara': alvara,
+        'title': f'Novo Recebimento - Alvará {alvara.cliente.nome}',
+        'action': 'Criar'
+    }
+    
+    return render(request, 'precapp/recebimento_form.html', context)
+
+
+@login_required
+def listar_recebimentos_view(request, alvara_id):
+    """View to list all payments for a specific alvará (AJAX)"""
+    alvara = get_object_or_404(Alvara, id=alvara_id)
+    recebimentos = alvara.recebimentos.all().order_by('-data', '-numero_documento')
+    
+    context = {
+        'recebimentos': recebimentos,
+        'alvara': alvara
+    }
+    
+    return render(request, 'precapp/pagamentos_list_partial.html', context)
+
+
+@login_required
+def editar_recebimento_view(request, recebimento_id):
+    """View to edit an existing payment"""
+    recebimento = get_object_or_404(Recebimentos, numero_documento=recebimento_id)
+    
+    if request.method == 'POST':
+        form = RecebimentosForm(request.POST, instance=recebimento, alvara_id=recebimento.alvara.id)
+        if form.is_valid():
+            recebimento = form.save()
+            messages.success(request, f'Recebimento {recebimento.numero_documento} atualizado com sucesso!')
+            return redirect('precatorio_detalhe', precatorio_cnj=recebimento.alvara.precatorio.cnj)
+        else:
+            messages.error(request, 'Por favor, corrija os erros no formulário.')
+    else:
+        form = RecebimentosForm(instance=recebimento, alvara_id=recebimento.alvara.id)
+    
+    context = {
+        'form': form,
+        'recebimento': recebimento,
+        'alvara': recebimento.alvara,
+        'title': f'Editar Recebimento {recebimento.numero_documento}',
+        'action': 'Atualizar'
+    }
+    
+    return render(request, 'precapp/recebimento_form.html', context)
+
+
+@login_required
+def deletar_recebimento_view(request, recebimento_id):
+    """View to delete a receipt"""
+    recebimento = get_object_or_404(Recebimentos, numero_documento=recebimento_id)
+    
+    if request.method == 'POST':
+        alvara_precatorio_cnj = recebimento.alvara.precatorio.cnj
+        numero_documento = recebimento.numero_documento
+        try:
+            recebimento.delete()
+            messages.success(request, f'Recebimento {numero_documento} excluído com sucesso!')
+        except Exception as e:
+            messages.error(request, f'Erro ao excluir recebimento: {str(e)}')
+        
+        return redirect('precatorio_detalhe', precatorio_cnj=alvara_precatorio_cnj)
+    
+    context = {
+        'recebimento': recebimento,
+        'alvara': recebimento.alvara
+    }
+    
+    return render(request, 'precapp/confirmar_delete_recebimento.html', context)

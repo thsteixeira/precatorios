@@ -363,6 +363,62 @@
                 </div>
             </div>
         </div>
+
+        <!-- Contas Bancárias Card -->
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-university me-2"></i>Contas Bancárias
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted mb-3">
+                        Configure as contas bancárias para pagamentos
+                    </p>
+                    
+                    <!-- Statistics -->
+                    <div class="row text-center mb-3">
+                        <div class="col-12">
+                            <div class="border rounded p-2">
+                                <h4 class="text-success mb-0">{{ total_contas_bancarias }}</h4>
+                                <small class="text-muted">Contas Cadastradas</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Accounts -->
+                    {% if recent_contas_bancarias %}
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-clock me-1"></i>Contas Recentes:
+                        </h6>
+                        <div class="mb-3">
+                            {% for conta in recent_contas_bancarias %}
+                                <div class="d-flex align-items-center mb-1">
+                                    <div class="fase-color me-2" style="width: 8px; height: 8px; border-radius: 50%; background-color: #28a745;"></div>
+                                    <small class="text-muted">{{ conta.banco }} - Ag. {{ conta.agencia }}</small>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted mb-3">
+                            <i class="fas fa-university fa-2x mb-2 opacity-50"></i>
+                            <p class="small mb-0">Nenhuma conta configurada</p>
+                        </div>
+                    {% endif %}
+
+                    <!-- Actions -->
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'contas_bancarias' %}" class="btn btn-success">
+                            <i class="fas fa-list me-1"></i>Gerenciar Contas Bancárias
+                        </a>
+                        <a href="{% url 'nova_conta_bancaria' %}" class="btn btn-outline-success">
+                            <i class="fas fa-plus me-1"></i>Criar Nova Conta Bancária
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Quick Actions Row -->
@@ -404,6 +460,50 @@
                                 <small class="text-muted">Honorários</small>
                             </a>
                         </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'nova_conta_bancaria' %}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-plus me-1"></i>
+                                <div>Nova Conta</div>
+                                <small class="text-muted">Bancária</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'contas_bancarias' %}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-university me-1"></i>
+                                <div>Ver Todas</div>
+                                <small class="text-muted">Contas</small>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'novo_tipo_precatorio' %}" class="btn btn-outline-warning w-100">
+                                <i class="fas fa-plus me-1"></i>
+                                <div>Novo Tipo</div>
+                                <small class="text-muted">Precatório</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'novo_tipo_pedido_requerimento' %}" class="btn btn-outline-danger w-100">
+                                <i class="fas fa-plus me-1"></i>
+                                <div>Novo Tipo</div>
+                                <small class="text-muted">Pedido Req.</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'novo_tipo_diligencia' %}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-plus me-1"></i>
+                                <div>Novo Tipo</div>
+                                <small class="text-muted">Diligência</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'tipos_diligencia' %}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-tasks me-1"></i>
+                                <div>Ver Tipos</div>
+                                <small class="text-muted">Diligência</small>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -415,10 +515,10 @@
         <div class="col-12">
             <div class="alert alert-info">
                 <h6 class="alert-heading">
-                    <i class="fas fa-info-circle me-1"></i>Sobre as Fases
+                    <i class="fas fa-info-circle me-1"></i>Sobre as Configurações
                 </h6>
                 <div class="row">
-                    <div class="col-md-6 mb-2">
+                    <div class="col-md-4 mb-2">
                         <p class="mb-1"><strong>Fases Principais:</strong></p>
                         <ul class="mb-0">
                             <li>Usadas em Alvarás e Requerimentos</li>
@@ -426,12 +526,20 @@
                             <li>Controlam o fluxo principal dos processos</li>
                         </ul>
                     </div>
-                    <div class="col-md-6 mb-2">
+                    <div class="col-md-4 mb-2">
                         <p class="mb-1"><strong>Fases Honorários Contratuais:</strong></p>
                         <ul class="mb-0">
                             <li>Específicas para acompanhar honorários contratuais</li>
                             <li>Usadas apenas em Alvarás</li>
                             <li>Independentes da fase principal</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <p class="mb-1"><strong>Contas Bancárias:</strong></p>
+                        <ul class="mb-0">
+                            <li>Configure contas para recebimento de pagamentos</li>
+                            <li>Defina bancos, agências e números de conta</li>
+                            <li>Reutilize contas em diferentes pagamentos</li>
                         </ul>
                     </div>
                 </div>

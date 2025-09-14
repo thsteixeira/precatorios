@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if conta %}
+        Editar Conta Bancária
+    {% else %}
+        Nova Conta Bancária
+    {% endif %}
+{% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-dark mb-0">
+                    <i class="fas fa-university me-2"></i>
+                    {% if conta %}
+                        Editar Conta Bancária
+                    {% else %}
+                        Nova Conta Bancária
+                    {% endif %}
+                </h2>
+                <a href="{% url 'contas_bancarias' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Voltar para Lista
+                </a>
+            </div>
+
+            <!-- Form Card -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-{{ conta|yesno:'edit,plus' }} me-2"></i>
+                        {% if conta %}
+                            Editando: {{ conta.banco }} - Ag: {{ conta.agencia }}
+                        {% else %}
+                            Dados da Nova Conta
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Error Messages -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="row g-3">
+                            <!-- Banco Field -->
+                            <div class="col-md-6">
+                                <label for="{{ form.banco.id_for_label }}" class="form-label">
+                                    {{ form.banco.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.banco }}
+                                {% if form.banco.help_text %}
+                                    <div class="form-text">{{ form.banco.help_text }}</div>
+                                {% endif %}
+                                {% if form.banco.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.banco.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Tipo de Conta Field -->
+                            <div class="col-md-6">
+                                <label for="{{ form.tipo_de_conta.id_for_label }}" class="form-label">
+                                    {{ form.tipo_de_conta.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.tipo_de_conta }}
+                                {% if form.tipo_de_conta.help_text %}
+                                    <div class="form-text">{{ form.tipo_de_conta.help_text }}</div>
+                                {% endif %}
+                                {% if form.tipo_de_conta.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.tipo_de_conta.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Agência Field -->
+                            <div class="col-md-6">
+                                <label for="{{ form.agencia.id_for_label }}" class="form-label">
+                                    {{ form.agencia.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.agencia }}
+                                {% if form.agencia.help_text %}
+                                    <div class="form-text">{{ form.agencia.help_text }}</div>
+                                {% endif %}
+                                {% if form.agencia.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.agencia.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Conta Field -->
+                            <div class="col-md-6">
+                                <label for="{{ form.conta.id_for_label }}" class="form-label">
+                                    {{ form.conta.label }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.conta }}
+                                {% if form.conta.help_text %}
+                                    <div class="form-text">{{ form.conta.help_text }}</div>
+                                {% endif %}
+                                {% if form.conta.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.conta.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Account Information Preview (if editing) -->
+                            {% if conta %}
+                                <div class="col-12">
+                                    <div class="alert alert-info">
+                                        <h6 class="alert-heading">
+                                            <i class="fas fa-info-circle me-1"></i>Informações Adicionais
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <strong>Pagamentos vinculados:</strong> {{ conta.pagamentos_set.count }}
+                                            </div>
+                                            <div class="col-md-6">
+                                                <strong>Criada em:</strong> {{ conta.criado_em|date:"d/m/Y H:i" }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                            <a href="{% url 'contas_bancarias' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>
+                                {% if conta %}
+                                    Atualizar Conta
+                                {% else %}
+                                    Criar Conta
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-question-circle me-2"></i>Dicas de Uso
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-success">
+                                <i class="fas fa-university me-1"></i>Nome do Banco
+                            </h6>
+                            <p class="small text-muted">
+                                Digite o nome completo do banco (ex: Banco do Brasil, 
+                                Caixa Econômica Federal, Itaú Unibanco).
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-info">
+                                <i class="fas fa-credit-card me-1"></i>Tipo de Conta
+                            </h6>
+                            <p class="small text-muted">
+                                Selecione o tipo de conta bancária: Corrente, Poupança, 
+                                Conta Salário ou Outros conforme necessário.
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-warning">
+                                <i class="fas fa-code-branch me-1"></i>Agência
+                            </h6>
+                            <p class="small text-muted">
+                                Informe o código da agência bancária. Pode incluir 
+                                hífens e será validado automaticamente.
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-primary">
+                                <i class="fas fa-hashtag me-1"></i>Número da Conta
+                            </h6>
+                            <p class="small text-muted">
+                                Digite o número da conta bancária incluindo o dígito 
+                                verificador. Pode usar hífens para separar.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="text-secondary">
+                                <i class="fas fa-shield-alt me-1"></i>Validação Automática
+                            </h6>
+                            <p class="small text-muted mb-0">
+                                O sistema valida automaticamente os formatos da agência e conta, 
+                                verificando se contêm apenas números e hífens, e se possuem 
+                                o tamanho mínimo necessário para operações bancárias.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

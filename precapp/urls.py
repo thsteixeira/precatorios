@@ -16,7 +16,9 @@ from .views import (
     deletar_tipo_diligencia_view, ativar_tipo_diligencia_view,
     nova_diligencia_view, editar_diligencia_view, deletar_diligencia_view, marcar_diligencia_concluida_view,
     diligencias_list_view, update_priority_by_age, import_excel_view, export_precatorios_excel, export_clientes_excel,
-    download_precatorio_file
+    download_precatorio_file,
+    contas_bancarias_view, nova_conta_bancaria_view, editar_conta_bancaria_view, deletar_conta_bancaria_view,
+    novo_recebimento_view, listar_recebimentos_view, editar_recebimento_view, deletar_recebimento_view
 )
 
 urlpatterns = [
@@ -81,6 +83,18 @@ urlpatterns = [
     path('tipos-diligencia/<int:tipo_id>/editar/', editar_tipo_diligencia_view, name='editar_tipo_diligencia'),
     path('tipos-diligencia/<int:tipo_id>/deletar/', deletar_tipo_diligencia_view, name='deletar_tipo_diligencia'),
     path('tipos-diligencia/<int:tipo_id>/ativar/', ativar_tipo_diligencia_view, name='ativar_tipo_diligencia'),
+    
+    # ContaBancaria Management URLs
+    path('contas-bancarias/', contas_bancarias_view, name='contas_bancarias'),
+    path('contas-bancarias/nova/', nova_conta_bancaria_view, name='nova_conta_bancaria'),
+    path('contas-bancarias/<int:conta_id>/editar/', editar_conta_bancaria_view, name='editar_conta_bancaria'),
+    path('contas-bancarias/<int:conta_id>/deletar/', deletar_conta_bancaria_view, name='deletar_conta_bancaria'),
+    
+    # Recebimentos Management URLs
+    path('alvaras/<int:alvara_id>/recebimentos/novo/', novo_recebimento_view, name='novo_recebimento'),
+    path('alvaras/<int:alvara_id>/recebimentos/listar/', listar_recebimentos_view, name='listar_recebimentos'),
+    path('recebimentos/<str:recebimento_id>/editar/', editar_recebimento_view, name='editar_recebimento'),
+    path('recebimentos/<str:recebimento_id>/deletar/', deletar_recebimento_view, name='deletar_recebimento'),
     
     # Diligencia Management URLs (within client context)
     path('clientes/<str:cpf>/diligencias/nova/', nova_diligencia_view, name='nova_diligencia'),

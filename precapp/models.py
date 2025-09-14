@@ -6,6 +6,7 @@ from django.db.models.signals import pre_save, post_delete
 from django.dispatch import receiver
 from django.core.files.storage import default_storage
 from datetime import datetime
+from decimal import Decimal
 import threading
 import logging
 from django.utils import timezone
@@ -1341,3 +1342,199 @@ class Requerimento(models.Model):
     class Meta:
         verbose_name = "Requerimento"
         verbose_name_plural = "Requerimentos"
+
+
+class ContaBancaria(models.Model):
+    """
+    Model representing a bank account for payment purposes.
+    
+    This model stores bank account information that can be reused
+    across multiple payments. It allows users to configure commonly
+    used bank accounts for efficient payment processing.
+    
+    Attributes:
+        banco (CharField): Name of the bank (max 100 characters)
+        tipo_de_conta (CharField): Type of account (corrente, poupança, etc.)
+        agencia (CharField): Bank branch code/number (max 20 characters)
+        conta (CharField): Account number (max 30 characters)
+    
+    Business Rules:
+        - Bank account information can be reused across payments
+        - All fields are required for payment processing
+        - Account combinations should be unique per bank
+    
+    Usage Examples:
+        conta = ContaBancaria.objects.create(
+            banco="Banco do Brasil",
+            tipo_de_conta="corrente",
+            agencia="1234-5",
+            conta="12345678-9"
+        )
+    """
+    
+    TIPO_CONTA_CHOICES = [
+        ('corrente', 'Conta Corrente'),
+        ('poupanca', 'Conta Poupança'),
+    ]
+    
+    banco = models.CharField(
+        max_length=100,
+        help_text="Nome do banco (ex: Banco do Brasil, Caixa Econômica Federal)"
+    )
+    tipo_de_conta = models.CharField(
+        max_length=20,
+        choices=TIPO_CONTA_CHOICES,
+        default='corrente',
+        help_text="Tipo de conta bancária"
+    )
+    agencia = models.CharField(
+        max_length=20,
+        help_text="Código da agência (ex: 1234-5, 0001)"
+    )
+    conta = models.CharField(
+        max_length=30,
+        help_text="Número da conta (ex: 12345678-9)"
+    )
+    
+    # Audit fields
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Conta Bancária"
+        verbose_name_plural = "Contas Bancárias"
+        unique_together = ['banco', 'agencia', 'conta']
+        ordering = ['banco', 'agencia', 'conta']
+    
+    def __str__(self):
+        return f"{self.banco} - Ag: {self.agencia} - CC: {self.conta}"
+
+
+class Recebimentos(models.Model):
+    """
+    Model representing receipts made for a specific Alvará.
+    
+    This model tracks individual receipts made against an Alvará,
+    including receipt date, document number, bank account used,
+    receipt amount, and receipt type. Multiple receipts can be made for a single Alvará.
+    
+    Attributes:
+        numero_documento (CharField): Unique document/reference number (Primary Key)
+        alvara (ForeignKey): Related Alvará for which receipt is made
+        data (DateField): Date when receipt was made
+        conta_bancaria (ForeignKey): Bank account used for receipt
+        valor (DecimalField): Receipt amount
+        tipo (CharField): Receipt type - either "Hon. contratuais" or "Hon. sucumbenciais"
+    
+    Business Rules:
+        - Each receipt must have a unique document number
+        - Receipt amount must be positive
+        - Receipt type must be one of the two allowed choices
+        - Bank account must exist before creating receipt
+        - Multiple receipts can be made for the same Alvará
+        - Related Alvará cannot be deleted if receipts exist (PROTECT)
+        - Related bank account cannot be deleted if used in receipts (PROTECT)
+    
+    Relationships:
+        - Alvara: Parent document (PROTECT - prevents deletion of Alvará with receipts)
+        - ContaBancaria: Receipt account (PROTECT - prevents deletion of account with receipts)
+    
+    Usage Examples:
+        recebimento = Recebimentos.objects.create(
+            numero_documento="REC-2023-001234",
+            alvara=alvara,
+            data=date.today(),
+            conta_bancaria=conta,
+            valor=Decimal('50000.00'),
+            tipo="Hon. contratuais"
+        )
+    """
+    numero_documento = models.CharField(
+        max_length=50,
+        primary_key=True,
+        help_text="Número único do documento de recebimento (ex: REC-2023-001234)"
+    )
+    alvara = models.ForeignKey(
+        Alvara,
+        on_delete=models.PROTECT,
+        related_name='recebimentos',
+        help_text="Alvará para o qual o recebimento foi realizado"
+    )
+    data = models.DateField(
+        help_text="Data em que o recebimento foi realizado"
+    )
+    conta_bancaria = models.ForeignKey(
+        ContaBancaria,
+        on_delete=models.PROTECT,
+        help_text="Conta bancária utilizada para o recebimento"
+    )
+    valor = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        validators=[MinValueValidator(0.01)],
+        help_text="Valor do recebimento (deve ser positivo)"
+    )
+    
+    # Receipt type choices
+    TIPO_CHOICES = [
+        ('Hon. contratuais', 'Hon. contratuais'),
+        ('Hon. sucumbenciais', 'Hon. sucumbenciais'),
+    ]
+    
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_CHOICES,
+        help_text="Tipo do recebimento: honorários contratuais ou sucumbenciais"
+    )
+    
+    # Audit fields
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    criado_por = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text="Usuário que registrou o recebimento"
+    )
+    
+    class Meta:
+        verbose_name = "Recebimento"
+        verbose_name_plural = "Recebimentos"
+        ordering = ['-data', '-numero_documento']
+        
+    def clean(self):
+        """
+        Validate receipt data.
+        
+        Ensures that receipt amount is positive and that all required
+        relationships are properly set.
+        """
+        super().clean()
+        
+        if self.valor and self.valor <= 0:
+            raise ValidationError({
+                'valor': 'O valor do recebimento deve ser maior que zero.'
+            })
+    
+    def save(self, *args, **kwargs):
+        """
+        Override save to ensure validation and track creation user.
+        """
+        # Track who created the receipt on first save
+        if not self.pk:  # New instance
+            current_user = getattr(threading.current_thread(), 'user', None)
+            if current_user and hasattr(current_user, 'get_full_name'):
+                self.criado_por = current_user.get_full_name() or current_user.username
+            else:
+                self.criado_por = "System"
+        
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Recebimento {self.numero_documento} - R$ {self.valor:,.2f}"
+    
+    @property
+    def valor_formatado(self):
+        """Return formatted currency value."""
+        return f"R$ {self.valor:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')

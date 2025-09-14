@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.forms.widgets import ClearableFileInput
 import re
-from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, Diligencias, TipoDiligencia, Tipo, PedidoRequerimento
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, Diligencias, TipoDiligencia, Tipo, PedidoRequerimento, ContaBancaria, Recebimentos
 
 
 class CustomFileWidget(ClearableFileInput):
@@ -3517,4 +3517,340 @@ class PedidoRequerimentoForm(forms.ModelForm):
         if cor and not re.match(r'^#[0-9A-Fa-f]{6}$', cor):
             raise forms.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
         return cor
+
+
+class ContaBancariaForm(forms.ModelForm):
+    """
+    Form for creating and editing bank account information.
+    
+    This form handles bank account data that will be used for payment processing.
+    It includes validation for Brazilian bank account formats and ensures all
+    required information is provided for successful payment transactions.
+    
+    Key Features:
+        - Bank name validation and formatting
+        - Account type selection with predefined choices
+        - Agency and account number validation
+        - Bootstrap styling integration
+        - User-friendly field labels and help texts
+        
+    Business Rules:
+        - All fields are required for payment processing
+        - Bank account combinations should be unique per bank
+        - Account numbers and agency codes are validated for basic format
+        
+    Usage:
+        # Creating new bank account
+        form = ContaBancariaForm(request.POST or None)
+        if form.is_valid():
+            conta = form.save()
+            
+        # Editing existing bank account
+        form = ContaBancariaForm(request.POST or None, instance=conta)
+    """
+    
+    class Meta:
+        model = ContaBancaria
+        fields = ['banco', 'tipo_de_conta', 'agencia', 'conta']
+        widgets = {
+            'banco': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex: Banco do Brasil, Caixa Econômica Federal'
+            }),
+            'tipo_de_conta': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'agencia': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex: 1234-5, 0001'
+            }),
+            'conta': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex: 12345678-9, 123456-7'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Set custom labels
+        self.fields['banco'].label = 'Banco'
+        self.fields['tipo_de_conta'].label = 'Tipo de Conta'
+        self.fields['agencia'].label = 'Agência'
+        self.fields['conta'].label = 'Número da Conta'
+        
+        # Add help texts
+        self.fields['banco'].help_text = 'Nome completo do banco'
+        self.fields['tipo_de_conta'].help_text = 'Selecione o tipo de conta bancária'
+        self.fields['agencia'].help_text = 'Código da agência bancária'
+        self.fields['conta'].help_text = 'Número da conta bancária'
+        
+        # Make all fields required
+        for field in self.fields:
+            self.fields[field].required = True
+    
+    def clean_agencia(self):
+        """Validate agency code format"""
+        agencia = self.cleaned_data.get('agencia')
+        if agencia:
+            # Remove spaces and hyphens for validation
+            agencia_clean = agencia.replace(' ', '').replace('-', '')
+            if not agencia_clean.isdigit():
+                raise forms.ValidationError('Código da agência deve conter apenas números e hífens')
+            if len(agencia_clean) < 3:
+                raise forms.ValidationError('Código da agência deve ter pelo menos 3 dígitos')
+        return agencia
+    
+    def clean_conta(self):
+        """Validate account number format"""
+        conta = self.cleaned_data.get('conta')
+        if conta:
+            # Remove spaces and hyphens for validation
+            conta_clean = conta.replace(' ', '').replace('-', '')
+            if not conta_clean.isdigit():
+                raise forms.ValidationError('Número da conta deve conter apenas números e hífens')
+            if len(conta_clean) < 5:
+                raise forms.ValidationError('Número da conta deve ter pelo menos 5 dígitos')
+        return conta
+
+
+class RecebimentosForm(forms.ModelForm):
+    """
+    Form for creating and editing payment records for Alvarás.
+    
+    This form handles individual payment transactions associated with specific
+    Alvarás. It includes validation for payment amounts, document numbers,
+    and bank account relationships.
+    
+    Key Features:
+        - Document number validation and formatting
+        - Payment amount validation with Brazilian currency support
+        - Date validation with Brazilian date format
+        - Bank account integration with real-time selection
+        - Bootstrap styling with enhanced UX
+        
+    Business Rules:
+        - Document numbers must be unique
+        - Payment amounts must be positive
+        - Receipt dates cannot be in the future
+        - Bank account must exist before creating receipt
+        - Alvará must exist and be valid
+        
+    Usage:
+        # Creating new receipt
+        form = RecebimentosForm(request.POST or None, alvara_id=alvara.id)
+        if form.is_valid():
+            recebimento = form.save()
+            
+        # Editing existing receipt
+        form = RecebimentosForm(request.POST or None, instance=recebimento)
+    """
+    
+    class Meta:
+        model = Recebimentos
+        fields = ['numero_documento', 'data', 'conta_bancaria', 'valor', 'tipo']
+        widgets = {
+            'numero_documento': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex: REC-2023-001234'
+            }),
+            'data': BrazilianDateInput(attrs={
+                'class': 'form-control'
+            }),
+            'conta_bancaria': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'valor': forms.NumberInput(attrs={
+                'class': 'form-control brazilian-currency',
+                'step': '0.01',
+                'min': '0.01'
+            }),
+            'tipo': forms.Select(attrs={
+                'class': 'form-select'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.alvara_id = kwargs.pop('alvara_id', None)
+        super().__init__(*args, **kwargs)
+        
+        # Set custom labels
+        self.fields['numero_documento'].label = 'Número do Documento'
+        self.fields['data'].label = 'Data do Recebimento'
+        self.fields['conta_bancaria'].label = 'Conta Bancária'
+        self.fields['valor'].label = 'Valor do Recebimento'
+        self.fields['tipo'].label = 'Tipo do Recebimento'
+        
+        # Add help texts
+        self.fields['numero_documento'].help_text = 'Número único de identificação do recebimento'
+        self.fields['data'].help_text = 'Data em que o recebimento foi realizado'
+        self.fields['conta_bancaria'].help_text = 'Conta bancária utilizada para o recebimento'
+        self.fields['valor'].help_text = 'Valor do recebimento em reais (R$)'
+        self.fields['tipo'].help_text = 'Tipo do recebimento: honorários contratuais ou sucumbenciais'
+        
+        # Make all fields required
+        for field in self.fields:
+            self.fields[field].required = True
+        
+        # Filter bank accounts to show only active ones
+        self.fields['conta_bancaria'].queryset = ContaBancaria.objects.all().order_by('banco', 'agencia')
+        
+        # If creating for specific alvara, set it automatically
+        if self.alvara_id and not self.instance.pk:
+            try:
+                alvara = Alvara.objects.get(id=self.alvara_id)
+                self.instance.alvara = alvara
+            except Alvara.DoesNotExist:
+                pass
+    
+    def clean_numero_documento(self):
+        """Validate document number uniqueness and format"""
+        numero_documento = self.cleaned_data.get('numero_documento')
+        if numero_documento:
+            # Check for uniqueness (excluding current instance if editing)
+            existing = Recebimentos.objects.filter(numero_documento=numero_documento)
+            if self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+            
+            if existing.exists():
+                raise forms.ValidationError('Este número de documento já existe. Use um número único.')
+            
+            # Basic format validation
+            if len(numero_documento) < 5:
+                raise forms.ValidationError('Número do documento deve ter pelo menos 5 caracteres')
+                
+        return numero_documento
+    
+    def clean_data(self):
+        """Validate payment date"""
+        data = self.cleaned_data.get('data')
+        if data:
+            from datetime import date
+            today = date.today()
+            if data > today:
+                raise forms.ValidationError('Data do recebimento não pode ser no futuro')
+                
+        return data
+    
+    def clean_valor(self):
+        """Validate payment amount"""
+        valor = self.cleaned_data.get('valor')
+        if valor is not None:
+            if valor <= 0:
+                raise forms.ValidationError('Valor do recebimento deve ser maior que zero')
+            if valor > 99999999.99:  # Max value check
+                raise forms.ValidationError('Valor do recebimento é muito alto')
+                
+        return valor
+    
+    def save(self, commit=True):
+        """Override save to ensure alvara is set"""
+        instance = super().save(commit=False)
+        
+        # Set alvara if provided
+        if self.alvara_id and not instance.alvara_id:
+            try:
+                alvara = Alvara.objects.get(id=self.alvara_id)
+                instance.alvara = alvara
+            except Alvara.DoesNotExist:
+                raise forms.ValidationError('Alvará especificado não foi encontrado')
+        
+        if commit:
+            instance.save()
+        return instance
+
+
+class RecebimentosSearchForm(forms.Form):
+    """
+    Form for searching and filtering payment records.
+    
+    Provides comprehensive search functionality for payments including
+    filtering by date ranges, amounts, document numbers, and related
+    Alvará information.
+    
+    Features:
+        - Document number search
+        - Date range filtering
+        - Amount range filtering
+        - Bank account filtering
+        - Alvará client name search
+        - Advanced search options
+    """
+    
+    numero_documento = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Pesquisar por número do documento...'
+        }),
+        label='Número do Documento'
+    )
+    
+    data_inicio = forms.DateField(
+        required=False,
+        widget=BrazilianDateInput(attrs={
+            'class': 'form-control'
+        }),
+        label='Data Inicial'
+    )
+    
+    data_fim = forms.DateField(
+        required=False,
+        widget=BrazilianDateInput(attrs={
+            'class': 'form-control'
+        }),
+        label='Data Final'
+    )
+    
+    valor_minimo = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control brazilian-currency',
+            'step': '0.01',
+            'min': '0'
+        }),
+        label='Valor Mínimo'
+    )
+    
+    valor_maximo = forms.DecimalField(
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control brazilian-currency',
+            'step': '0.01',
+            'min': '0'
+        }),
+        label='Valor Máximo'
+    )
+    
+    conta_bancaria = forms.ModelChoiceField(
+        queryset=ContaBancaria.objects.all().order_by('banco', 'agencia'),
+        required=False,
+        empty_label='Todas as contas',
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        }),
+        label='Conta Bancária'
+    )
+    
+    cliente_nome = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Pesquisar por nome do cliente...'
+        }),
+        label='Nome do Cliente'
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Add help texts
+        self.fields['numero_documento'].help_text = 'Busca parcial no número do documento'
+        self.fields['data_inicio'].help_text = 'Data inicial para filtrar recebimentos'
+        self.fields['data_fim'].help_text = 'Data final para filtrar recebimentos'
+        self.fields['valor_minimo'].help_text = 'Valor mínimo dos recebimentos'
+        self.fields['valor_maximo'].help_text = 'Valor máximo dos recebimentos'
+        self.fields['conta_bancaria'].help_text = 'Filtrar por conta bancária específica'
+        self.fields['cliente_nome'].help_text = 'Busca parcial no nome do cliente do alvará'
+
 

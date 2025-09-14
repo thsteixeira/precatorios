@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Confirmar Exclusão - Conta Bancária{% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-dark mb-0">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                    Confirmar Exclusão
+                </h2>
+                <a href="{% url 'contas_bancarias' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Voltar para Lista
+                </a>
+            </div>
+
+            <!-- Confirmation Card -->
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-university me-2"></i>
+                        Excluir Conta Bancária
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Account Details -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-university fa-3x text-muted"></i>
+                                </div>
+                                <div>
+                                    <h4 class="mb-1">{{ conta.banco }}</h4>
+                                    <small class="text-muted">
+                                        <strong>Tipo:</strong> {{ conta.get_tipo_de_conta_display }} | 
+                                        <strong>Agência:</strong> {{ conta.agencia }} | 
+                                        <strong>Conta:</strong> {{ conta.conta }}
+                                        {% if not can_delete %}
+                                            <span class="badge bg-warning ms-2">Com Pagamentos</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Validation Checks -->
+                    {% if pagamentos_count > 0 %}
+                        <div class="alert alert-warning" role="alert">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-ban me-1"></i>Não é possível excluir
+                            </h6>
+                            <p class="mb-2">
+                                Esta conta bancária não pode ser excluída porque possui 
+                                <strong>{{ pagamentos_count }} pagamento{{ pagamentos_count|pluralize }}</strong> vinculado{{ pagamentos_count|pluralize }}.
+                            </p>
+                            <hr>
+                            <p class="mb-0">
+                                <strong>Opções disponíveis:</strong>
+                            </p>
+                            <ul class="mb-0">
+                                <li>Remova ou transfira os pagamentos vinculados primeiro</li>
+                                <li>Edite os dados da conta se necessário</li>
+                            </ul>
+                        </div>
+
+                        <!-- Actions when cannot delete -->
+                        <div class="d-flex justify-content-between gap-2">
+                            <a href="{% url 'contas_bancarias' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Voltar para Lista
+                            </a>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'editar_conta_bancaria' conta.id %}" class="btn btn-primary">
+                                    <i class="fas fa-edit me-1"></i>Editar Conta
+                                </a>
+                            </div>
+                        </div>
+
+                    {% else %}
+                        <div class="alert alert-danger" role="alert">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Atenção!
+                            </h6>
+                            <p class="mb-0">
+                                Você está prestes a excluir permanentemente a conta bancária 
+                                "<strong>{{ conta.banco }} - Ag: {{ conta.agencia }}</strong>". 
+                                Esta ação não pode ser desfeita.
+                            </p>
+                        </div>
+
+                        <!-- Confirmation form -->
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <div class="d-flex justify-content-between gap-2">
+                                <a href="{% url 'contas_bancarias' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left me-1"></i>Cancelar
+                                </a>
+                                <div class="d-flex gap-2">
+                                    <a href="{% url 'editar_conta_bancaria' conta.id %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-edit me-1"></i>Editar em vez de Excluir
+                                    </a>
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="fas fa-trash me-1"></i>Sim, Excluir Conta
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Account Information Card -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Detalhes da Conta
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">
+                                <i class="fas fa-university me-1"></i>Informações Bancárias
+                            </h6>
+                            <ul class="list-unstyled small">
+                                <li><strong>Banco:</strong> {{ conta.banco }}</li>
+                                <li><strong>Tipo de Conta:</strong> {{ conta.get_tipo_de_conta_display }}</li>
+                                <li><strong>Agência:</strong> {{ conta.agencia }}</li>
+                                <li><strong>Número da Conta:</strong> {{ conta.conta }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-info">
+                                <i class="fas fa-chart-bar me-1"></i>Estatísticas
+                            </h6>
+                            <ul class="list-unstyled small">
+                                <li><strong>Pagamentos vinculados:</strong> {{ pagamentos_count }}</li>
+                                <li><strong>Criada em:</strong> {{ conta.criado_em|date:"d/m/Y H:i" }}</li>
+                                <li><strong>Última atualização:</strong> {{ conta.atualizado_em|date:"d/m/Y H:i" }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alternative Actions Card -->
+            {% if pagamentos_count > 0 %}
+                <div class="card mt-4">
+                    <div class="card-header bg-light">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>Alternativas
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-primary">
+                                    <i class="fas fa-edit me-1"></i>Editar Conta
+                                </h6>
+                                <p class="small text-muted">
+                                    Em vez de excluir, você pode editar os dados da conta 
+                                    para corrigir informações ou atualizá-la.
+                                </p>
+                                <a href="{% url 'editar_conta_bancaria' conta.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit me-1"></i>Editar
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-warning">
+                                    <i class="fas fa-exchange-alt me-1"></i>Transferir Pagamentos
+                                </h6>
+                                <p class="small text-muted">
+                                    Você pode transferir os pagamentos para outra conta 
+                                    antes de excluir esta conta bancária.
+                                </p>
+                                <p class="small text-muted">
+                                    <em>Esta funcionalidade será implementada em versões futuras.</em>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card mt-4">
+                    <div class="card-header bg-light">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>Alternativas
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h6 class="text-primary">
+                                    <i class="fas fa-edit me-1"></i>Editar em vez de Excluir
+                                </h6>
+                                <p class="small text-muted">
+                                    Como esta conta não possui pagamentos vinculados, você pode 
+                                    editá-la para adequá-la melhor às suas necessidades em vez de excluí-la.
+                                    Você pode modificar o nome do banco, tipo de conta, agência ou número da conta 
+                                    para adequá-la melhor às suas necessidades.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock content %}

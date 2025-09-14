@@ -1421,6 +1421,13 @@
                                                     title="Editar alvará">
                                                 <i class="fas fa-edit me-1"></i>Editar
                                             </button>
+                                            <button type="button" class="btn btn-outline-success" 
+                                                    data-bs-toggle="collapse" 
+                                                    data-bs-target="#recebimentosForm-{{ alvara.id }}" 
+                                                    aria-expanded="false" 
+                                                    title="Gerenciar recebimentos">
+                                                <i class="fas fa-money-bill-wave me-1"></i>Recebimentos
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -1577,6 +1584,184 @@
                                         </div>
                                     </div>
                                 </div>
+                                
+                                <!-- Payments Management Section -->
+                                <tr>
+                                    <td colspan="9" class="p-0">
+                                        <div class="collapse" id="recebimentosForm-{{ alvara.id }}">
+                                            <div class="card card-body m-2 bg-light-subtle">
+                                                <div class="row mb-3">
+                                                    <div class="col-12">
+                                                        <h6 class="text-success mb-3">
+                                                            <i class="fas fa-money-bill-wave me-2"></i>Recebimentos - {{ alvara.cliente.nome }}
+                                                        </h6>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Existing Payments Display -->
+                                                {% if alvara.recebimentos.all %}
+                                                <div class="row mb-4">
+                                                    <div class="col-12">
+                                                        <h6 class="text-muted mb-2">
+                                                            <i class="fas fa-list me-1"></i>Recebimentos Existentes
+                                                        </h6>
+                                                        <div class="table-responsive">
+                                                            <table class="table table-sm table-striped">
+                                                                <thead class="table-success">
+                                                                    <tr>
+                                                                        <th>Documento</th>
+                                                                        <th>Data</th>
+                                                                        <th>Tipo</th>
+                                                                        <th>Valor</th>
+                                                                        <th>Conta Bancária</th>
+                                                                        <th>Ações</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {% for recebimento in alvara.recebimentos.all %}
+                                                                    <tr>
+                                                                        <td>
+                                                                            <strong>{{ recebimento.numero_documento }}</strong>
+                                                                        </td>
+                                                                        <td>{{ recebimento.data|date:"d/m/Y" }}</td>
+                                                                        <td>
+                                                                            <span class="badge bg-info text-dark">{{ recebimento.get_tipo_display }}</span>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span class="text-success fw-bold">{{ recebimento.valor_formatado }}</span>
+                                                                        </td>
+                                                                        <td>
+                                                                            <small>
+                                                                                <strong>{{ recebimento.conta_bancaria.banco }}</strong><br>
+                                                                                Ag: {{ recebimento.conta_bancaria.agencia }} - 
+                                                                                Cc: {{ recebimento.conta_bancaria.conta }}
+                                                                            </small>
+                                                                        </td>
+                                                                        <td>
+                                                                            <a href="{% url 'editar_recebimento' recebimento.numero_documento %}" 
+                                                                               class="btn btn-outline-primary btn-sm" title="Editar recebimento">
+                                                                                <i class="fas fa-edit me-1"></i>Editar
+                                                                            </a>
+                                                                        </td>
+                                                                    </tr>
+                                                                    {% endfor %}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                        
+                                                        <!-- Payment Summary -->
+                                                        <div class="row mt-2">
+                                                            <div class="col-md-6">
+                                                                <div class="alert alert-success py-2">
+                                                                    <strong>Total Pago:</strong> 
+                                                                    {{ alvara.recebimentos.all|length|floatformat:0 }} recebimento{{ alvara.recebimentos.all|length|pluralize }}
+                                                                    <!-- TODO: Add sum calculation -->
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <hr>
+                                                {% endif %}
+                                                
+                                                <!-- New Payment Form -->
+                                                <div class="row">
+                                                    <div class="col-12">
+                                                        <h6 class="text-primary mb-3">
+                                                            <i class="fas fa-plus me-1"></i>Novo Recebimento
+                                                        </h6>
+                                                        
+                                                        <form method="post" action="{% url 'novo_recebimento' alvara.id %}" id="novoRecebimentoForm-{{ alvara.id }}">
+                                                            {% csrf_token %}
+                                                            
+                                                            <div class="row g-3">
+                                                                <div class="col-md-3">
+                                                                    <label for="numero_documento_{{ alvara.id }}" class="form-label">Número do Documento</label>
+                                                                    <input type="text" class="form-control form-control-sm" 
+                                                                           id="numero_documento_{{ alvara.id }}" 
+                                                                           name="numero_documento" 
+                                                                           placeholder="Ex: PAG-2024-001"
+                                                                           required>
+                                                                </div>
+                                                                
+                                                                <div class="col-md-3">
+                                                                    <label for="data_{{ alvara.id }}" class="form-label">Data do Recebimento</label>
+                                                                    <input type="date" class="form-control form-control-sm" 
+                                                                           id="data_{{ alvara.id }}" 
+                                                                           name="data" 
+                                                                           value="{% now 'Y-m-d' %}"
+                                                                           required>
+                                                                </div>
+                                                                
+                                                                <div class="col-md-3">
+                                                                    <label for="tipo_{{ alvara.id }}" class="form-label">Tipo</label>
+                                                                    <select class="form-select form-select-sm" 
+                                                                            id="tipo_{{ alvara.id }}" 
+                                                                            name="tipo"
+                                                                            required>
+                                                                        <option value="">Selecione o tipo</option>
+                                                                        <option value="Hon. contratuais">Hon. contratuais</option>
+                                                                        <option value="Hon. sucumbenciais">Hon. sucumbenciais</option>
+                                                                    </select>
+                                                                </div>
+                                                                
+                                                                <div class="col-md-3">
+                                                                    <label for="valor_{{ alvara.id }}" class="form-label">Valor</label>
+                                                                    <div class="input-group input-group-sm">
+                                                                        <span class="input-group-text">R$</span>
+                                                                        <input type="text" class="form-control brazilian-currency" 
+                                                                               id="valor_{{ alvara.id }}" 
+                                                                               name="valor" 
+                                                                               placeholder="0,00"
+                                                                               required>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <div class="col-12">
+                                                                    <label for="conta_bancaria_{{ alvara.id }}" class="form-label">Conta Bancária</label>
+                                                                    <select class="form-select form-select-sm" 
+                                                                            id="conta_bancaria_{{ alvara.id }}" 
+                                                                            name="conta_bancaria"
+                                                                            required>
+                                                                        <option value="">Selecione a conta bancária</option>
+                                                                        {% for conta in contas_bancarias %}
+                                                                            <option value="{{ conta.id }}">
+                                                                                {{ conta.banco }} - Ag: {{ conta.agencia }} - Cc: {{ conta.conta }} ({{ conta.tipo_de_conta }})
+                                                                            </option>
+                                                                        {% endfor %}
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div class="row mt-3">
+                                                                <div class="col-12">
+                                                                    <div class="d-flex justify-content-between">
+                                                                        <div class="btn-group">
+                                                                            <button type="button" class="btn btn-secondary btn-sm" 
+                                                                                    data-bs-toggle="collapse" 
+                                                                                    data-bs-target="#recebimentosForm-{{ alvara.id }}">
+                                                                                <i class="fas fa-times me-1"></i>Cancelar
+                                                                            </button>
+                                                                            <button type="submit" class="btn btn-success btn-sm">
+                                                                                <i class="fas fa-save me-1"></i>Criar Recebimento
+                                                                            </button>
+                                                                        </div>
+                                                                        
+                                                                        <small class="text-muted align-self-center">
+                                                                            <i class="fas fa-info-circle me-1"></i>
+                                                                            Recebimento será vinculado a este alvará
+                                                                        </small>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
                                 {% endfor %}
                             </tbody>
                         </table>
