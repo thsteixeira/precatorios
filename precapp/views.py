@@ -383,6 +383,24 @@ def precatorio_detalhe_view(request, precatorio_cnj):
             else:
                 messages.error(request, 'Por favor, corrija os erros abaixo.')
         
+        elif 'update_payment_status' in request.POST:
+            # Handle inline payment status update
+            credito_principal = request.POST.get('credito_principal', '').strip()
+            honorarios_contratuais = request.POST.get('honorarios_contratuais', '').strip()
+            honorarios_sucumbenciais = request.POST.get('honorarios_sucumbenciais', '').strip()
+            
+            # Update the payment status fields
+            if credito_principal:
+                precatorio.credito_principal = credito_principal
+            if honorarios_contratuais:
+                precatorio.honorarios_contratuais = honorarios_contratuais
+            if honorarios_sucumbenciais:
+                precatorio.honorarios_sucumbenciais = honorarios_sucumbenciais
+            
+            precatorio.save(update_fields=['credito_principal', 'honorarios_contratuais', 'honorarios_sucumbenciais'])
+            messages.success(request, 'Status dos Pagamentos atualizado com sucesso!')
+            return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
+            
         elif 'update_observacao' in request.POST:
             # Handle inline observacao update
             observacao = request.POST.get('observacao', '').strip()
@@ -541,6 +559,12 @@ def precatorio_detalhe_view(request, precatorio_cnj):
             alvara_id = request.POST.get('alvara_id')
             try:
                 alvara = get_object_or_404(Alvara, id=alvara_id, precatorio=precatorio)
+                
+                # Track original fase values to detect changes
+                original_fase = alvara.fase
+                original_fase_honorarios_contratuais = alvara.fase_honorarios_contratuais
+                original_fase_honorarios_sucumbenciais = alvara.fase_honorarios_sucumbenciais
+                
                 # Update the alvara fields
                 alvara.valor_principal = float(request.POST.get('valor_principal', alvara.valor_principal))
                 alvara.honorarios_contratuais = float(request.POST.get('honorarios_contratuais', alvara.honorarios_contratuais))
@@ -571,9 +595,32 @@ def precatorio_detalhe_view(request, precatorio_cnj):
                 else:
                     alvara.fase_honorarios_contratuais = None
                 
+                # Handle fase_honorarios_sucumbenciais field properly (ForeignKey)
+                fase_honorarios_sucumbenciais_id = request.POST.get('fase_honorarios_sucumbenciais')
+                if fase_honorarios_sucumbenciais_id:
+                    try:
+                        fase_honorarios_sucumbenciais = FaseHonorariosSucumbenciais.objects.get(id=fase_honorarios_sucumbenciais_id)
+                        alvara.fase_honorarios_sucumbenciais = fase_honorarios_sucumbenciais
+                    except FaseHonorariosSucumbenciais.DoesNotExist:
+                        messages.error(request, 'Fase Honorários Sucumbenciais selecionada não existe.')
+                        return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
+                else:
+                    alvara.fase_honorarios_sucumbenciais = None
+                
                 alvara.save()
+                
+                # Check if any fase field was changed and add warning message
+                fase_changed = (
+                    original_fase != alvara.fase or
+                    original_fase_honorarios_contratuais != alvara.fase_honorarios_contratuais or
+                    original_fase_honorarios_sucumbenciais != alvara.fase_honorarios_sucumbenciais
+                )
+                
                 messages.success(request, f'Alvará do cliente {alvara.cliente.nome} atualizado com sucesso!')
-                return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
+                
+                if fase_changed:
+                    messages.warning(request, 'Verifique a necessidade de alterar os Status de Pagamento')
+
             except Alvara.DoesNotExist:
                 messages.error(request, 'Alvará não encontrado.')
             except (ValueError, TypeError) as e:
@@ -660,6 +707,7 @@ def precatorio_detalhe_view(request, precatorio_cnj):
         'alvara_form': alvara_form,
         'requerimento_form': requerimento_form,
         'is_editing': request.method == 'POST' and 'edit_precatorio' in request.POST or 'edit' in request.GET,
+        'edit_mode': 'edit' in request.GET,  # Safe boolean for template use
         'clientes': associated_clientes,
         'associated_clientes': associated_clientes,
         'alvaras': alvaras,
@@ -667,6 +715,7 @@ def precatorio_detalhe_view(request, precatorio_cnj):
         'alvara_fases': Fase.get_fases_for_alvara(),
         'requerimento_fases': Fase.get_fases_for_requerimento(),
         'fases_honorarios_contratuais': FaseHonorariosContratuais.objects.filter(ativa=True),  # Uses model's default ordering: ['ordem', 'nome']
+        'fases_honorarios_sucumbenciais': FaseHonorariosSucumbenciais.objects.filter(ativa=True),  # Uses model's default ordering: ['ordem', 'nome']
         'available_pedidos': PedidoRequerimento.get_ativos(),
         'contas_bancarias': ContaBancaria.objects.all().order_by('banco', 'agencia'),
     }

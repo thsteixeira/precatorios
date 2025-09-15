@@ -40,7 +40,7 @@
                 </h5>
             </div>
             <div class="card-body">
-                {% if is_editing or request.GET.edit %}
+                {% if is_editing or edit_mode %}
                     <!-- Edit Mode -->
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
@@ -326,17 +326,82 @@
                         <!-- Status dos Pagamentos -->
                         <div class="col-12 mb-3">
                             <hr class="my-4">
-                            <h6><strong><i class="fas fa-tags me-1"></i>Status dos Pagamentos:</strong></h6>
-                            <div class="d-flex flex-wrap gap-2">
-                                <span class="badge bg-info fs-6">
-                                    <i class="fas fa-coins me-1"></i>Principal: {{ precatorio.get_credito_principal_display }}
-                                </span>
-                                <span class="badge bg-success fs-6">
-                                    <i class="fas fa-file-contract me-1"></i>Contratuais: {{ precatorio.get_honorarios_contratuais_display }}
-                                </span>
-                                <span class="badge bg-warning text-dark fs-6">
-                                    <i class="fas fa-balance-scale me-1"></i>Sucumbenciais: {{ precatorio.get_honorarios_sucumbenciais_display }}
-                                </span>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6><strong><i class="fas fa-tags me-1"></i>Status dos Pagamentos:</strong></h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleStatusPagamentoEdit()">
+                                    <i class="fas fa-edit me-1"></i>Editar Status
+                                </button>
+                            </div>
+                            
+                            <!-- Status Display -->
+                            <div id="status-pagamento-display">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="badge bg-info fs-6">
+                                        <i class="fas fa-coins me-1"></i>Principal: {{ precatorio.get_credito_principal_display }}
+                                    </span>
+                                    <span class="badge bg-success fs-6">
+                                        <i class="fas fa-file-contract me-1"></i>Contratuais: {{ precatorio.get_honorarios_contratuais_display }}
+                                    </span>
+                                    <span class="badge bg-warning text-dark fs-6">
+                                        <i class="fas fa-balance-scale me-1"></i>Sucumbenciais: {{ precatorio.get_honorarios_sucumbenciais_display }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Status Edit Form -->
+                            <div id="status-pagamento-edit" style="display: none;">
+                                <form method="post" class="inline-edit-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="update_payment_status" value="1">
+                                    
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label for="credito_principal" class="form-label">
+                                                <i class="fas fa-coins me-1"></i>Status Principal
+                                            </label>
+                                            <select name="credito_principal" class="form-select form-select-sm" id="credito_principal">
+                                                <option value="pendente" {% if precatorio.credito_principal == 'pendente' %}selected{% endif %}>Pendente</option>
+                                                <option value="parcial" {% if precatorio.credito_principal == 'parcial' %}selected{% endif %}>Parcial</option>
+                                                <option value="quitado" {% if precatorio.credito_principal == 'quitado' %}selected{% endif %}>Quitado</option>
+                                                <option value="vendido" {% if precatorio.credito_principal == 'vendido' %}selected{% endif %}>Vendido</option>
+                                                <option value="inaplicável" {% if precatorio.credito_principal == 'inaplicável' %}selected{% endif %}>Inaplicável</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="honorarios_contratuais" class="form-label">
+                                                <i class="fas fa-file-contract me-1"></i>Status Contratuais
+                                            </label>
+                                            <select name="honorarios_contratuais" class="form-select form-select-sm" id="honorarios_contratuais">
+                                                <option value="pendente" {% if precatorio.honorarios_contratuais == 'pendente' %}selected{% endif %}>Pendente</option>
+                                                <option value="parcial" {% if precatorio.honorarios_contratuais == 'parcial' %}selected{% endif %}>Parcial</option>
+                                                <option value="quitado" {% if precatorio.honorarios_contratuais == 'quitado' %}selected{% endif %}>Quitado</option>
+                                                <option value="vendido" {% if precatorio.honorarios_contratuais == 'vendido' %}selected{% endif %}>Vendido</option>
+                                                <option value="inaplicável" {% if precatorio.honorarios_contratuais == 'inaplicável' %}selected{% endif %}>Inaplicável</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="honorarios_sucumbenciais" class="form-label">
+                                                <i class="fas fa-balance-scale me-1"></i>Status Sucumbenciais
+                                            </label>
+                                            <select name="honorarios_sucumbenciais" class="form-select form-select-sm" id="honorarios_sucumbenciais">
+                                                <option value="pendente" {% if precatorio.honorarios_sucumbenciais == 'pendente' %}selected{% endif %}>Pendente</option>
+                                                <option value="parcial" {% if precatorio.honorarios_sucumbenciais == 'parcial' %}selected{% endif %}>Parcial</option>
+                                                <option value="quitado" {% if precatorio.honorarios_sucumbenciais == 'quitado' %}selected{% endif %}>Quitado</option>
+                                                <option value="vendido" {% if precatorio.honorarios_sucumbenciais == 'vendido' %}selected{% endif %}>Vendido</option>
+                                                <option value="inaplicável" {% if precatorio.honorarios_sucumbenciais == 'inaplicável' %}selected{% endif %}>Inaplicável</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex gap-2 mt-3">
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="fas fa-save me-1"></i>Salvar
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="toggleStatusPagamentoEdit()">
+                                            <i class="fas fa-times me-1"></i>Cancelar
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                         
@@ -451,7 +516,7 @@
 </div>
 
 <!-- Summary Card (View Mode Only) -->
-{% if not is_editing and not request.GET.edit %}
+{% if not is_editing and not edit_mode %}
 <div class="row mt-4">
     <div class="col-md-6">
         <div class="card text-center">
@@ -506,7 +571,7 @@
 {% endif %}
 
 <!-- Clients Section -->
-{% if not is_editing and not request.GET.edit %}
+{% if not is_editing and not edit_mode %}
 
 
 
@@ -2006,6 +2071,24 @@
 
 {% block extra_js %}
 <script>
+function toggleStatusPagamentoEdit() {
+    const display = document.getElementById('status-pagamento-display');
+    const edit = document.getElementById('status-pagamento-edit');
+    
+    if (display.style.display === 'none') {
+        display.style.display = 'block';
+        edit.style.display = 'none';
+    } else {
+        display.style.display = 'none';
+        edit.style.display = 'block';
+        // Focus on the first select when editing
+        const firstSelect = edit.querySelector('select');
+        if (firstSelect) {
+            firstSelect.focus();
+        }
+    }
+}
+
 function toggleObservacaoEdit() {
     const display = document.getElementById('observacao-display');
     const edit = document.getElementById('observacao-edit');
