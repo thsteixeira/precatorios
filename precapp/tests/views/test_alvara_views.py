@@ -20,7 +20,7 @@ from django.template import TemplateDoesNotExist
 from datetime import date
 from decimal import Decimal
 from precapp.models import (
-    Alvara, Precatorio, Cliente, Fase, FaseHonorariosContratuais,
+    Alvara, Precatorio, Cliente, Fase, FaseHonorariosContratuais, FaseHonorariosSucumbenciais,
     Recebimentos, ContaBancaria
 )
 
@@ -99,6 +99,28 @@ class AlvarasViewTest(TestCase):
             ativa=False
         )
         
+        # Create test honorários sucumbenciais phases
+        self.fase_honorarios_sucumb = FaseHonorariosSucumbenciais.objects.create(
+            nome='Aguardando Depósito Judicial',
+            cor='#17a2b8',
+            ordem=1,
+            ativa=True
+        )
+        
+        self.fase_honorarios_sucumb2 = FaseHonorariosSucumbenciais.objects.create(
+            nome='Recebido pelo Cliente',
+            cor='#28a745',
+            ordem=2,
+            ativa=True
+        )
+        
+        self.fase_honorarios_sucumb_inativa = FaseHonorariosSucumbenciais.objects.create(
+            nome='Fase Sucumbenciais Inativa',
+            cor='#6c757d',
+            ordem=10,
+            ativa=False
+        )
+        
         # Create test clients
         self.cliente1 = Cliente.objects.create(
             nome='João Silva',
@@ -142,7 +164,8 @@ class AlvarasViewTest(TestCase):
             honorarios_sucumbenciais=10000.00,
             tipo='aguardando depósito',
             fase=self.fase_alvara,
-            fase_honorarios_contratuais=self.fase_honorarios
+            fase_honorarios_contratuais=self.fase_honorarios,
+            fase_honorarios_sucumbenciais=self.fase_honorarios_sucumb
         )
         
         self.alvara2 = Alvara.objects.create(
@@ -153,7 +176,8 @@ class AlvarasViewTest(TestCase):
             honorarios_sucumbenciais=15000.00,
             tipo='recebido pelo cliente',
             fase=self.fase_ambos,
-            fase_honorarios_contratuais=self.fase_honorarios
+            fase_honorarios_contratuais=self.fase_honorarios,
+            fase_honorarios_sucumbenciais=self.fase_honorarios_sucumb2
         )
         
         self.alvara3 = Alvara.objects.create(
@@ -164,7 +188,8 @@ class AlvarasViewTest(TestCase):
             honorarios_sucumbenciais=2500.00,
             tipo='depósito judicial',
             fase=self.fase_alvara,
-            fase_honorarios_contratuais=None
+            fase_honorarios_contratuais=None,
+            fase_honorarios_sucumbenciais=self.fase_honorarios_sucumb
         )
         
         # URLs
@@ -323,6 +348,43 @@ class AlvarasViewTest(TestCase):
         alvaras = response.context['alvaras']
         self.assertEqual(len(alvaras), 0)
     
+    def test_alvaras_have_sucumbenciais_phases_assigned(self):
+        """Test that test alvaras have honorários sucumbenciais phases correctly assigned"""
+        self.client.force_login(self.user)
+        response = self.client.get(self.alvaras_url)
+        
+        alvaras = list(response.context['alvaras'])
+        self.assertEqual(len(alvaras), 3)
+        
+        # Verify all alvaras have sucumbenciais phases assigned
+        for alvara in alvaras:
+            self.assertIsNotNone(alvara.fase_honorarios_sucumbenciais, 
+                                f"Alvara {alvara.id} should have a sucumbenciais phase assigned")
+        
+        # Verify specific phase assignments from setUp
+        alvara1 = next(a for a in alvaras if a.id == self.alvara1.id)
+        alvara2 = next(a for a in alvaras if a.id == self.alvara2.id)
+        alvara3 = next(a for a in alvaras if a.id == self.alvara3.id)
+        
+        self.assertEqual(alvara1.fase_honorarios_sucumbenciais.nome, 'Aguardando Depósito Judicial')
+        self.assertEqual(alvara2.fase_honorarios_sucumbenciais.nome, 'Recebido pelo Cliente')
+        self.assertEqual(alvara3.fase_honorarios_sucumbenciais.nome, 'Aguardando Depósito Judicial')
+
+    def test_filter_by_fase_honorarios_sucumbenciais(self):
+        """Test filtering alvaras by fase honorários sucumbenciais - FUTURE FEATURE"""
+        self.client.force_login(self.user)
+        
+        # NOTE: This functionality is not yet implemented in the view
+        # The view would need to be updated to support fase_honorarios_sucumbenciais filtering
+        # Currently all alvaras will be returned regardless of this filter
+        response = self.client.get(self.alvaras_url + '?fase_honorarios_sucumbenciais=Aguardando Depósito Judicial')
+        alvaras = response.context['alvaras']
+        self.assertEqual(len(alvaras), 3)  # All alvaras returned since filter is not implemented
+        
+        # Verify the alvaras have sucumbenciais phases set in tests
+        alvaras_with_sucumb = [alvara for alvara in alvaras if alvara.fase_honorarios_sucumbenciais]
+        self.assertEqual(len(alvaras_with_sucumb), 3)  # All test alvaras have sucumbenciais phases
+    
     def test_combined_filters(self):
         """Test applying multiple filters simultaneously"""
         self.client.force_login(self.user)
@@ -341,6 +403,13 @@ class AlvarasViewTest(TestCase):
         )
         alvaras = response.context['alvaras']
         self.assertEqual(len(alvaras), 2)  # alvara1 and alvara3
+        
+        # Combine fase honorarios with other filters
+        response = self.client.get(
+            self.alvaras_url + '?nome=João&fase_honorarios=Aguardando Pagamento'
+        )
+        alvaras = response.context['alvaras']
+        self.assertEqual(len(alvaras), 1)  # Only alvara1 has both João and honorarios fase set
         
         # Combine all filters with no matching results
         response = self.client.get(
@@ -412,6 +481,9 @@ class AlvarasViewTest(TestCase):
         self.assertEqual(context['current_tipo'], 'aguardando depósito')
         self.assertEqual(context['current_fase'], 'Aguardando Depósito')
         self.assertEqual(context['current_fase_honorarios'], 'Aguardando Pagamento')
+        
+        # NOTE: current_fase_honorarios_sucumbenciais is not yet implemented
+        # This would be added when the sucumbenciais filter is implemented in the view
     
     def test_context_includes_available_options(self):
         """Test that available fases options are included in context"""
@@ -428,10 +500,14 @@ class AlvarasViewTest(TestCase):
         self.assertIn(self.fase_ambos, available_fases)
         self.assertNotIn(self.fase_inativa, available_fases)  # Inactive should be excluded
         
-        # Test available_fases_honorarios (should include all active)
+        # Test available_fases_honorarios (should include all active contratuais)
         available_fases_honorarios = context['available_fases_honorarios']
         self.assertIn(self.fase_honorarios, available_fases_honorarios)
         self.assertIn(self.fase_honorarios_inativa, available_fases_honorarios)  # All phases included
+        
+        # NOTE: available_fases_honorarios_sucumbenciais is not yet implemented in the view
+        # This test documents the expected future functionality
+        # When implemented, it should include all sucumbenciais phases
     
     def test_alvaras_view_query_optimization(self):
         """Test that the view uses proper query optimization"""
@@ -465,6 +541,8 @@ class AlvarasViewTest(TestCase):
         self.assertEqual(context['current_tipo'], '')
         self.assertEqual(context['current_fase'], '')
         self.assertEqual(context['current_fase_honorarios'], '')
+        
+        # NOTE: current_fase_honorarios_sucumbenciais would be added when the filter is implemented
     
     def test_whitespace_handling_in_filters(self):
         """Test that whitespace in filter parameters is properly handled"""
@@ -549,6 +627,8 @@ class AlvarasViewTest(TestCase):
             'total_honorarios_contratuais', 'total_honorarios_sucumbenciais',
             'current_nome', 'current_precatorio', 'current_tipo', 'current_fase',
             'current_fase_honorarios', 'available_fases', 'available_fases_honorarios'
+            # NOTE: These would be added when sucumbenciais filter is implemented:
+            # 'current_fase_honorarios_sucumbenciais', 'available_fases_honorarios_sucumbenciais'
         ]
         
         for key in required_context_keys:

@@ -11,12 +11,12 @@ from django import forms
 from datetime import date, timedelta
 
 from precapp.models import (
-    Fase, FaseHonorariosContratuais, Precatorio, Cliente, 
+    Fase, FaseHonorariosContratuais, FaseHonorariosSucumbenciais, Precatorio, Cliente, 
     Alvara, Requerimento, TipoDiligencia, Diligencias, Tipo, PedidoRequerimento,
     ContaBancaria, Recebimentos
 )
 from precapp.forms import (
-    FaseForm, FaseHonorariosContratuaisForm, AlvaraSimpleForm, 
+    FaseForm, FaseHonorariosContratuaisForm, FaseHonorariosSucumbenciaisForm, AlvaraSimpleForm, 
     RequerimentoForm, PrecatorioForm, ClienteForm, ClienteSimpleForm,
     TipoDiligenciaForm, DiligenciasForm, DiligenciasUpdateForm,
     PrecatorioSearchForm, ClienteSearchForm, TipoForm, PedidoRequerimentoForm,
@@ -1149,6 +1149,375 @@ class FaseHonorariosContratuaisFormComprehensiveTest(TestCase):
         self.assertFalse(updated_fase.ativa)
 
 
+class FaseHonorariosSucumbenciaisFormComprehensiveTest(TestCase):
+    """Comprehensive test cases for FaseHonorariosSucumbenciaisForm"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.valid_form_data = {
+            'nome': 'Aguardando Aprovação Judicial',
+            'descricao': 'Honorários sucumbenciais aguardando aprovação do juízo competente',
+            'cor': '#dc3545',
+            'ordem': 0,
+            'ativa': True
+        }
+        # Create an existing fase for uniqueness tests
+        self.existing_fase = FaseHonorariosSucumbenciais.objects.create(
+            nome='Fase Existente Sucumbenciais',
+            descricao='Fase já existente para testes de honorários sucumbenciais',
+            cor='#e74c3c',
+            ordem=1,
+            ativa=True
+        )
+    
+    # Basic Form Validation Tests
+    def test_valid_form_with_all_fields(self):
+        """Test form with all valid data"""
+        form = FaseHonorariosSucumbenciaisForm(data=self.valid_form_data)
+        self.assertTrue(form.is_valid())
+    
+    def test_minimal_valid_form(self):
+        """Test form with minimal required data"""
+        form_data = {
+            'nome': 'Teste Mínimo Sucumbenciais',
+            'cor': '#dc3545',
+            'ordem': 0
+        }
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertTrue(form.is_valid())
+    
+    def test_form_required_fields(self):
+        """Test form with missing required fields"""
+        form = FaseHonorariosSucumbenciaisForm(data={})
+        self.assertFalse(form.is_valid())
+        self.assertIn('nome', form.errors)
+        self.assertIn('cor', form.errors)
+        self.assertIn('ordem', form.errors)
+    
+    def test_form_save_creates_object_correctly(self):
+        """Test form saving creates the object correctly"""
+        form = FaseHonorariosSucumbenciaisForm(data=self.valid_form_data)
+        self.assertTrue(form.is_valid())
+        fase = form.save()
+        self.assertEqual(fase.nome, 'Aguardando Aprovação Judicial')
+        self.assertEqual(fase.cor, '#dc3545')
+        self.assertEqual(fase.descricao, 'Honorários sucumbenciais aguardando aprovação do juízo competente')
+        self.assertEqual(fase.ordem, 0)
+        self.assertTrue(fase.ativa)
+    
+    # Field Configuration Tests
+    def test_form_field_widgets(self):
+        """Test that form fields have correct widgets and attributes"""
+        form = FaseHonorariosSucumbenciaisForm()
+        
+        # Test nome field
+        nome_field = form.fields['nome']
+        self.assertEqual(nome_field.widget.__class__.__name__, 'TextInput')
+        self.assertIn('form-control', nome_field.widget.attrs.get('class', ''))
+        self.assertTrue(nome_field.widget.attrs.get('required'))
+        
+        # Test descricao field
+        descricao_field = form.fields['descricao']
+        self.assertEqual(descricao_field.widget.__class__.__name__, 'Textarea')
+        self.assertIn('form-control', descricao_field.widget.attrs.get('class', ''))
+        
+        # Test cor field
+        cor_field = form.fields['cor']
+        self.assertEqual(cor_field.widget.input_type, 'color')
+        self.assertIn('form-control', cor_field.widget.attrs.get('class', ''))
+        
+        # Test ordem field
+        ordem_field = form.fields['ordem']
+        self.assertEqual(ordem_field.widget.__class__.__name__, 'NumberInput')
+        self.assertIn('form-control', ordem_field.widget.attrs.get('class', ''))
+        
+        # Test ativa field
+        ativa_field = form.fields['ativa']
+        self.assertEqual(ativa_field.widget.input_type, 'checkbox')
+        self.assertIn('form-check-input', ativa_field.widget.attrs.get('class', ''))
+    
+    def test_form_field_labels(self):
+        """Test that form fields have correct labels"""
+        form = FaseHonorariosSucumbenciaisForm()
+        self.assertEqual(form.fields['nome'].label, 'Nome da Fase')
+        self.assertEqual(form.fields['descricao'].label, 'Descrição')
+        self.assertEqual(form.fields['cor'].label, 'Cor')
+        self.assertEqual(form.fields['ordem'].label, 'Ordem de Exibição')
+        self.assertEqual(form.fields['ativa'].label, 'Fase Ativa')
+    
+    def test_form_field_help_texts(self):
+        """Test that form fields have appropriate help texts"""
+        form = FaseHonorariosSucumbenciaisForm()
+        self.assertIn('único', form.fields['nome'].help_text)
+        self.assertIn('opcional', form.fields['descricao'].help_text)
+        self.assertIn('visualmente', form.fields['cor'].help_text)
+        self.assertIn('ordem', form.fields['ordem'].help_text)
+        self.assertIn('disponibilizar', form.fields['ativa'].help_text)
+    
+    def test_form_field_required_status(self):
+        """Test that form fields have correct required status"""
+        form = FaseHonorariosSucumbenciaisForm()
+        self.assertTrue(form.fields['nome'].required)
+        self.assertFalse(form.fields['descricao'].required)
+        self.assertTrue(form.fields['cor'].required)
+        self.assertTrue(form.fields['ordem'].required)
+        self.assertFalse(form.fields['ativa'].required)
+    
+    def test_form_meta_fields(self):
+        """Test that form Meta includes correct fields"""
+        form = FaseHonorariosSucumbenciaisForm()
+        expected_fields = ['nome', 'descricao', 'cor', 'ordem', 'ativa']
+        self.assertEqual(list(form.Meta.fields), expected_fields)
+        self.assertEqual(form.Meta.model, FaseHonorariosSucumbenciais)
+    
+    # Nome Field Tests
+    def test_clean_nome_whitespace_trimming(self):
+        """Test that nome field strips whitespace"""
+        form_data = self.valid_form_data.copy()
+        form_data['nome'] = '  Nome com Espaços Sucumbenciais  '
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data['nome'], 'Nome com Espaços Sucumbenciais')
+    
+    def test_clean_nome_empty_field(self):
+        """Test that empty nome field is handled correctly"""
+        form_data = self.valid_form_data.copy()
+        form_data['nome'] = ''
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('nome', form.errors)
+    
+    def test_clean_nome_only_whitespace(self):
+        """Test that nome with only whitespace is invalid"""
+        form_data = self.valid_form_data.copy()
+        form_data['nome'] = '   '
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('nome', form.errors)
+    
+    def test_clean_nome_uniqueness_validation(self):
+        """Test nome uniqueness validation"""
+        form_data = self.valid_form_data.copy()
+        form_data['nome'] = 'Fase Existente Sucumbenciais'  # Same as existing fase
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('nome', form.errors)
+        self.assertIn('Já existe uma fase', str(form.errors['nome']))
+    
+    def test_clean_nome_case_insensitive_uniqueness(self):
+        """Test that nome uniqueness is case-insensitive"""
+        form_data = self.valid_form_data.copy()
+        form_data['nome'] = 'FASE EXISTENTE SUCUMBENCIAIS'  # Uppercase version
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('nome', form.errors)
+    
+    def test_clean_nome_editing_existing_fase_excludes_self(self):
+        """Test that editing existing fase excludes itself from uniqueness check"""
+        form = FaseHonorariosSucumbenciaisForm(
+            data={'nome': 'Fase Existente Sucumbenciais', 'cor': '#dc3545', 'ordem': 1},
+            instance=self.existing_fase
+        )
+        self.assertTrue(form.is_valid())
+    
+    # Cor Field Tests
+    def test_clean_cor_valid_hex_format(self):
+        """Test that valid hex colors are accepted"""
+        valid_colors = ['#dc3545', '#e74c3c', '#c0392b', '#f39c12', '#e67e22', '#8e44ad']
+        for color in valid_colors:
+            form_data = self.valid_form_data.copy()
+            form_data['cor'] = color
+            form = FaseHonorariosSucumbenciaisForm(data=form_data)
+            self.assertTrue(form.is_valid(), f"Color {color} should be valid")
+    
+    def test_clean_cor_invalid_hex_format(self):
+        """Test that invalid hex colors are rejected"""
+        invalid_colors = ['red', '#dc', '#GGGGGG', 'dc3545', '#dc35', '#dc35GG', 'invalid']
+        for color in invalid_colors:
+            form_data = self.valid_form_data.copy()
+            form_data['cor'] = color
+            form = FaseHonorariosSucumbenciaisForm(data=form_data)
+            self.assertFalse(form.is_valid(), f"Color {color} should be invalid")
+            self.assertIn('cor', form.errors)
+    
+    def test_clean_cor_case_handling(self):
+        """Test that color validation handles case correctly"""
+        form_data = self.valid_form_data.copy()
+        form_data['cor'] = '#DC3545'  # uppercase
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertTrue(form.is_valid())
+    
+    # Ordem Field Tests
+    def test_valid_ordem_values(self):
+        """Test valid ordem values"""
+        valid_orders = [0, 1, 5, 10, 100, 999]
+        for ordem in valid_orders:
+            form_data = self.valid_form_data.copy()
+            form_data['ordem'] = ordem
+            form = FaseHonorariosSucumbenciaisForm(data=form_data)
+            self.assertTrue(form.is_valid(), f"Ordem {ordem} should be valid")
+    
+    def test_negative_ordem_invalid(self):
+        """Test that negative ordem values are rejected"""
+        form_data = self.valid_form_data.copy()
+        form_data['ordem'] = -1
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('ordem', form.errors)
+    
+    def test_ordem_default_value(self):
+        """Test that ordem has correct default value"""
+        form = FaseHonorariosSucumbenciaisForm()
+        self.assertEqual(form.fields['ordem'].initial, 0)
+    
+    # Ativa Field Tests
+    def test_ativa_field_boolean_values(self):
+        """Test that ativa field accepts boolean values"""
+        # Test True
+        form_data = self.valid_form_data.copy()
+        form_data['ativa'] = True
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertTrue(form.is_valid())
+        
+        # Test False
+        form_data['ativa'] = False
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertTrue(form.is_valid())
+    
+    def test_ativa_field_default_value(self):
+        """Test that ativa field has correct default when not provided"""
+        form_data = self.valid_form_data.copy()
+        del form_data['ativa']  # Remove ativa field
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.fields['ativa'].initial, True)
+    
+    # Descricao Field Tests
+    def test_descricao_optional_field(self):
+        """Test that descricao field is optional"""
+        form_data = self.valid_form_data.copy()
+        del form_data['descricao']
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertTrue(form.is_valid())
+    
+    def test_descricao_with_legal_content(self):
+        """Test that descricao field accepts legal content for succumbence fees"""
+        form_data = self.valid_form_data.copy()
+        form_data['descricao'] = (
+            'Honorários sucumbenciais conforme art. 85 do CPC, calculados '
+            'sobre o valor da causa, aguardando manifestação das partes '
+            'e posterior aprovação judicial.'
+        )
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertTrue(form.is_valid())
+    
+    # Edge Cases and Integration Tests
+    def test_form_with_special_characters_in_nome(self):
+        """Test form handles special characters in nome"""
+        form_data = self.valid_form_data.copy()
+        form_data['nome'] = 'Honorários Sucumbenciais: Art. 85, § 1º (20%)'
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertTrue(form.is_valid())
+    
+    def test_form_with_unicode_characters(self):
+        """Test form handles unicode characters in nome and descricao"""
+        form_data = self.valid_form_data.copy()
+        form_data['nome'] = 'Cálculo & Manifestação'
+        form_data['descricao'] = 'Descrição com acentos: ção, ã, é, ç para sucumbenciais'
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertTrue(form.is_valid())
+    
+    def test_form_with_typical_succumbence_phases(self):
+        """Test form with typical succumbence fee phase names"""
+        typical_phases = [
+            'Aguardando Cálculo Judicial',
+            'Em Análise pelo Juízo',
+            'Aguardando Manifestação das Partes',
+            'Aprovado para Pagamento',
+            'Pago Integralmente',
+            'Contestado - Aguardando Decisão'
+        ]
+        
+        for phase_name in typical_phases:
+            form_data = self.valid_form_data.copy()
+            form_data['nome'] = phase_name
+            form_data['cor'] = '#dc3545'  # Consistent red color for succumbence
+            form = FaseHonorariosSucumbenciaisForm(data=form_data)
+            self.assertTrue(form.is_valid(), f"Phase '{phase_name}' should be valid")
+    
+    def test_form_error_messages_user_friendly(self):
+        """Test that form error messages are user-friendly"""
+        # Test uniqueness error message
+        form_data = self.valid_form_data.copy()
+        form_data['nome'] = 'Fase Existente Sucumbenciais'
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        error_message = str(form.errors['nome'])
+        self.assertIn('Já existe uma fase', error_message)
+        self.assertIn('honorários sucumbenciais', error_message)
+        
+        # Test color format error message with invalid format
+        form_data['nome'] = 'Nome Único Sucumbenciais'
+        form_data['cor'] = 'red'  # Invalid format that triggers hex validation
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        error_message = str(form.errors['cor'])
+        self.assertIn('hexadecimal', error_message)
+    
+    def test_complete_workflow_create_and_edit(self):
+        """Test complete workflow of creating and editing a succumbence fase"""
+        # Create new fase
+        create_data = {
+            'nome': 'Nova Fase Sucumbenciais',
+            'descricao': 'Descrição da nova fase de honorários sucumbenciais',
+            'cor': '#8e44ad',
+            'ordem': 5,
+            'ativa': True
+        }
+        create_form = FaseHonorariosSucumbenciaisForm(data=create_data)
+        self.assertTrue(create_form.is_valid())
+        new_fase = create_form.save()
+        
+        # Edit the created fase
+        edit_data = {
+            'nome': 'Fase Sucumbenciais Editada',
+            'descricao': 'Descrição atualizada com termos jurídicos específicos',
+            'cor': '#9b59b6',
+            'ordem': 10,
+            'ativa': False
+        }
+        edit_form = FaseHonorariosSucumbenciaisForm(data=edit_data, instance=new_fase)
+        self.assertTrue(edit_form.is_valid())
+        updated_fase = edit_form.save()
+        
+        # Verify changes
+        self.assertEqual(updated_fase.nome, 'Fase Sucumbenciais Editada')
+        self.assertEqual(updated_fase.cor, '#9b59b6')
+        self.assertFalse(updated_fase.ativa)
+        self.assertIn('jurídicos', updated_fase.descricao)
+    
+    def test_succumbence_specific_validations(self):
+        """Test validations specific to succumbence fees"""
+        # Test with legal percentage references
+        form_data = self.valid_form_data.copy()
+        form_data['nome'] = 'Art. 85, §3º - 20% sobre valor da causa'
+        form_data['descricao'] = (
+            'Honorários sucumbenciais fixados em 20% conforme decisão judicial, '
+            'sujeitos à atualização monetária e juros legais até o efetivo pagamento.'
+        )
+        form = FaseHonorariosSucumbenciaisForm(data=form_data)
+        self.assertTrue(form.is_valid())
+        
+        # Test default color validation (should accept red variants)
+        red_colors = ['#dc3545', '#e74c3c', '#c0392b', '#b71c1c']
+        for red_color in red_colors:
+            form_data = self.valid_form_data.copy()
+            form_data['nome'] = f'Fase Cor {red_color}'
+            form_data['cor'] = red_color
+            form = FaseHonorariosSucumbenciaisForm(data=form_data)
+            self.assertTrue(form.is_valid(), f"Red color {red_color} should be valid for succumbence")
+
+
 class AlvaraFormTest(TestCase):
     """
     Comprehensive test suite for AlvaraSimpleForm functionality and validation.
@@ -1259,6 +1628,18 @@ class AlvaraFormTest(TestCase):
             cor='#6C757D',
             ativa=False
         )
+        
+        # Create fases honorários sucumbenciais
+        self.fase_sucumbenciais_ativa = FaseHonorariosSucumbenciais.objects.create(
+            nome='Aguardando Aprovação Judicial',
+            cor='#dc3545',
+            ativa=True
+        )
+        self.fase_sucumbenciais_inativa = FaseHonorariosSucumbenciais.objects.create(
+            nome='Inativa Sucumbenciais',
+            cor='#6C757D',
+            ativa=False
+        )
     
     def test_alvara_simple_form_fase_filtering(self):
         """Test that AlvaraSimpleForm only shows alvara and ambos phases"""
@@ -1289,6 +1670,25 @@ class AlvaraFormTest(TestCase):
         self.assertIn(self.fase_honorarios_ativa, honorarios_queryset)
         # Should NOT include inactive phases
         self.assertNotIn(self.fase_honorarios_inativa, honorarios_queryset)
+    
+    def test_alvara_simple_form_includes_sucumbenciais_field(self):
+        """Test that AlvaraSimpleForm includes fase_honorarios_sucumbenciais field"""
+        form = AlvaraSimpleForm(precatorio=self.precatorio)
+        self.assertIn('fase_honorarios_sucumbenciais', form.fields)
+        
+        # Test field properties
+        sucumbenciais_field = form.fields['fase_honorarios_sucumbenciais']
+        self.assertFalse(sucumbenciais_field.required)  # Should be optional
+    
+    def test_alvara_simple_form_sucumbenciais_filtering(self):
+        """Test that AlvaraSimpleForm only shows active honorários sucumbenciais phases"""
+        form = AlvaraSimpleForm(precatorio=self.precatorio)
+        sucumbenciais_queryset = form.fields['fase_honorarios_sucumbenciais'].queryset
+        
+        # Should include only active phases
+        self.assertIn(self.fase_sucumbenciais_ativa, sucumbenciais_queryset)
+        # Should NOT include inactive phases
+        self.assertNotIn(self.fase_sucumbenciais_inativa, sucumbenciais_queryset)
 
 
 class AlvaraSimpleFormComprehensiveTest(TestCase):
@@ -1365,6 +1765,18 @@ class AlvaraSimpleFormComprehensiveTest(TestCase):
         
         self.fase_honorarios_inativa = FaseHonorariosContratuais.objects.create(
             nome='Inativa',
+            cor='#6C757D',
+            ativa=False
+        )
+        
+        self.fase_sucumbenciais_ativa = FaseHonorariosSucumbenciais.objects.create(
+            nome='Aguardando Aprovação Judicial',
+            cor='#dc3545',
+            ativa=True
+        )
+        
+        self.fase_sucumbenciais_inativa = FaseHonorariosSucumbenciais.objects.create(
+            nome='Inativa Sucumbenciais',
             cor='#6C757D',
             ativa=False
         )
@@ -1642,12 +2054,52 @@ class AlvaraSimpleFormComprehensiveTest(TestCase):
         form = AlvaraSimpleForm(data=form_data, precatorio=self.precatorio)
         self.assertTrue(form.is_valid())
     
+    def test_valid_form_with_sucumbenciais_fase(self):
+        """Test valid form submission with honorários sucumbenciais fase"""
+        form_data = {
+            'cliente_cpf': self.cliente.cpf,
+            'valor_principal': '50000.00',
+            'honorarios_contratuais': '8000.00',
+            'honorarios_sucumbenciais': '12000.00',
+            'tipo': 'acordo',
+            'fase': self.fase_alvara.id,
+            'fase_honorarios_sucumbenciais': self.fase_sucumbenciais_ativa.id
+        }
+        form = AlvaraSimpleForm(data=form_data, precatorio=self.precatorio)
+        self.assertTrue(form.is_valid())
+    
+    def test_valid_form_with_both_honorarios_fases(self):
+        """Test valid form submission with both honorários fases"""
+        form_data = {
+            'cliente_cpf': self.cliente.cpf,
+            'valor_principal': '75000.00',
+            'honorarios_contratuais': '15000.00',
+            'honorarios_sucumbenciais': '10000.00',
+            'tipo': 'prioridade',
+            'fase': self.fase_alvara.id,
+            'fase_honorarios_contratuais': self.fase_honorarios_ativa.id,
+            'fase_honorarios_sucumbenciais': self.fase_sucumbenciais_ativa.id
+        }
+        form = AlvaraSimpleForm(data=form_data, precatorio=self.precatorio)
+        self.assertTrue(form.is_valid())
+    
     def test_optional_honorarios_fase(self):
         """Test that honorários fase is optional"""
         form_data = {
             'cliente_cpf': self.cliente.cpf,
             'valor_principal': '50000.00',
             'tipo': 'prioridade',
+            'fase': self.fase_alvara.id
+        }
+        form = AlvaraSimpleForm(data=form_data, precatorio=self.precatorio)
+        self.assertTrue(form.is_valid())
+    
+    def test_optional_sucumbenciais_fase(self):
+        """Test that honorários sucumbenciais fase is optional"""
+        form_data = {
+            'cliente_cpf': self.cliente.cpf,
+            'valor_principal': '50000.00',
+            'tipo': 'acordo',
             'fase': self.fase_alvara.id
         }
         form = AlvaraSimpleForm(data=form_data, precatorio=self.precatorio)
@@ -1701,7 +2153,7 @@ class AlvaraSimpleFormComprehensiveTest(TestCase):
         self.assertEqual(form.fields['honorarios_contratuais'].label, 'Honorários Contratuais')
         self.assertEqual(form.fields['honorarios_sucumbenciais'].label, 'Honorários Sucumbenciais')
         self.assertEqual(form.fields['tipo'].label, 'Tipo')
-        self.assertEqual(form.fields['fase'].label, 'Fase')  # Field definition overrides Meta labels
+        self.assertEqual(form.fields['fase'].label, 'Fase Principal')  # Field definition overrides Meta labels
         self.assertEqual(form.fields['fase_honorarios_contratuais'].label, 'Fase Honorários Contratuais')
     
     def test_form_field_help_texts(self):
@@ -1722,7 +2174,8 @@ class AlvaraSimpleFormComprehensiveTest(TestCase):
             'honorarios_sucumbenciais': '15000.00',
             'tipo': 'acordo',
             'fase': self.fase_alvara.id,
-            'fase_honorarios_contratuais': self.fase_honorarios_ativa.id
+            'fase_honorarios_contratuais': self.fase_honorarios_ativa.id,
+            'fase_honorarios_sucumbenciais': self.fase_sucumbenciais_ativa.id
         }
         form = AlvaraSimpleForm(data=form_data, precatorio=self.precatorio)
         self.assertTrue(form.is_valid())
@@ -1741,7 +2194,7 @@ class AlvaraSimpleFormComprehensiveTest(TestCase):
         """Test that form Meta includes correct fields"""
         form = AlvaraSimpleForm()
         expected_fields = [
-            'tipo', 'fase', 'fase_honorarios_contratuais', 
+            'tipo', 'fase', 'fase_honorarios_contratuais', 'fase_honorarios_sucumbenciais',
             'valor_principal', 'honorarios_contratuais', 'honorarios_sucumbenciais'
         ]
         
@@ -1761,11 +2214,12 @@ class AlvaraSimpleFormComprehensiveTest(TestCase):
                            f"Audit field '{audit_field}' should be excluded from form fields")
     
     def test_form_includes_honorarios_fields(self):
-        """Test that form includes both honorários fields"""
+        """Test that form includes all honorários fields"""
         form = AlvaraSimpleForm()
         self.assertIn('honorarios_contratuais', form.fields)
         self.assertIn('honorarios_sucumbenciais', form.fields)
         self.assertIn('fase_honorarios_contratuais', form.fields)
+        self.assertIn('fase_honorarios_sucumbenciais', form.fields)
 
 
 class RequerimentoFormComprehensiveTest(TestCase):

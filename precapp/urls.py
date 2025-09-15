@@ -7,7 +7,9 @@ from .views import (
     requerimento_list_view, login_view, logout_view,
     fases_view, nova_fase_view, editar_fase_view, deletar_fase_view, ativar_fase_view,
     fases_honorarios_view, nova_fase_honorarios_view, editar_fase_honorarios_view, 
-    deletar_fase_honorarios_view, ativar_fase_honorarios_view, customizacao_view,
+    deletar_fase_honorarios_view, ativar_fase_honorarios_view,
+    fases_honorarios_sucumbenciais_view, nova_fase_honorarios_sucumbenciais_view, editar_fase_honorarios_sucumbenciais_view, 
+    deletar_fase_honorarios_sucumbenciais_view, ativar_fase_honorarios_sucumbenciais_view, customizacao_view,
     tipos_precatorio_view, novo_tipo_precatorio_view, editar_tipo_precatorio_view,
     deletar_tipo_precatorio_view, ativar_tipo_precatorio_view,
     tipos_pedido_requerimento_view, novo_tipo_pedido_requerimento_view, editar_tipo_pedido_requerimento_view,
@@ -62,6 +64,13 @@ urlpatterns = [
     path('fases-honorarios/<int:fase_id>/editar/', editar_fase_honorarios_view, name='editar_fase_honorarios'),
     path('fases-honorarios/<int:fase_id>/deletar/', deletar_fase_honorarios_view, name='deletar_fase_honorarios'),
     path('fases-honorarios/<int:fase_id>/ativar/', ativar_fase_honorarios_view, name='ativar_fase_honorarios'),
+    
+    # Honorários Sucumbenciais Phase Management URLs
+    path('fases-honorarios-sucumbenciais/', fases_honorarios_sucumbenciais_view, name='fases_honorarios_sucumbenciais'),
+    path('fases-honorarios-sucumbenciais/nova/', nova_fase_honorarios_sucumbenciais_view, name='nova_fase_honorarios_sucumbenciais'),
+    path('fases-honorarios-sucumbenciais/<int:fase_id>/editar/', editar_fase_honorarios_sucumbenciais_view, name='editar_fase_honorarios_sucumbenciais'),
+    path('fases-honorarios-sucumbenciais/<int:fase_id>/deletar/', deletar_fase_honorarios_sucumbenciais_view, name='deletar_fase_honorarios_sucumbenciais'),
+    path('fases-honorarios-sucumbenciais/<int:fase_id>/ativar/', ativar_fase_honorarios_sucumbenciais_view, name='ativar_fase_honorarios_sucumbenciais'),
     
     # Tipo Precatório Management URLs
     path('tipos-precatorio/', tipos_precatorio_view, name='tipos_precatorio'),

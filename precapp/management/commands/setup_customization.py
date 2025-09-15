@@ -8,7 +8,7 @@ initial system setup or when resetting the system to default configurations.
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from precapp.models import Fase, FaseHonorariosContratuais, TipoDiligencia, Tipo, PedidoRequerimento, ContaBancaria
+from precapp.models import Fase, FaseHonorariosContratuais, FaseHonorariosSucumbenciais, TipoDiligencia, Tipo, PedidoRequerimento, ContaBancaria
 
 
 class Command(BaseCommand):
@@ -240,6 +240,7 @@ class Command(BaseCommand):
         created_req = 0
         created_alv = 0
         created_hon = 0
+        created_suc = 0
         
         # Create Requerimento phases
         for phase_data in requerimento_phases:
@@ -274,7 +275,7 @@ class Command(BaseCommand):
                 self.stdout.write(f'✓ Created Alvará fase: {fase.nome} (ordem: {fase.ordem})')
         
         # Create Honorários phases
-        honorarios_phases = [
+        honorarios_contratuais_phases = [
             {
                 'nome': 'Aguardando Depósito Judicial',
                 'descricao': 'Aguardando depósito dos honorários pelo tribunal diretamente à HT',
@@ -312,7 +313,7 @@ class Command(BaseCommand):
             }
         ]
         
-        for phase_data in honorarios_phases:
+        for phase_data in honorarios_contratuais_phases:
             fase, created = FaseHonorariosContratuais.objects.get_or_create(
                 nome=phase_data['nome'],
                 defaults={
@@ -324,14 +325,89 @@ class Command(BaseCommand):
             )
             if created:
                 created_hon += 1
-                self.stdout.write(f'✓ Created Honorários fase: {fase.nome} (ordem: {fase.ordem})')
+                self.stdout.write(f'✓ Created Honorários Contratuais fase: {fase.nome} (ordem: {fase.ordem})')
+        
+        # Create Honorários Sucumbenciais phases (using same structure as alvara_phases)
+        honorarios_sucumbenciais_phases = [
+            {
+                'nome': 'Aguardando Depósito Judicial',
+                'descricao': 'Aguardando o depósito do valor pelo tribunal',
+                'cor': "#d9ff00",
+                'ativa': True,
+                'ordem': 1
+            },
+            {
+                'nome': 'Aguardando Atualização pela Contadoria',
+                'descricao': 'Aguardando cálculos de atualização pela contadoria',
+                'cor': "#ff07ea",
+                'ativa': True,
+                'ordem': 2
+            },
+            {
+                'nome': 'Para manifestar de cálculos',
+                'descricao': 'Aguardando manifestação sobre os cálculos',
+                'cor': '#fd7e14',
+                'ativa': True,
+                'ordem': 3
+            },
+            {
+                'nome': 'Cálculos impugnados',
+                'descricao': 'Cálculos foram impugnados',
+                'cor': '#dc3545',
+                'ativa': True,
+                'ordem': 4
+            },
+            {
+                'nome': 'Para informar conta',
+                'descricao': 'Solicitado informações de conta bancária',
+                'cor': "#a220c9",
+                'ativa': True,
+                'ordem': 5
+            },
+            {
+                'nome': 'Contas bancárias informadas',
+                'descricao': 'Informações bancárias foram fornecidas',
+                'cor': '#6f42c1',
+                'ativa': True,
+                'ordem': 6
+            },
+            {
+                'nome': 'Recebido Pelo Cliente',
+                'descricao': 'Valor foi recebido pelo cliente',
+                'cor': "#001aff",
+                'ativa': True,
+                'ordem': 7
+            },
+            {
+                'nome': 'Alvará no Escritório',
+                'descricao': 'Alvará no escritório aguardando retirada pelo cliente',
+                'cor': "#00ff2a",
+                'ativa': True,
+                'ordem': 8
+            }
+        ]
+        
+        for phase_data in honorarios_sucumbenciais_phases:
+            fase, created = FaseHonorariosSucumbenciais.objects.get_or_create(
+                nome=phase_data['nome'],
+                defaults={
+                    'descricao': phase_data['descricao'],
+                    'cor': phase_data['cor'],
+                    'ativa': phase_data['ativa'],
+                    'ordem': phase_data['ordem']
+                }
+            )
+            if created:
+                created_suc += 1
+                self.stdout.write(f'✓ Created Honorários Sucumbenciais fase: {fase.nome} (ordem: {fase.ordem})')
         
         # Summary
-        if created_req > 0 or created_alv > 0 or created_hon > 0:
+        if created_req > 0 or created_alv > 0 or created_hon > 0 or created_suc > 0:
             self.stdout.write(f'\\n=== PHASES CREATION SUMMARY ===')
             self.stdout.write(f'Requerimento phases: {created_req}')
             self.stdout.write(f'Alvará phases: {created_alv}')
-            self.stdout.write(f'Honorários phases: {created_hon}')
+            self.stdout.write(f'Honorários Contratuais phases: {created_hon}')
+            self.stdout.write(f'Honorários Sucumbenciais phases: {created_suc}')
         else:
             self.stdout.write('All main phases already exist')
         

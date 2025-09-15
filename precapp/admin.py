@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.http import HttpResponseRedirect
 from .models import (
     Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo,
-    FaseHonorariosContratuais, TipoDiligencia, Diligencias, PedidoRequerimento,
+    FaseHonorariosContratuais, FaseHonorariosSucumbenciais, TipoDiligencia, Diligencias, PedidoRequerimento,
     ContaBancaria, Recebimentos
 )
 from .forms import CustomFileWidget
@@ -26,8 +26,8 @@ class AlvaraInline(admin.TabularInline):
     """Inline for managing alvaras within precatorio admin"""
     model = Alvara
     extra = 0
-    fields = ('cliente', 'valor_principal', 'tipo', 'fase', 'fase_honorarios_contratuais', 'fase_alterada_por')
-    readonly_fields = ('fase_alterada_por', 'fase_honorarios_alterada_por')
+    fields = ('cliente', 'valor_principal', 'tipo', 'fase', 'fase_honorarios_contratuais', 'fase_honorarios_sucumbenciais', 'fase_alterada_por')
+    readonly_fields = ('fase_alterada_por', 'fase_honorarios_alterada_por', 'fase_honorarios_sucumbenciais_alterada_por')
 
 
 class RequerimentoInline(admin.TabularInline):
@@ -249,9 +249,9 @@ class AlvaraAdmin(admin.ModelAdmin):
     
     list_display = (
         'id', 'precatorio', 'cliente_nome', 'tipo', 'valor_principal_formatted', 
-        'fase_colored', 'fase_honorarios_colored', 'total_valor'
+        'fase_colored', 'fase_honorarios_contratuais_colored', 'fase_honorarios_sucumbenciais_colored', 'total_valor'
     )
-    list_filter = ('tipo', 'fase', 'fase_honorarios_contratuais')
+    list_filter = ('tipo', 'fase', 'fase_honorarios_contratuais', 'fase_honorarios_sucumbenciais')
     search_fields = ('precatorio__cnj', 'cliente__nome', 'cliente__cpf', 'tipo')
     
     fieldsets = (
@@ -262,12 +262,13 @@ class AlvaraAdmin(admin.ModelAdmin):
             'fields': ('valor_principal', 'honorarios_contratuais', 'honorarios_sucumbenciais')
         }),
         ('Classificação e Status', {
-            'fields': ('tipo', 'fase', 'fase_honorarios_contratuais')
+            'fields': ('tipo', 'fase', 'fase_honorarios_contratuais', 'fase_honorarios_sucumbenciais')
         }),
         ('Auditoria de Alterações', {
             'fields': (
                 ('fase_ultima_alteracao', 'fase_alterada_por'),
-                ('fase_honorarios_ultima_alteracao', 'fase_honorarios_alterada_por')
+                ('fase_honorarios_ultima_alteracao', 'fase_honorarios_alterada_por'),
+                ('fase_honorarios_sucumbenciais_ultima_alteracao', 'fase_honorarios_sucumbenciais_alterada_por')
             ),
             'classes': ('collapse',),
             'description': 'Informações de rastreamento das últimas alterações nas fases'
@@ -275,7 +276,7 @@ class AlvaraAdmin(admin.ModelAdmin):
     )
     
     autocomplete_fields = ['precatorio', 'cliente']
-    readonly_fields = ('fase_ultima_alteracao', 'fase_alterada_por', 'fase_honorarios_ultima_alteracao', 'fase_honorarios_alterada_por')
+    readonly_fields = ('fase_ultima_alteracao', 'fase_alterada_por', 'fase_honorarios_ultima_alteracao', 'fase_honorarios_alterada_por', 'fase_honorarios_sucumbenciais_ultima_alteracao', 'fase_honorarios_sucumbenciais_alterada_por')
     inlines = [RecebimentosInline]
     
     def cliente_nome(self, obj):
@@ -295,14 +296,23 @@ class AlvaraAdmin(admin.ModelAdmin):
         return '-'
     fase_colored.short_description = 'Fase'
     
-    def fase_honorarios_colored(self, obj):
+    def fase_honorarios_contratuais_colored(self, obj):
         if obj.fase_honorarios_contratuais:
             return format_html(
                 '<span style="background-color: {}; color: white; padding: 2px 6px; border-radius: 3px;">{}</span>',
                 obj.fase_honorarios_contratuais.cor, obj.fase_honorarios_contratuais.nome
             )
         return '-'
-    fase_honorarios_colored.short_description = 'Fase Honorários'
+    fase_honorarios_contratuais_colored.short_description = 'Fase Hon. Contratuais'
+    
+    def fase_honorarios_sucumbenciais_colored(self, obj):
+        if obj.fase_honorarios_sucumbenciais:
+            return format_html(
+                '<span style="background-color: {}; color: white; padding: 2px 6px; border-radius: 3px;">{}</span>',
+                obj.fase_honorarios_sucumbenciais.cor, obj.fase_honorarios_sucumbenciais.nome
+            )
+        return '-'
+    fase_honorarios_sucumbenciais_colored.short_description = 'Fase Hon. Sucumbenciais'
     
     def total_valor(self, obj):
         total = obj.valor_principal + (obj.honorarios_contratuais or 0) + (obj.honorarios_sucumbenciais or 0)
@@ -333,7 +343,20 @@ class AlvaraAdmin(admin.ModelAdmin):
                 obj.fase_honorarios_alterada_por or 'Sistema'
             )
         return '-'
-    fase_honorarios_ultima_alteracao_display.short_description = 'Última Alt. Honorários'
+    fase_honorarios_ultima_alteracao_display.short_description = 'Última Alt. Hon. Contratuais'
+    
+    def fase_honorarios_sucumbenciais_ultima_alteracao_display(self, obj):
+        """Display formatted fase honorarios sucumbenciais last modification info"""
+        if obj.fase_honorarios_sucumbenciais_ultima_alteracao:
+            from django.utils.timezone import localtime
+            local_time = localtime(obj.fase_honorarios_sucumbenciais_ultima_alteracao)
+            return format_html(
+                '<span style="color: #666;">{}<br><small>por: {}</small></span>',
+                local_time.strftime('%d/%m/%Y %H:%M'),
+                obj.fase_honorarios_sucumbenciais_alterada_por or 'Sistema'
+            )
+        return '-'
+    fase_honorarios_sucumbenciais_ultima_alteracao_display.short_description = 'Última Alt. Hon. Sucumbenciais'
 
 
 @admin.register(Requerimento)
@@ -526,6 +549,40 @@ class PedidoRequerimentoAdmin(admin.ModelAdmin):
 @admin.register(FaseHonorariosContratuais)
 class FaseHonorariosContratuaisAdmin(admin.ModelAdmin):
     """Admin configuration for FaseHonorariosContratuais model"""
+    
+    list_display = ('nome', 'cor_preview', 'ordem', 'ativa', 'usage_count', 'criado_em')
+    list_filter = ('ativa',)
+    search_fields = ('nome', 'descricao')
+    ordering = ('ordem', 'nome')
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('nome', 'descricao')
+        }),
+        ('Aparência e Ordenação', {
+            'fields': ('cor', 'ordem')
+        }),
+        ('Status', {
+            'fields': ('ativa',)
+        }),
+    )
+    
+    def cor_preview(self, obj):
+        return format_html(
+            '<div style="width: 50px; height: 20px; background-color: {}; border: 1px solid #ccc; border-radius: 3px;"></div>',
+            obj.cor
+        )
+    cor_preview.short_description = 'Cor'
+    
+    def usage_count(self, obj):
+        count = obj.alvara_set.count()
+        return format_html('<span style="color: blue;">{}</span>', count)
+    usage_count.short_description = 'Alvarás'
+
+
+@admin.register(FaseHonorariosSucumbenciais)
+class FaseHonorariosSucumbenciaisAdmin(admin.ModelAdmin):
+    """Admin configuration for FaseHonorariosSucumbenciais model"""
     
     list_display = ('nome', 'cor_preview', 'ordem', 'ativa', 'usage_count', 'criado_em')
     list_filter = ('ativa',)

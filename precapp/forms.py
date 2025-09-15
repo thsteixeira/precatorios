@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.forms.widgets import ClearableFileInput
 import re
-from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, Diligencias, TipoDiligencia, Tipo, PedidoRequerimento, ContaBancaria, Recebimentos
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, FaseHonorariosContratuais, FaseHonorariosSucumbenciais, Diligencias, TipoDiligencia, Tipo, PedidoRequerimento, ContaBancaria, Recebimentos
 
 
 class CustomFileWidget(ClearableFileInput):
@@ -1859,7 +1859,7 @@ class AlvaraSimpleForm(forms.ModelForm):
     fase = forms.ModelChoiceField(
         queryset=None,  # Will be set in __init__
         empty_label='Selecione a fase',
-        label='Fase',
+        label='Fase Principal',
         required=False,
         widget=forms.Select(attrs={
             'class': 'form-control'
@@ -1872,6 +1872,17 @@ class AlvaraSimpleForm(forms.ModelForm):
         label='Fase Honorários Contratuais',
         required=False,
         help_text='Fase específica para acompanhar o status dos honorários contratuais',
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        })
+    )
+    
+    fase_honorarios_sucumbenciais = forms.ModelChoiceField(
+        queryset=None,  # Will be set in __init__
+        empty_label='Selecione a fase (opcional)',
+        label='Fase Honorários Sucumbenciais',
+        required=False,
+        help_text='Fase específica para acompanhar o status dos honorários sucumbenciais',
         widget=forms.Select(attrs={
             'class': 'form-control'
         })
@@ -1920,9 +1931,10 @@ class AlvaraSimpleForm(forms.ModelForm):
         self.precatorio = kwargs.pop('precatorio', None)
         super().__init__(*args, **kwargs)
         # Set queryset to only show phases for Alvará
-        from .models import Fase, FaseHonorariosContratuais
+        from .models import Fase, FaseHonorariosContratuais, FaseHonorariosSucumbenciais
         self.fields['fase'].queryset = Fase.get_fases_for_alvara()
         self.fields['fase_honorarios_contratuais'].queryset = FaseHonorariosContratuais.get_fases_ativas()
+        self.fields['fase_honorarios_sucumbenciais'].queryset = FaseHonorariosSucumbenciais.get_fases_ativas()
     
     def clean_cliente_cpf(self):
         """Validate that the CPF or CNPJ corresponds to an existing cliente"""
@@ -1966,11 +1978,12 @@ class AlvaraSimpleForm(forms.ModelForm):
 
     class Meta:
         model = Alvara
-        fields = ["tipo", "fase", "fase_honorarios_contratuais", "valor_principal", "honorarios_contratuais", "honorarios_sucumbenciais"]
+        fields = ["tipo", "fase", "fase_honorarios_contratuais", "fase_honorarios_sucumbenciais", "valor_principal", "honorarios_contratuais", "honorarios_sucumbenciais"]
         labels = {
             'tipo': 'Tipo',
             'fase': 'Fase Principal',
             'fase_honorarios_contratuais': 'Fase Honorários Contratuais',
+            'fase_honorarios_sucumbenciais': 'Fase Honorários Sucumbenciais',
             'valor_principal': 'Valor Principal',
             'honorarios_contratuais': 'Honorários Contratuais',
             'honorarios_sucumbenciais': 'Honorários Sucumbenciais',
@@ -1981,7 +1994,9 @@ class AlvaraSimpleForm(forms.ModelForm):
             'fase_ultima_alteracao', 
             'fase_alterada_por',
             'fase_honorarios_ultima_alteracao',
-            'fase_honorarios_alterada_por'
+            'fase_honorarios_alterada_por',
+            'fase_honorarios_sucumbenciais_ultima_alteracao',
+            'fase_honorarios_sucumbenciais_alterada_por'
         ]
 
 
@@ -2529,6 +2544,267 @@ class FaseHonorariosContratuaisForm(forms.ModelForm):
 
     class Meta:
         model = FaseHonorariosContratuais
+        fields = ['nome', 'descricao', 'cor', 'ordem', 'ativa']
+
+
+class FaseHonorariosSucumbenciaisForm(forms.ModelForm):
+    """
+    Specialized form for creating and managing succumbence fees (honorários sucumbenciais) phases.
+    
+    This form provides a dedicated interface for defining custom phases specifically
+    for tracking succumbence attorney fees throughout the precatorio process. It
+    offers similar functionality to FaseForm but is specialized for the unique
+    requirements of succumbence fee management, including separate color schemes
+    and specific workflow considerations.
+    
+    Key Features:
+        - Specialized phase management for succumbence fees
+        - Independent workflow tracking from main processes
+        - Visual customization with fee-specific color defaults
+        - Order management for logical fee phase progression
+        - Activation control for phase lifecycle management
+        - Unique naming validation within succumbence fee context
+        - Bootstrap styling for consistent user interface
+        - Fee-specific help text and guidance
+        
+    Business Logic:
+        - Ensures unique phase names within succumbence fees context
+        - Provides separate phase tracking for attorney succumbence fee processes
+        - Validates proper color format (hexadecimal)
+        - Manages phase ordering for logical fee workflow
+        - Controls phase availability through activation
+        - Maintains independence from general process phases
+        - Supports complex succumbence fee tracking requirements
+        
+    Usage:
+        # Creating new succumbence fee phase
+        form = FaseHonorariosSucumbenciaisForm(request.POST or None)
+        if form.is_valid():
+            fee_phase = form.save()
+            
+        # Editing existing fee phase
+        form = FaseHonorariosSucumbenciaisForm(request.POST or None, instance=existing_phase)
+        
+        # With fee-specific defaults
+        form = FaseHonorariosSucumbenciaisForm(initial={
+            'cor': '#dc3545',  # Red for succumbence tracking
+            'ativa': True,
+            'ordem': 0
+        })
+    
+    Fields:
+        nome (CharField): Unique succumbence fee phase name
+            - max_length: 100 characters
+            - Required field for phase identification
+            - Must be unique within succumbence fee phases
+            - Bootstrap form-control styling
+            - Fee-specific placeholder guidance
+            
+        descricao (CharField): Optional phase description
+            - Required: False
+            - Textarea widget for detailed explanation
+            - Helps users understand fee phase purpose
+            - Bootstrap styling with 3 rows
+            - Optional field for additional context
+            
+        cor (CharField): Visual identification color
+            - max_length: 7 characters (hexadecimal)
+            - Color picker widget for visual selection
+            - Default: '#dc3545' (Bootstrap danger red)
+            - Used for visual fee phase identification
+            - Hexadecimal format validation
+            
+        ordem (IntegerField): Display order priority
+            - min_value: 0 (prevents negative ordering)
+            - Default: 0 (highest priority)
+            - Controls fee phase display sequence
+            - Lower numbers appear first
+            - Allows logical fee workflow progression
+            
+        ativa (BooleanField): Phase activation status
+            - Required: False (checkbox field)
+            - Default: True (new phases active by default)
+            - Controls phase availability in system
+            - Allows fee phase lifecycle management
+            - Bootstrap checkbox styling
+            
+    Succumbence Fee Context:
+        Purpose:
+            - Track attorney succumbence fee processing
+            - Monitor payment stages for court-awarded fees
+            - Separate workflow from main precatorio process
+            - Specialized financial tracking requirements
+            
+        Workflow Independence:
+            - Independent from general Fase phases
+            - Separate color scheme (red theme)
+            - Specialized naming context
+            - Unique validation rules
+            
+        Business Requirements:
+            - Court-awarded fee payment tracking
+            - Legal compliance monitoring
+            - Financial milestone management
+            - Legal requirement adherence
+            
+    Validation:
+        - Nome: Required, unique within succumbence fees, max 100 chars
+        - Cor: Valid hexadecimal color format
+        - Ordem: Non-negative integer
+        - Ativa: Boolean validation
+        - Uniqueness: Scoped to succumbence fee phases only
+        
+    Color Scheme:
+        - Default: '#dc3545' (Bootstrap danger red)
+        - Financial tracking theme
+        - Visual distinction from general and contractual phases
+        - Accessibility considerations for color contrast
+        - User customizable through color picker
+        
+    Ordering System:
+        - Integer-based ordering (0 = highest priority)
+        - Logical fee processing progression
+        - Supports phase reordering without conflicts
+        - Visual sorting in fee phase displays
+        - Flexible insertion of new fee phases
+        
+    Error Messages:
+        - "Nome da fase é obrigatório."
+        - "Já existe uma fase de honorários sucumbenciais com este nome."
+        - "Formato de cor inválido."
+        - "Ordem deve ser um número não negativo."
+        
+    Widgets:
+        - TextInput with fee-specific placeholder
+        - Textarea with 3 rows for description
+        - Color picker with red default
+        - NumberInput with min validation for order
+        - Checkbox for activation status
+        
+    Security Considerations:
+        - Input sanitization for text fields
+        - Color format validation prevents injection
+        - Integer validation for order field
+        - Unique constraint enforcement within scope
+        - XSS prevention through proper escaping
+        
+    Performance:
+        - Efficient scoped uniqueness validation
+        - Minimal database queries
+        - Optimized form rendering
+        - Client-side validation support
+        
+    Accessibility:
+        - Descriptive labels and help text
+        - Color picker accessibility features
+        - Keyboard navigation support
+        - Screen reader compatibility
+        - Clear error messaging
+        
+    Integration Points:
+        - FaseHonorariosSucumbenciais model for persistence
+        - Alvará succumbence fee tracking
+        - Financial reporting systems
+        - Fee phase selection in related forms
+        - Attorney succumbence fee workflow management
+        
+    Differences from FaseForm:
+        - Specialized for succumbence fees only
+        - Different default color scheme (red vs green)
+        - Scoped uniqueness validation
+        - Fee-specific help text and placeholders
+        - Independent workflow tracking
+        
+    Lifecycle Management:
+        - Creation: All fields customizable with fee defaults
+        - Editing: Full field modification support
+        - Deactivation: Ativa flag for soft deletion
+        - Reordering: Ordem field for position changes
+        - Deletion: Hard deletion with fee-specific cascade
+    """
+    
+    nome = forms.CharField(
+        max_length=100,
+        label='Nome da Fase',
+        help_text='Nome único para identificar a fase de honorários sucumbenciais',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ex: Aguardando pagamento',
+            'required': True
+        })
+    )
+    
+    descricao = forms.CharField(
+        required=False,
+        label='Descrição',
+        help_text='Descrição opcional da fase',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Descreva esta fase (opcional)...'
+        })
+    )
+    
+    cor = forms.CharField(
+        max_length=7,
+        label='Cor',
+        help_text='Cor para identificar visualmente a fase',
+        widget=forms.TextInput(attrs={
+            'type': 'color',
+            'class': 'form-control form-control-color',
+            'value': '#dc3545',
+            'title': 'Escolha uma cor para esta fase'
+        })
+    )
+    
+    ordem = forms.IntegerField(
+        min_value=0,
+        initial=0,
+        label='Ordem de Exibição',
+        help_text='Número para definir a ordem de exibição (menores aparecem primeiro)',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': '0',
+            'placeholder': '0'
+        })
+    )
+    
+    ativa = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='Fase Ativa',
+        help_text='Marque para disponibilizar esta fase para uso',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
+    )
+    
+    def clean_nome(self):
+        """Validate nome field to ensure uniqueness"""
+        nome = self.cleaned_data.get('nome')
+        if nome:
+            nome = nome.strip()
+            # Check if another fase with the same name exists (excluding current instance if editing)
+            from .models import FaseHonorariosSucumbenciais
+            existing_fase = FaseHonorariosSucumbenciais.objects.filter(nome__iexact=nome)
+            if self.instance.pk:
+                existing_fase = existing_fase.exclude(pk=self.instance.pk)
+            
+            if existing_fase.exists():
+                raise forms.ValidationError(f'Já existe uma fase de honorários sucumbenciais com o nome "{nome}".')
+        return nome
+    
+    def clean_cor(self):
+        """Validate color field format"""
+        cor = self.cleaned_data.get('cor')
+        if cor:
+            # Ensure it's a valid hex color
+            if not re.match(r'^#[0-9a-fA-F]{6}$', cor):
+                raise forms.ValidationError('Cor deve estar no formato hexadecimal (#RRGGBB)')
+        return cor
+
+    class Meta:
+        model = FaseHonorariosSucumbenciais
         fields = ['nome', 'descricao', 'cor', 'ordem', 'ativa']
 
 

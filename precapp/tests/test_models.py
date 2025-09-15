@@ -40,7 +40,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from precapp.models import (
-    Fase, FaseHonorariosContratuais, Precatorio, Cliente, 
+    Fase, FaseHonorariosContratuais, FaseHonorariosSucumbenciais, Precatorio, Cliente, 
     Alvara, Requerimento, TipoDiligencia, Diligencias, Tipo, PedidoRequerimento,
     ContaBancaria, Recebimentos
 )
@@ -281,6 +281,512 @@ class FaseHonorariosContratuaisModelTest(TestCase):
         self.assertIn(ativa2, ativas)
         self.assertNotIn(inativa, ativas)
         self.assertEqual(ativas.count(), 2)
+
+
+class FaseHonorariosSucumbenciaisModelTest(TestCase):
+    """
+    Comprehensive test suite for the FaseHonorariosSucumbenciais model.
+    
+    This model represents specialized phases for tracking succumbence fees
+    (honorários sucumbenciais) separately from main document phases and contractual fees.
+    Tests validate:
+    
+    - Model creation and field assignment
+    - Required field validation (nome field)
+    - Default value behavior (cor, ativa, ordem fields)
+    - String representation consistency
+    - Ordering functionality (ordem, nome)
+    - Class method for retrieving active phases
+    - Business rule enforcement for succumbence fee phase management
+    - Integration with Alvara model for succumbence fee tracking
+    
+    Key Differences from Fase and FaseHonorariosContratuais:
+    - No 'tipo' field (specific to succumbence fees)
+    - Different default color (#dc3545 - red/danger)
+    - Specialized for court-awarded attorney fees workflow
+    - Independent from both main phases and contractual fee phases
+    - Supports separate tracking of succumbence fee processing
+    
+    Business Context:
+    - Honorários sucumbenciais are court-awarded attorney fees
+    - Different from contractual fees (paid by client agreement)
+    - Often have different processing timelines and requirements
+    - May require separate judicial authorization
+    - Subject to different legal constraints and priorities
+    
+    Use Cases:
+    - Tracking court fee calculation approval
+    - Managing judicial authorization for succumbence payments
+    - Monitoring payment processing for court-awarded fees
+    - Separate workflow from principal amounts and contractual fees
+    - Integration with legal fee management systems
+    """
+    
+    def setUp(self):
+        """Set up test data for FaseHonorariosSucumbenciais tests"""
+        self.fase_sucumbenciais_data = {
+            'nome': 'Aguardando Cálculo Judicial',
+            'descricao': 'Honorários sucumbenciais aguardando cálculo e aprovação judicial',
+            'cor': '#e74c3c',
+            'ativa': True,
+            'ordem': 1
+        }
+    
+    def test_fase_sucumbenciais_creation(self):
+        """
+        Test creating a fase honorários sucumbenciais with valid data.
+        
+        Validates that:
+        - A FaseHonorariosSucumbenciais instance can be created with valid data
+        - full_clean() passes without raising ValidationError
+        - The instance can be saved to the database
+        - All field values are correctly assigned and accessible
+        - Default values are applied when not specified
+        """
+        fase = FaseHonorariosSucumbenciais(**self.fase_sucumbenciais_data)
+        fase.full_clean()  # This should not raise ValidationError
+        fase.save()
+        
+        # Verify all field values
+        self.assertEqual(fase.nome, 'Aguardando Cálculo Judicial')
+        self.assertEqual(fase.descricao, 'Honorários sucumbenciais aguardando cálculo e aprovação judicial')
+        self.assertEqual(fase.cor, '#e74c3c')
+        self.assertTrue(fase.ativa)
+        self.assertEqual(fase.ordem, 1)
+    
+    def test_fase_sucumbenciais_str_method(self):
+        """
+        Test the __str__ method of FaseHonorariosSucumbenciais.
+        
+        Validates that the string representation returns the nome field
+        as expected, providing a human-readable identification for the
+        succumbence fee phase that will be displayed in admin interfaces,
+        forms, and templates.
+        """
+        fase = FaseHonorariosSucumbenciais(**self.fase_sucumbenciais_data)
+        expected_str = fase.nome
+        self.assertEqual(str(fase), expected_str)
+        
+        # Test with different nome values typical for succumbence fees
+        test_names = [
+            'Aguardando Aprovação Judicial',
+            'Cálculo Aprovado',
+            'Aguardando Pagamento',
+            'Pago Integralmente'
+        ]
+        for name in test_names:
+            with self.subTest(nome=name):
+                fase.nome = name
+                self.assertEqual(str(fase), name)
+    
+    def test_fase_sucumbenciais_default_values(self):
+        """
+        Test default values for FaseHonorariosSucumbenciais.
+        
+        Validates that:
+        - cor field defaults to '#dc3545' (red/danger color for succumbence)
+        - ativa field defaults to True
+        - ordem field defaults to 0
+        - descricao field is optional and can be empty
+        - All defaults are appropriate for succumbence fee tracking
+        """
+        fase = FaseHonorariosSucumbenciais.objects.create(nome='Test Fase Sucumbenciais')
+        
+        # Check default values
+        self.assertEqual(fase.cor, '#dc3545')  # Default red color from model
+        self.assertTrue(fase.ativa)  # Default to active
+        self.assertEqual(fase.ordem, 0)  # Default order
+        self.assertEqual(fase.descricao, '')  # Optional field, defaults to empty string
+    
+    def test_fase_sucumbenciais_required_fields(self):
+        """
+        Test that required fields are enforced.
+        
+        Validates field requirements:
+        - 'nome' field is required and cannot be empty or None
+        - Other fields have defaults and should not cause validation failures
+        - Tests both negative (missing required field) and positive cases
+        - Ensures proper error handling for missing required data
+        """
+        # Test without nome (nome is required)
+        with self.assertRaises(ValidationError):
+            fase = FaseHonorariosSucumbenciais(
+                descricao='Test description',
+                cor='#e74c3c',
+                ativa=True,
+                ordem=1
+            )
+            fase.full_clean()
+        
+        # Test with empty nome (should also fail)
+        with self.assertRaises(ValidationError):
+            fase = FaseHonorariosSucumbenciais(
+                nome='',
+                descricao='Test description',
+                cor='#e74c3c',
+                ativa=True
+            )
+            fase.full_clean()
+        
+        # Test valid creation with just nome (other fields have defaults)
+        fase = FaseHonorariosSucumbenciais(nome='Test Succumbence Phase')
+        fase.full_clean()  # Should pass
+        fase.save()
+        self.assertEqual(fase.nome, 'Test Succumbence Phase')
+    
+    def test_fase_sucumbenciais_ordering(self):
+        """
+        Test that fases are ordered by ordem and nome.
+        
+        Validates the model's Meta ordering configuration:
+        - Primary sort by ordem field (ascending)
+        - Secondary sort by nome field (alphabetical)
+        - Ensures consistent ordering for UI display
+        - Tests various ordem values including duplicates
+        """
+        # Create fases with different orders and names
+        FaseHonorariosSucumbenciais.objects.create(nome='Z Última Fase', ordem=3, cor='#FF0000')
+        FaseHonorariosSucumbenciais.objects.create(nome='A Primeira Fase', ordem=1, cor='#00FF00')
+        FaseHonorariosSucumbenciais.objects.create(nome='C Terceira Fase', ordem=2, cor='#0000FF')
+        FaseHonorariosSucumbenciais.objects.create(nome='B Segunda Fase', ordem=1, cor='#FFFF00')  # Same ordem as A
+        FaseHonorariosSucumbenciais.objects.create(nome='D Inicial', ordem=0, cor='#FF00FF')   # Lowest ordem
+        
+        fases = FaseHonorariosSucumbenciais.objects.all()
+        expected_order = ['D Inicial', 'A Primeira Fase', 'B Segunda Fase', 'C Terceira Fase', 'Z Última Fase']
+        actual_order = [fase.nome for fase in fases]
+        self.assertEqual(actual_order, expected_order)
+    
+    def test_get_fases_ativas_class_method(self):
+        """
+        Test get_fases_ativas class method.
+        
+        Validates that:
+        - Method returns only active fases
+        - Inactive fases are excluded from results
+        - Results maintain proper ordering (ordem, nome)
+        - Method is accessible as class method
+        - Empty queryset handling when no active fases exist
+        """
+        # Create active and inactive fases
+        ativa1 = FaseHonorariosSucumbenciais.objects.create(
+            nome='Ativa Primeira', 
+            ativa=True, 
+            ordem=2,
+            cor='#28a745'
+        )
+        ativa2 = FaseHonorariosSucumbenciais.objects.create(
+            nome='Ativa Segunda', 
+            ativa=True, 
+            ordem=1,
+            cor='#007bff'
+        )
+        inativa1 = FaseHonorariosSucumbenciais.objects.create(
+            nome='Inativa Primeira', 
+            ativa=False, 
+            ordem=0,
+            cor='#6c757d'
+        )
+        inativa2 = FaseHonorariosSucumbenciais.objects.create(
+            nome='Inativa Segunda', 
+            ativa=False, 
+            ordem=3,
+            cor='#dc3545'
+        )
+        
+        fases_ativas = FaseHonorariosSucumbenciais.get_fases_ativas()
+        
+        # Check that only active fases are returned
+        self.assertIn(ativa1, fases_ativas)
+        self.assertIn(ativa2, fases_ativas)
+        self.assertNotIn(inativa1, fases_ativas)
+        self.assertNotIn(inativa2, fases_ativas)
+        self.assertEqual(fases_ativas.count(), 2)
+        
+        # Check ordering (should be by ordem, then nome)
+        fases_list = list(fases_ativas)
+        self.assertEqual(fases_list[0], ativa2)  # ordem=1
+        self.assertEqual(fases_list[1], ativa1)  # ordem=2
+    
+    def test_fase_sucumbenciais_soft_delete_pattern(self):
+        """
+        Test soft delete pattern through ativa field.
+        
+        Validates that:
+        - Fases can be deactivated instead of deleted
+        - Deactivated fases are excluded from active queries
+        - Data integrity is preserved when deactivating
+        - Historical references remain intact
+        - Reactivation is possible
+        """
+        # Create active fase
+        fase = FaseHonorariosSucumbenciais.objects.create(
+            nome='Test Deactivation',
+            descricao='Testing soft delete pattern for succumbence fees',
+            ativa=True,
+            cor='#17a2b8'
+        )
+        
+        # Verify it appears in active fases
+        self.assertIn(fase, FaseHonorariosSucumbenciais.get_fases_ativas())
+        
+        # Deactivate the fase
+        fase.ativa = False
+        fase.save()
+        
+        # Verify it no longer appears in active fases
+        self.assertNotIn(fase, FaseHonorariosSucumbenciais.get_fases_ativas())
+        
+        # Verify the fase still exists in database
+        self.assertTrue(FaseHonorariosSucumbenciais.objects.filter(nome='Test Deactivation').exists())
+        
+        # Test reactivation
+        fase.ativa = True
+        fase.save()
+        self.assertIn(fase, FaseHonorariosSucumbenciais.get_fases_ativas())
+    
+    def test_fase_sucumbenciais_color_field_validation(self):
+        """
+        Test color field accepts valid hexadecimal colors.
+        
+        Validates various valid color formats commonly used for succumbence fees:
+        - Standard hex colors with # prefix
+        - Colors appropriate for legal fee categorization
+        - Different shades suitable for succumbence fee status indication
+        """
+        valid_colors_for_sucumbenciais = [
+            '#dc3545',  # Default danger red
+            '#e74c3c',  # Bright red
+            '#c0392b',  # Dark red
+            '#f39c12',  # Orange (warning)
+            '#e67e22',  # Dark orange
+            '#8e44ad',  # Purple
+            '#9b59b6',  # Light purple
+            '#34495e',  # Dark gray
+            '#2c3e50',  # Very dark gray
+        ]
+        
+        for color in valid_colors_for_sucumbenciais:
+            with self.subTest(color=color):
+                data = self.fase_sucumbenciais_data.copy()
+                data['cor'] = color
+                data['nome'] = f'Test Color {color}'  # Unique name for each test
+                fase = FaseHonorariosSucumbenciais(**data)
+                fase.full_clean()
+                fase.save()
+                self.assertEqual(fase.cor, color)
+    
+    def test_fase_sucumbenciais_unique_constraint(self):
+        """
+        Test that nome field allows duplicate values since no unique constraint exists.
+        
+        Validates that:
+        - Multiple FaseHonorariosSucumbenciais instances can have the same nome
+        - No database constraint prevents duplicate names
+        - This is different from other models that may have unique constraints
+        """
+        # Create first fase
+        fase1 = FaseHonorariosSucumbenciais.objects.create(**self.fase_sucumbenciais_data)
+        
+        # Create second fase with same name - should work since no unique constraint
+        fase2_data = self.fase_sucumbenciais_data.copy()
+        fase2 = FaseHonorariosSucumbenciais.objects.create(**fase2_data)
+        
+        # Both should exist in database
+        self.assertEqual(FaseHonorariosSucumbenciais.objects.filter(
+            nome=self.fase_sucumbenciais_data['nome']
+        ).count(), 2)
+    
+    def test_fase_sucumbenciais_meta_configuration(self):
+        """
+        Test model Meta configuration.
+        
+        Validates that:
+        - Verbose names are properly set for admin interface
+        - Ordering configuration is correct
+        - Model metadata is properly configured for succumbence fees
+        """
+        meta = FaseHonorariosSucumbenciais._meta
+        self.assertEqual(meta.verbose_name, "Fase Honorários Sucumbenciais")
+        self.assertEqual(meta.verbose_name_plural, "Fases Honorários Sucumbenciais")
+        self.assertEqual(meta.ordering, ['ordem', 'nome'])
+    
+    def test_fase_sucumbenciais_description_field(self):
+        """
+        Test description field behavior for succumbence fee phases.
+        
+        Validates that:
+        - Description field is optional (can be empty or None)
+        - Long descriptions specific to succumbence fees are properly handled
+        - Legal terminology is preserved in descriptions
+        - Unicode characters are supported for legal terms
+        """
+        # Test with empty description
+        fase_empty = FaseHonorariosSucumbenciais.objects.create(
+            nome='Empty Description Test',
+            descricao=''
+        )
+        self.assertEqual(fase_empty.descricao, '')
+        
+        # Test with legal description for succumbence fees
+        legal_description = (
+            'Honorários sucumbenciais conforme determinação judicial, calculados sobre '
+            'o valor da causa e sujeitos à aprovação do juízo competente. Aguardando '
+            'manifestação das partes sobre os cálculos apresentados pelos peritos.'
+        )
+        fase_legal = FaseHonorariosSucumbenciais.objects.create(
+            nome='Legal Description Test',
+            descricao=legal_description
+        )
+        self.assertEqual(fase_legal.descricao, legal_description)
+        self.assertIn('sucumbenciais', fase_legal.descricao.lower())
+        
+        # Test with unicode legal terms
+        unicode_description = 'Honorários sucumbenciais: cálculo, manifestação, execução'
+        fase_unicode = FaseHonorariosSucumbenciais.objects.create(
+            nome='Unicode Legal Terms',
+            descricao=unicode_description
+        )
+        self.assertEqual(fase_unicode.descricao, unicode_description)
+    
+    def test_fase_sucumbenciais_integration_scenarios(self):
+        """
+        Test integration scenarios specific to succumbence fee management.
+        
+        Validates common use cases:
+        - Creating typical succumbence fee phases
+        - Workflow progression from calculation to payment
+        - Phase transitions for judicial approval process
+        - Integration with legal fee management workflows
+        """
+        # Create typical succumbence fee phases
+        typical_phases = [
+            {'nome': 'Aguardando Cálculo', 'cor': '#ffc107', 'ordem': 1},
+            {'nome': 'Em Análise Judicial', 'cor': '#fd7e14', 'ordem': 2},
+            {'nome': 'Aguardando Manifestação', 'cor': '#e83e8c', 'ordem': 3},
+            {'nome': 'Aprovado pelo Juízo', 'cor': '#007bff', 'ordem': 4},
+            {'nome': 'Aguardando Pagamento', 'cor': '#6f42c1', 'ordem': 5},
+            {'nome': 'Pago Integralmente', 'cor': '#28a745', 'ordem': 6},
+            {'nome': 'Contestado', 'cor': '#dc3545', 'ordem': 7},
+        ]
+        
+        created_phases = []
+        for phase_data in typical_phases:
+            phase = FaseHonorariosSucumbenciais.objects.create(**phase_data)
+            created_phases.append(phase)
+        
+        # Test that all were created successfully
+        self.assertEqual(FaseHonorariosSucumbenciais.objects.count(), 7)
+        
+        # Test ordering is correct for workflow
+        ordered_phases = list(FaseHonorariosSucumbenciais.objects.all())
+        expected_names = [p['nome'] for p in typical_phases]
+        actual_names = [p.nome for p in ordered_phases]
+        self.assertEqual(actual_names, expected_names)
+        
+        # Test filtering by workflow stage
+        pending_phases = FaseHonorariosSucumbenciais.objects.filter(
+            nome__icontains='Aguardando'
+        )
+        self.assertEqual(pending_phases.count(), 3)  # 3 phases with "Aguardando"
+        
+        judicial_phases = FaseHonorariosSucumbenciais.objects.filter(
+            nome__icontains='Judicial'
+        )
+        self.assertEqual(judicial_phases.count(), 1)
+        
+        completed_phases = FaseHonorariosSucumbenciais.objects.filter(
+            nome__icontains='Pago'
+        )
+        self.assertEqual(completed_phases.count(), 1)
+    
+    def test_fase_sucumbenciais_business_logic_scenarios(self):
+        """
+        Test business logic scenarios specific to succumbence fees.
+        
+        Validates handling of:
+        - Judicial approval workflow phases
+        - Fee calculation and approval stages  
+        - Party manifestation and contestation
+        - Payment authorization and execution
+        - Legal compliance requirements
+        """
+        # Test judicial approval workflow
+        calculation_phase = FaseHonorariosSucumbenciais.objects.create(
+            nome='Cálculo Apresentado',
+            descricao='Cálculo dos honorários apresentado conforme determinação judicial'
+        )
+        
+        review_phase = FaseHonorariosSucumbenciais.objects.create(
+            nome='Em Revisão Judicial',
+            descricao='Aguardando revisão e aprovação dos cálculos pelo juízo'
+        )
+        
+        approved_phase = FaseHonorariosSucumbenciais.objects.create(
+            nome='Judicialmente Aprovado',
+            descricao='Honorários aprovados pelo juízo competente'
+        )
+        
+        # Test that workflow phases can be retrieved in order
+        workflow_phases = FaseHonorariosSucumbenciais.objects.all().order_by('ordem', 'nome')
+        self.assertEqual(workflow_phases.count(), 3)
+        
+        # Test that each phase has appropriate description
+        for phase in workflow_phases:
+            self.assertIsNotNone(phase.descricao)
+            if 'Cálculo' in phase.nome:
+                self.assertIn('cálculo', phase.descricao.lower())
+            elif 'Revisão' in phase.nome:
+                self.assertIn('revisão', phase.descricao.lower())
+            elif 'Aprovado' in phase.nome:
+                self.assertIn('aprovado', phase.descricao.lower())
+    
+    def test_fase_sucumbenciais_edge_cases(self):
+        """
+        Test edge cases and boundary conditions specific to succumbence fees.
+        
+        Validates handling of:
+        - Very long phase names
+        - Special legal characters in names and descriptions
+        - Extreme ordem values
+        - Complex judicial terminology
+        """
+        # Test long phase name (legal terminology can be verbose)
+        long_name = "Aguardando Manifestação das Partes sobre os Cálculos de Honorários Sucumbenciais Apresentados pelo Perito Judicial"
+        fase_long = FaseHonorariosSucumbenciais.objects.create(
+            nome=long_name,
+            cor='#6c757d'
+        )
+        self.assertEqual(fase_long.nome, long_name)
+        
+        # Test special legal characters
+        special_name = "Art. 85, § 1º do CPC - Honorários Sucumbenciais (20%)"
+        fase_special = FaseHonorariosSucumbenciais.objects.create(
+            nome=special_name,
+            cor='#17a2b8'
+        )
+        self.assertEqual(fase_special.nome, special_name)
+        
+        # Test large ordem value for edge case phases
+        fase_large_order = FaseHonorariosSucumbenciais.objects.create(
+            nome='Fase Excepcional',
+            ordem=999999,
+            cor='#fd7e14'
+        )
+        self.assertEqual(fase_large_order.ordem, 999999)
+        
+        # Test complex legal description
+        complex_description = (
+            'Honorários sucumbenciais fixados em sentença, conforme art. 85 do CPC, '
+            'no percentual de 15% sobre o valor da condenação, sujeitos à atualização '
+            'monetária pelos índices oficiais desde a data da sentença até o efetivo '
+            'pagamento, acrescidos de juros legais conforme determinação judicial.'
+        )
+        fase_complex = FaseHonorariosSucumbenciais.objects.create(
+            nome='Sentença Transitada em Julgado',
+            descricao=complex_description
+        )
+        self.assertIn('art. 85 do CPC', fase_complex.descricao)
+        self.assertIn('15%', fase_complex.descricao)
 
 
 class TipoModelTest(TestCase):

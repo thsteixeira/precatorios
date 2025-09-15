@@ -201,6 +201,75 @@ class FaseHonorariosContratuais(models.Model):
         verbose_name_plural = "Fases Honorários Contratuais"
         ordering = ['ordem', 'nome']
 
+
+class FaseHonorariosSucumbenciais(models.Model):
+    """
+    Model for custom phases specifically for Honorários Sucumbenciais tracking.
+    
+    This model represents specialized phases that track the status of succumbence
+    fees (honorários sucumbenciais) separately from the main document phases.
+    This allows for independent tracking of fee payment status while the main
+    document may be in a different phase.
+    
+    Attributes:
+        nome (CharField): The name of the succumbence fees phase (max 100 characters)
+        descricao (TextField): Optional description of the phase
+        cor (CharField): Hexadecimal color code for visual identification (default: #dc3545)
+        ordem (PositiveIntegerField): Display order (lower numbers appear first)
+        ativa (BooleanField): Whether this phase is active for use
+        criado_em (DateTimeField): Timestamp when the phase was created
+        atualizado_em (DateTimeField): Timestamp when the phase was last updated
+    
+    Business Rules:
+        - Each phase name must be unique
+        - Phases are ordered by ordem, then by nome
+        - Only active phases are available for selection
+        - Default color is red (#dc3545) to distinguish from other phase types
+    
+    Usage Examples:
+        # Create a succumbence fees phase
+        fase = FaseHonorariosSucumbenciais.objects.create(
+            nome="Aguardando Pagamento",
+            descricao="Honorários sucumbenciais aguardando liberação do pagamento"
+        )
+        
+        # Get all active succumbence fees phases
+        active_phases = FaseHonorariosSucumbenciais.get_fases_ativas()
+    """
+    
+    nome = models.CharField(max_length=100, help_text="Nome da fase de honorários sucumbenciais")
+    descricao = models.TextField(blank=True, help_text="Descrição opcional da fase")
+    cor = models.CharField(
+        max_length=7, 
+        default='#dc3545', 
+        help_text="Cor da fase em hexadecimal (ex: #dc3545)"
+    )
+    ordem = models.PositiveIntegerField(
+        default=0,
+        help_text="Ordem de exibição (números menores aparecem primeiro)"
+    )
+    ativa = models.BooleanField(default=True, help_text="Se esta fase está ativa para uso")
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.nome}"
+    
+    @classmethod
+    def get_fases_ativas(cls):
+        """
+        Get active phases for honorários sucumbenciais.
+        
+        Returns:
+            QuerySet: Active succumbence fees phases ordered by ordem and nome
+        """
+        return cls.objects.filter(ativa=True)
+    
+    class Meta:
+        verbose_name = "Fase Honorários Sucumbenciais"
+        verbose_name_plural = "Fases Honorários Sucumbenciais"
+        ordering = ['ordem', 'nome']
+
 class Tipo(models.Model):
     """
     Model for custom types that can be assigned to Precatórios.
@@ -965,7 +1034,7 @@ class Alvara(models.Model):
     
     An Alvará is a legal document that authorizes payment of specific amounts
     from a precatório to a client. It tracks both main phases and separate
-    contractual fee phases, along with various fee components.
+    fee phases for contractual and succumbence fees, along with various fee components.
     
     Attributes:
         precatorio (ForeignKey): Related precatório document (CASCADE deletion)
@@ -976,11 +1045,12 @@ class Alvara(models.Model):
         tipo (CharField): Type/category of the alvará (max 100 characters)
         fase (ForeignKey): Current main phase of the alvará (PROTECT constraint)
         fase_honorarios_contratuais (ForeignKey): Separate phase for contractual fees tracking
+        fase_honorarios_sucumbenciais (ForeignKey): Separate phase for succumbence fees tracking
     
     Business Rules:
         - Cliente must be linked to the precatório before creating an alvará
         - Validation ensures client-precatório relationship exists
-        - Main fase and honorarios fase can be tracked independently
+        - Main fase and honorarios phases can be tracked independently
         - Financial amounts can be zero but not negative
         - PROTECT constraints prevent deletion of referenced phases
         - CASCADE deletion removes alvarás if precatório or cliente is deleted
@@ -994,7 +1064,8 @@ class Alvara(models.Model):
         - Precatorio: Parent document (CASCADE)
         - Cliente: Payment recipient (CASCADE)
         - Fase: Main phase tracking (PROTECT)
-        - FaseHonorariosContratuais: Separate fee phase tracking (PROTECT)
+        - FaseHonorariosContratuais: Separate contractual fee phase tracking (PROTECT)
+        - FaseHonorariosSucumbenciais: Separate succumbence fee phase tracking (PROTECT)
     
     Usage Examples:
         # Create an alvará (cliente must be linked to precatório first)
@@ -1004,12 +1075,14 @@ class Alvara(models.Model):
             cliente=cliente,
             valor_principal=50000.00,
             honorarios_contratuais=10000.00,
+            honorarios_sucumbenciais=5000.00,
             tipo="Prioridade por idade",
             fase=fase_aguardando_deposito
         )
         
-        # Add contractual fees phase tracking
-        alvara.fase_honorarios_contratuais = fase_hon_pendente
+        # Add fee phase tracking
+        alvara.fase_honorarios_contratuais = fase_hon_contratuais_pendente
+        alvara.fase_honorarios_sucumbenciais = fase_hon_sucumbenciais_pendente
         alvara.save()
     """
     precatorio = models.ForeignKey(Precatorio, on_delete=models.CASCADE, to_field='cnj')
@@ -1032,6 +1105,14 @@ class Alvara(models.Model):
         blank=True,
         help_text="Fase específica para honorários contratuais",
         verbose_name="Fase Honorários Contratuais"
+    )
+    fase_honorarios_sucumbenciais = models.ForeignKey(
+        FaseHonorariosSucumbenciais,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text="Fase específica para honorários sucumbenciais",
+        verbose_name="Fase Honorários Sucumbenciais"
     )
     
     # Audit fields for tracking fase changes
@@ -1058,6 +1139,19 @@ class Alvara(models.Model):
         null=True,
         blank=True,
         help_text="Usuário que fez a última alteração da fase de honorários contratuais"
+    )
+    
+    # Audit fields for tracking fase_honorarios_sucumbenciais changes
+    fase_honorarios_sucumbenciais_ultima_alteracao = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="Data e hora da última alteração da fase de honorários sucumbenciais"
+    )
+    fase_honorarios_sucumbenciais_alterada_por = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        help_text="Usuário que fez a última alteração da fase de honorários sucumbenciais"
     )
 
     def clean(self):
@@ -1105,9 +1199,11 @@ class Alvara(models.Model):
                 # Get the old instance from database
                 old_instance = Alvara.objects.get(pk=self.pk)
                 old_fase = old_instance.fase
-                old_fase_honorarios = old_instance.fase_honorarios_contratuais
+                old_fase_honorarios_contratuais = old_instance.fase_honorarios_contratuais
+                old_fase_honorarios_sucumbenciais = old_instance.fase_honorarios_sucumbenciais
                 new_fase = self.fase
-                new_fase_honorarios = self.fase_honorarios_contratuais
+                new_fase_honorarios_contratuais = self.fase_honorarios_contratuais
+                new_fase_honorarios_sucumbenciais = self.fase_honorarios_sucumbenciais
                 
                 # Try to get current user from thread-local storage
                 current_user = getattr(threading.current_thread(), 'user', None)
@@ -1122,10 +1218,15 @@ class Alvara(models.Model):
                     self.fase_ultima_alteracao = timezone.now()
                     self.fase_alterada_por = user_name
                 
-                # Check if honorarios fase has changed
-                if old_fase_honorarios != new_fase_honorarios:
+                # Check if honorarios contratuais fase has changed
+                if old_fase_honorarios_contratuais != new_fase_honorarios_contratuais:
                     self.fase_honorarios_ultima_alteracao = timezone.now()
                     self.fase_honorarios_alterada_por = user_name
+                
+                # Check if honorarios sucumbenciais fase has changed
+                if old_fase_honorarios_sucumbenciais != new_fase_honorarios_sucumbenciais:
+                    self.fase_honorarios_sucumbenciais_ultima_alteracao = timezone.now()
+                    self.fase_honorarios_sucumbenciais_alterada_por = user_name
                         
             except Alvara.DoesNotExist:
                 # This shouldn't happen, but handle gracefully
@@ -1145,10 +1246,15 @@ class Alvara(models.Model):
                 self.fase_ultima_alteracao = timezone.now()
                 self.fase_alterada_por = user_name
             
-            # Set initial honorarios fase audit values if fase_honorarios_contratuais is provided
+            # Set initial honorarios contratuais fase audit values if provided
             if self.fase_honorarios_contratuais:
                 self.fase_honorarios_ultima_alteracao = timezone.now()
                 self.fase_honorarios_alterada_por = user_name
+            
+            # Set initial honorarios sucumbenciais fase audit values if provided
+            if self.fase_honorarios_sucumbenciais:
+                self.fase_honorarios_sucumbenciais_ultima_alteracao = timezone.now()
+                self.fase_honorarios_sucumbenciais_alterada_por = user_name
         
         self.full_clean()
         super().save(*args, **kwargs)

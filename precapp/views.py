@@ -14,11 +14,11 @@ import os
 import logging
 import mimetypes
 from io import StringIO
-from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo, FaseHonorariosContratuais, TipoDiligencia, Diligencias, PedidoRequerimento, ContaBancaria, Recebimentos
+from .models import Precatorio, Cliente, Alvara, Requerimento, Fase, Tipo, FaseHonorariosContratuais, FaseHonorariosSucumbenciais, TipoDiligencia, Diligencias, PedidoRequerimento, ContaBancaria, Recebimentos
 from .forms import (
     PrecatorioForm, ClienteForm, PrecatorioSearchForm, 
     ClienteSearchForm, RequerimentoForm, ClienteSimpleForm, 
-    AlvaraSimpleForm, FaseForm, TipoForm, FaseHonorariosContratuaisForm, TipoDiligenciaForm,
+    AlvaraSimpleForm, FaseForm, TipoForm, FaseHonorariosContratuaisForm, FaseHonorariosSucumbenciaisForm, TipoDiligenciaForm,
     DiligenciasForm, DiligenciasUpdateForm, PedidoRequerimentoForm, ContaBancariaForm, RecebimentosForm
 )
 
@@ -1400,6 +1400,118 @@ def ativar_fase_honorarios_view(request, fase_id):
 
 
 # ===============================
+# FASE HONORÁRIOS SUCUMBENCIAIS VIEWS
+# ===============================
+
+@login_required
+def fases_honorarios_sucumbenciais_view(request):
+    """View to list all honorários sucumbenciais phases"""
+    fases = FaseHonorariosSucumbenciais.objects.all()  # Uses model's default ordering: ['ordem', 'nome']
+    
+    # Statistics
+    total_fases = fases.count()
+    fases_ativas = fases.filter(ativa=True).count()
+    fases_inativas = fases.filter(ativa=False).count()
+    
+    context = {
+        'fases': fases,
+        'total_fases': total_fases,
+        'fases_ativas': fases_ativas,
+        'fases_inativas': fases_inativas,
+    }
+    
+    return render(request, 'precapp/fases_honorarios_sucumbenciais_list.html', context)
+
+
+@login_required
+def nova_fase_honorarios_sucumbenciais_view(request):
+    """View to create a new honorários sucumbenciais phase"""
+    if request.method == 'POST':
+        form = FaseHonorariosSucumbenciaisForm(request.POST)
+        if form.is_valid():
+            fase = form.save()
+            messages.success(request, f'Fase de Honorários Sucumbenciais "{fase.nome}" criada com sucesso!')
+            return redirect('fases_honorarios_sucumbenciais')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = FaseHonorariosSucumbenciaisForm()
+    
+    context = {
+        'form': form,
+        'title': 'Nova Fase Honorários Sucumbenciais',
+        'submit_text': 'Criar Fase'
+    }
+    return render(request, 'precapp/fase_honorarios_sucumbenciais_form.html', context)
+
+
+@login_required
+def editar_fase_honorarios_sucumbenciais_view(request, fase_id):
+    """View to edit an existing honorários sucumbenciais phase"""
+    fase = get_object_or_404(FaseHonorariosSucumbenciais, id=fase_id)
+    
+    if request.method == 'POST':
+        form = FaseHonorariosSucumbenciaisForm(request.POST, instance=fase)
+        if form.is_valid():
+            fase = form.save()
+            messages.success(request, f'Fase de Honorários Sucumbenciais "{fase.nome}" atualizada com sucesso!')
+            return redirect('fases_honorarios_sucumbenciais')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    else:
+        form = FaseHonorariosSucumbenciaisForm(instance=fase)
+    
+    context = {
+        'form': form,
+        'fase': fase,
+        'title': f'Editar Fase Honorários Sucumbenciais: {fase.nome}',
+        'submit_text': 'Salvar Alterações'
+    }
+    return render(request, 'precapp/fase_honorarios_sucumbenciais_form.html', context)
+
+
+@login_required
+def deletar_fase_honorarios_sucumbenciais_view(request, fase_id):
+    """View to delete a honorários sucumbenciais phase"""
+    fase = get_object_or_404(FaseHonorariosSucumbenciais, id=fase_id)
+    
+    if request.method == 'POST':
+        fase_nome = fase.nome
+        
+        # Check if fase is being used by any alvara
+        alvaras_using_fase = Alvara.objects.filter(fase_honorarios_sucumbenciais=fase)
+        if alvaras_using_fase.exists():
+            messages.error(
+                request, 
+                f'Não é possível excluir a fase de honorários sucumbenciais "{fase_nome}" pois ela está sendo usada por {alvaras_using_fase.count()} alvará(s). '
+                'Altere a fase desses alvarás primeiro.'
+            )
+            return redirect('fases_honorarios_sucumbenciais')
+        
+        fase.delete()
+        messages.success(request, f'Fase de Honorários Sucumbenciais "{fase_nome}" foi excluída com sucesso!')
+        return redirect('fases_honorarios_sucumbenciais')
+    
+    # If not POST, redirect to fases list
+    return redirect('fases_honorarios_sucumbenciais')
+
+
+@login_required
+def ativar_fase_honorarios_sucumbenciais_view(request, fase_id):
+    """View to activate/deactivate a honorários sucumbenciais phase"""
+    fase = get_object_or_404(FaseHonorariosSucumbenciais, id=fase_id)
+    
+    if request.method == 'POST':
+        fase.ativa = not fase.ativa
+        fase.save()
+        
+        status_text = "ativada" if fase.ativa else "desativada"
+        messages.success(request, f'Fase de Honorários Sucumbenciais "{fase.nome}" foi {status_text} com sucesso!')
+    
+    return redirect('fases_honorarios_sucumbenciais')
+
+
+# ===============================
 # TIPO DILIGENCIA VIEWS
 # ===============================
 
@@ -1800,6 +1912,7 @@ def customizacao_view(request):
     # Get statistics for phases, types, and diligence types
     fases_principais = Fase.objects.all()
     fases_honorarios = FaseHonorariosContratuais.objects.all()
+    fases_honorarios_sucumbenciais = FaseHonorariosSucumbenciais.objects.all()
     tipos_precatorio = Tipo.objects.all()
     tipos_diligencia = TipoDiligencia.objects.all()
     tipos_pedido_requerimento = PedidoRequerimento.objects.all()
@@ -1815,6 +1928,11 @@ def customizacao_view(request):
         'total_fases_honorarios': fases_honorarios.count(),
         'fases_honorarios_ativas': fases_honorarios.filter(ativa=True).count(),
         'fases_honorarios_inativas': fases_honorarios.filter(ativa=False).count(),
+        
+        # Fases Honorários Sucumbenciais stats
+        'total_fases_honorarios_sucumbenciais': fases_honorarios_sucumbenciais.count(),
+        'fases_honorarios_sucumbenciais_ativas': fases_honorarios_sucumbenciais.filter(ativa=True).count(),
+        'fases_honorarios_sucumbenciais_inativas': fases_honorarios_sucumbenciais.filter(ativa=False).count(),
         
         # Tipos Precatório stats
         'total_tipos_precatorio': tipos_precatorio.count(),
@@ -1837,6 +1955,7 @@ def customizacao_view(request):
         # Recent items (last 5 of each type)
         'recent_fases_principais': fases_principais.order_by('-criado_em')[:5],
         'recent_fases_honorarios': fases_honorarios.order_by('-criado_em')[:5],
+        'recent_fases_honorarios_sucumbenciais': fases_honorarios_sucumbenciais.order_by('-criado_em')[:5],
         'recent_tipos_precatorio': tipos_precatorio.order_by('-criado_em')[:5],
         'recent_tipos_pedido_requerimento': tipos_pedido_requerimento.order_by('-criado_em')[:5],
         'recent_tipos_diligencia': tipos_diligencia.order_by('-criado_em')[:5],

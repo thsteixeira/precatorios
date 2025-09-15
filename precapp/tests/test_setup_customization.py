@@ -10,7 +10,7 @@ from django.db import transaction
 from unittest.mock import patch
 
 from precapp.models import (
-    Fase, FaseHonorariosContratuais, TipoDiligencia, 
+    Fase, FaseHonorariosContratuais, FaseHonorariosSucumbenciais, TipoDiligencia, 
     Tipo, PedidoRequerimento
 )
 
@@ -31,6 +31,7 @@ class SetupCustomizationCommandTest(TestCase):
         """Helper method to clear all relevant data."""
         Fase.objects.all().delete()
         FaseHonorariosContratuais.objects.all().delete()
+        FaseHonorariosSucumbenciais.objects.all().delete()
         TipoDiligencia.objects.all().delete()
         Tipo.objects.all().delete()
         PedidoRequerimento.objects.all().delete()
@@ -40,6 +41,7 @@ class SetupCustomizationCommandTest(TestCase):
         # Verify initial empty state
         self.assertEqual(Fase.objects.count(), 0)
         self.assertEqual(FaseHonorariosContratuais.objects.count(), 0)
+        self.assertEqual(FaseHonorariosSucumbenciais.objects.count(), 0)
         self.assertEqual(TipoDiligencia.objects.count(), 0)
         self.assertEqual(Tipo.objects.count(), 0)
         self.assertEqual(PedidoRequerimento.objects.count(), 0)
@@ -51,6 +53,7 @@ class SetupCustomizationCommandTest(TestCase):
         # Verify all data was created
         self.assertEqual(Fase.objects.count(), 12)  # 4 requerimento + 8 alvara
         self.assertEqual(FaseHonorariosContratuais.objects.count(), 5)  # Updated from 4 to 5
+        self.assertEqual(FaseHonorariosSucumbenciais.objects.count(), 8)  # 8 sucumbenciais phases
         self.assertEqual(TipoDiligencia.objects.count(), 5)
         self.assertEqual(Tipo.objects.count(), 7)  # Updated from 3 to 7
         self.assertEqual(PedidoRequerimento.objects.count(), 9)  # Updated from 8 to 9
@@ -69,6 +72,7 @@ class SetupCustomizationCommandTest(TestCase):
         # Verify initial counts
         initial_fase_count = Fase.objects.count()
         initial_honorarios_count = FaseHonorariosContratuais.objects.count()
+        initial_sucumbenciais_count = FaseHonorariosSucumbenciais.objects.count()
         initial_diligencia_count = TipoDiligencia.objects.count()
         initial_tipo_count = Tipo.objects.count()
         initial_pedido_count = PedidoRequerimento.objects.count()
@@ -80,6 +84,7 @@ class SetupCustomizationCommandTest(TestCase):
         # Verify counts haven't changed
         self.assertEqual(Fase.objects.count(), initial_fase_count)
         self.assertEqual(FaseHonorariosContratuais.objects.count(), initial_honorarios_count)
+        self.assertEqual(FaseHonorariosSucumbenciais.objects.count(), initial_sucumbenciais_count)
         self.assertEqual(TipoDiligencia.objects.count(), initial_diligencia_count)
         self.assertEqual(Tipo.objects.count(), initial_tipo_count)
         self.assertEqual(PedidoRequerimento.objects.count(), initial_pedido_count)
@@ -137,6 +142,23 @@ class SetupCustomizationCommandTest(TestCase):
         actual_hon_names = list(honorarios_phases.values_list('nome', flat=True))
         self.assertEqual(actual_hon_names, expected_hon_names)
 
+        # Verify Honorários Sucumbenciais phases
+        sucumbenciais_phases = FaseHonorariosSucumbenciais.objects.all().order_by('ordem')
+        self.assertEqual(sucumbenciais_phases.count(), 8)
+        
+        expected_suc_names = [
+            'Aguardando Depósito Judicial',
+            'Aguardando Atualização pela Contadoria',
+            'Para manifestar de cálculos',
+            'Cálculos impugnados',
+            'Para informar conta',
+            'Contas bancárias informadas',
+            'Recebido Pelo Cliente',
+            'Alvará no Escritório'
+        ]
+        actual_suc_names = list(sucumbenciais_phases.values_list('nome', flat=True))
+        self.assertEqual(actual_suc_names, expected_suc_names)
+
     def test_phases_attributes(self):
         """Test that phases are created with correct attributes."""
         call_command('setup_customization', verbosity=0)
@@ -160,6 +182,20 @@ class SetupCustomizationCommandTest(TestCase):
         self.assertEqual(quitado_integral.cor, '#0004ff')
         self.assertTrue(quitado_integral.ativa)
         self.assertEqual(quitado_integral.ordem, 5)
+
+        # Test a specific Honorários Sucumbenciais phase
+        aguardando_deposito_suc = FaseHonorariosSucumbenciais.objects.get(nome='Aguardando Depósito Judicial')
+        self.assertEqual(aguardando_deposito_suc.descricao, 'Aguardando o depósito do valor pelo tribunal')
+        self.assertEqual(aguardando_deposito_suc.cor, '#d9ff00')
+        self.assertTrue(aguardando_deposito_suc.ativa)
+        self.assertEqual(aguardando_deposito_suc.ordem, 1)
+
+        # Test another specific Honorários Sucumbenciais phase
+        calculos_impugnados = FaseHonorariosSucumbenciais.objects.get(nome='Cálculos impugnados')
+        self.assertEqual(calculos_impugnados.descricao, 'Cálculos foram impugnados')
+        self.assertEqual(calculos_impugnados.cor, '#dc3545')
+        self.assertTrue(calculos_impugnados.ativa)
+        self.assertEqual(calculos_impugnados.ordem, 4)
 
     def test_diligencia_types_creation(self):
         """Test creation of diligence types."""
@@ -313,7 +349,8 @@ class SetupCustomizationCommandTest(TestCase):
         # Check for creation confirmations
         self.assertIn('✓ Created Requerimento fase:', output)
         self.assertIn('✓ Created Alvará fase:', output)
-        self.assertIn('✓ Created Honorários fase:', output)
+        self.assertIn('✓ Created Honorários Contratuais fase:', output)
+        self.assertIn('✓ Created Honorários Sucumbenciais fase:', output)
         self.assertIn('✓ Created TipoDiligencia:', output)
         self.assertIn('✓ Created Tipo:', output)
         self.assertIn('✓ Created PedidoRequerimento:', output)
@@ -379,6 +416,11 @@ class SetupCustomizationCommandTest(TestCase):
             self.assertTrue(fase.cor.startswith('#'))
             self.assertEqual(len(fase.cor), 7)
         
+        # Test FaseHonorariosSucumbenciais colors
+        for fase in FaseHonorariosSucumbenciais.objects.all():
+            self.assertTrue(fase.cor.startswith('#'))
+            self.assertEqual(len(fase.cor), 7)
+        
         # Test TipoDiligencia colors
         for tipo in TipoDiligencia.objects.all():
             self.assertTrue(tipo.cor.startswith('#'))
@@ -413,6 +455,11 @@ class SetupCustomizationCommandTest(TestCase):
         hon_ordens = list(hon_phases.values_list('ordem', flat=True))
         self.assertEqual(hon_ordens, [1, 2, 3, 4, 5])
         
+        # Test Honorários Sucumbenciais phases ordem
+        suc_phases = FaseHonorariosSucumbenciais.objects.all().order_by('ordem')
+        suc_ordens = list(suc_phases.values_list('ordem', flat=True))
+        self.assertEqual(suc_ordens, [1, 2, 3, 4, 5, 6, 7, 8])
+        
         # Test TipoDiligencia ordem
         diligencia_types = TipoDiligencia.objects.all().order_by('ordem')
         dil_ordens = list(diligencia_types.values_list('ordem', flat=True))
@@ -440,6 +487,10 @@ class SetupCustomizationCommandTest(TestCase):
         for fase in FaseHonorariosContratuais.objects.all():
             self.assertTrue(fase.ativa, f"FaseHonorariosContratuais {fase.nome} should be active")
         
+        # Test FaseHonorariosSucumbenciais items
+        for fase in FaseHonorariosSucumbenciais.objects.all():
+            self.assertTrue(fase.ativa, f"FaseHonorariosSucumbenciais {fase.nome} should be active")
+        
         # Test Tipo items
         for tipo in Tipo.objects.all():
             self.assertTrue(tipo.ativa, f"Tipo {tipo.nome} should be active")
@@ -462,6 +513,9 @@ class SetupCustomizationCommandTest(TestCase):
         # Test other model names uniqueness
         hon_names = list(FaseHonorariosContratuais.objects.values_list('nome', flat=True))
         self.assertEqual(len(hon_names), len(set(hon_names)), "Honorários fase names should be unique")
+        
+        suc_names = list(FaseHonorariosSucumbenciais.objects.values_list('nome', flat=True))
+        self.assertEqual(len(suc_names), len(set(suc_names)), "Honorários Sucumbenciais fase names should be unique")
         
         dil_names = list(TipoDiligencia.objects.values_list('nome', flat=True))
         self.assertEqual(len(dil_names), len(set(dil_names)), "TipoDiligencia names should be unique")
