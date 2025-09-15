@@ -1013,13 +1013,15 @@ def update_priority_by_age(request):
 def alvaras_view(request):
     """View to display all alvarás with filtering support"""
     alvaras = Alvara.objects.all().select_related(
-        'precatorio', 'cliente', 'fase', 'fase_honorarios_contratuais'
+        'precatorio', 'cliente', 'fase', 'fase_honorarios_contratuais', 'fase_honorarios_sucumbenciais'
     ).order_by('-id')
     
     # Get available fases for alvara
     available_fases = Fase.get_fases_for_alvara()
     # Get available fases for honorários contratuais
     available_fases_honorarios = FaseHonorariosContratuais.objects.all()  # Uses model's default ordering: ['ordem', 'nome']
+    # Get available fases for honorários sucumbenciais
+    available_fases_honorarios_sucumbenciais = FaseHonorariosSucumbenciais.objects.all()  # Uses model's default ordering: ['ordem', 'nome']
     
     # Apply filters based on GET parameters
     nome_filter = request.GET.get('nome', '').strip()
@@ -1027,6 +1029,7 @@ def alvaras_view(request):
     tipo_filter = request.GET.get('tipo', '').strip()
     fase_filter = request.GET.get('fase', '').strip()
     fase_honorarios_filter = request.GET.get('fase_honorarios', '').strip()
+    fase_honorarios_sucumbenciais_filter = request.GET.get('fase_honorarios_sucumbenciais', '').strip()
     
     if nome_filter:
         alvaras = alvaras.filter(cliente__nome__icontains=nome_filter)
@@ -1042,6 +1045,9 @@ def alvaras_view(request):
         
     if fase_honorarios_filter:
         alvaras = alvaras.filter(fase_honorarios_contratuais__nome=fase_honorarios_filter)  # Exact match for dropdown
+    
+    if fase_honorarios_sucumbenciais_filter:
+        alvaras = alvaras.filter(fase_honorarios_sucumbenciais__nome=fase_honorarios_sucumbenciais_filter)  # Exact match for dropdown
     
     # Calculate summary statistics
     total_alvaras = alvaras.count()
@@ -1071,9 +1077,11 @@ def alvaras_view(request):
         'current_tipo': tipo_filter,
         'current_fase': fase_filter,
         'current_fase_honorarios': fase_honorarios_filter,
+        'current_fase_honorarios_sucumbenciais': fase_honorarios_sucumbenciais_filter,
         # Include available options for dropdowns
         'available_fases': available_fases,
         'available_fases_honorarios': available_fases_honorarios,
+        'available_fases_honorarios_sucumbenciais': available_fases_honorarios_sucumbenciais,
     }
     
     return render(request, 'precapp/alvara_list.html', context)

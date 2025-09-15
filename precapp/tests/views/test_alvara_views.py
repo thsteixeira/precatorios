@@ -371,19 +371,23 @@ class AlvarasViewTest(TestCase):
         self.assertEqual(alvara3.fase_honorarios_sucumbenciais.nome, 'Aguardando Depósito Judicial')
 
     def test_filter_by_fase_honorarios_sucumbenciais(self):
-        """Test filtering alvaras by fase honorários sucumbenciais - FUTURE FEATURE"""
+        """Test filtering alvaras by fase honorários sucumbenciais"""
         self.client.force_login(self.user)
         
-        # NOTE: This functionality is not yet implemented in the view
-        # The view would need to be updated to support fase_honorarios_sucumbenciais filtering
-        # Currently all alvaras will be returned regardless of this filter
+        # Test filtering by specific sucumbenciais phase - now implemented!
         response = self.client.get(self.alvaras_url + '?fase_honorarios_sucumbenciais=Aguardando Depósito Judicial')
         alvaras = response.context['alvaras']
-        self.assertEqual(len(alvaras), 3)  # All alvaras returned since filter is not implemented
+        self.assertEqual(len(alvaras), 2)  # Only alvaras with this specific phase
         
-        # Verify the alvaras have sucumbenciais phases set in tests
-        alvaras_with_sucumb = [alvara for alvara in alvaras if alvara.fase_honorarios_sucumbenciais]
-        self.assertEqual(len(alvaras_with_sucumb), 3)  # All test alvaras have sucumbenciais phases
+        # Verify all returned alvaras have the correct sucumbenciais phase
+        for alvara in alvaras:
+            self.assertEqual(alvara.fase_honorarios_sucumbenciais.nome, 'Aguardando Depósito Judicial')
+            
+        # Test filtering by another sucumbenciais phase
+        response = self.client.get(self.alvaras_url + '?fase_honorarios_sucumbenciais=Recebido pelo Cliente')
+        alvaras = response.context['alvaras']
+        self.assertEqual(len(alvaras), 1)  # Only one alvara with this phase
+        self.assertEqual(alvaras[0].fase_honorarios_sucumbenciais.nome, 'Recebido pelo Cliente')
     
     def test_combined_filters(self):
         """Test applying multiple filters simultaneously"""
@@ -410,6 +414,14 @@ class AlvarasViewTest(TestCase):
         )
         alvaras = response.context['alvaras']
         self.assertEqual(len(alvaras), 1)  # Only alvara1 has both João and honorarios fase set
+        
+        # Test sucumbenciais filter combined with other filters
+        response = self.client.get(
+            self.alvaras_url + '?nome=Maria&fase_honorarios_sucumbenciais=Recebido pelo Cliente'
+        )
+        alvaras = response.context['alvaras']
+        self.assertEqual(len(alvaras), 1)  # Only alvara2 matches both criteria
+        self.assertEqual(alvaras[0], self.alvara2)
         
         # Combine all filters with no matching results
         response = self.client.get(
@@ -470,7 +482,7 @@ class AlvarasViewTest(TestCase):
         
         response = self.client.get(
             self.alvaras_url + 
-            '?nome=João&precatorio=0000001&tipo=aguardando depósito&fase=Aguardando Depósito&fase_honorarios=Aguardando Pagamento'
+            '?nome=João&precatorio=0000001&tipo=aguardando depósito&fase=Aguardando Depósito&fase_honorarios=Aguardando Pagamento&fase_honorarios_sucumbenciais=Aguardando Depósito Judicial'
         )
         
         context = response.context
@@ -481,9 +493,7 @@ class AlvarasViewTest(TestCase):
         self.assertEqual(context['current_tipo'], 'aguardando depósito')
         self.assertEqual(context['current_fase'], 'Aguardando Depósito')
         self.assertEqual(context['current_fase_honorarios'], 'Aguardando Pagamento')
-        
-        # NOTE: current_fase_honorarios_sucumbenciais is not yet implemented
-        # This would be added when the sucumbenciais filter is implemented in the view
+        self.assertEqual(context['current_fase_honorarios_sucumbenciais'], 'Aguardando Depósito Judicial')
     
     def test_context_includes_available_options(self):
         """Test that available fases options are included in context"""
@@ -505,22 +515,24 @@ class AlvarasViewTest(TestCase):
         self.assertIn(self.fase_honorarios, available_fases_honorarios)
         self.assertIn(self.fase_honorarios_inativa, available_fases_honorarios)  # All phases included
         
-        # NOTE: available_fases_honorarios_sucumbenciais is not yet implemented in the view
-        # This test documents the expected future functionality
-        # When implemented, it should include all sucumbenciais phases
+        # Test available_fases_honorarios_sucumbenciais (now implemented!)
+        available_fases_honorarios_sucumbenciais = context['available_fases_honorarios_sucumbenciais']
+        self.assertIn(self.fase_honorarios_sucumb, available_fases_honorarios_sucumbenciais)
+        self.assertIn(self.fase_honorarios_sucumb_inativa, available_fases_honorarios_sucumbenciais)  # All phases included
     
     def test_alvaras_view_query_optimization(self):
         """Test that the view uses proper query optimization"""
         self.client.force_login(self.user)
         
         # Monitor number of queries - based on actual implementation
-        with self.assertNumQueries(10):  # Actual query count from test output
+        with self.assertNumQueries(11):  # Updated: now includes sucumbenciais phases query
             response = self.client.get(self.alvaras_url)
             
             # Force evaluation of querysets to trigger database queries
             list(response.context['alvaras'])
             list(response.context['available_fases'])
             list(response.context['available_fases_honorarios'])
+            list(response.context['available_fases_honorarios_sucumbenciais'])
     
     def test_empty_filter_parameters(self):
         """Test that empty filter parameters are handled correctly"""
@@ -541,8 +553,7 @@ class AlvarasViewTest(TestCase):
         self.assertEqual(context['current_tipo'], '')
         self.assertEqual(context['current_fase'], '')
         self.assertEqual(context['current_fase_honorarios'], '')
-        
-        # NOTE: current_fase_honorarios_sucumbenciais would be added when the filter is implemented
+        self.assertEqual(context['current_fase_honorarios_sucumbenciais'], '')
     
     def test_whitespace_handling_in_filters(self):
         """Test that whitespace in filter parameters is properly handled"""
@@ -626,9 +637,8 @@ class AlvarasViewTest(TestCase):
             'recebido_cliente', 'honorarios_recebidos', 'total_valor_principal',
             'total_honorarios_contratuais', 'total_honorarios_sucumbenciais',
             'current_nome', 'current_precatorio', 'current_tipo', 'current_fase',
-            'current_fase_honorarios', 'available_fases', 'available_fases_honorarios'
-            # NOTE: These would be added when sucumbenciais filter is implemented:
-            # 'current_fase_honorarios_sucumbenciais', 'available_fases_honorarios_sucumbenciais'
+            'current_fase_honorarios', 'current_fase_honorarios_sucumbenciais',
+            'available_fases', 'available_fases_honorarios', 'available_fases_honorarios_sucumbenciais'
         ]
         
         for key in required_context_keys:
