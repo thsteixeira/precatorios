@@ -1579,6 +1579,19 @@ class RequerimentoForm(forms.ModelForm):
         })
     )
     
+    cnj = forms.CharField(
+        max_length=29,
+        label='CNJ do Requerimento',
+        help_text='CNJ do requerimento no formato NNNNNNN-DD.AAAA.J.TR.OOOO (opcional)',
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '1234567-89.2023.8.26.0100',
+            'pattern': r'\d{7}-\d{2}\.\d{4}\.\d{1}\.\d{2}\.\d{4}',
+            'title': 'CNJ no formato: NNNNNNN-DD.AAAA.J.TR.OOOO'
+        })
+    )
+    
     def __init__(self, *args, **kwargs):
         self.precatorio = kwargs.pop('precatorio', None)
         super().__init__(*args, **kwargs)
@@ -1614,9 +1627,19 @@ class RequerimentoForm(forms.ModelForm):
                 raise forms.ValidationError(f'Não foi encontrado um cliente com o documento "{cpf}". Verifique se o número está correto ou cadastre o cliente primeiro.')
         return cpf
 
+    def clean_cnj(self):
+        """Validate CNJ format if provided"""
+        cnj = self.cleaned_data.get('cnj')
+        if cnj:  # Only validate if CNJ is provided (it's optional)
+            try:
+                validate_cnj(cnj)
+            except ValidationError as e:
+                raise forms.ValidationError(str(e))
+        return cnj
+
     class Meta:
         model = Requerimento
-        fields = ["valor", "desagio", "pedido", "fase"]
+        fields = ["valor", "desagio", "pedido", "fase", "cnj"]
         
         widgets = {
             'pedido': forms.Select(attrs={

@@ -936,6 +936,22 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            {{ requerimento_form.cnj.label_tag }}
+                                            {{ requerimento_form.cnj }}
+                                            {% if requerimento_form.cnj.help_text %}
+                                                <small class="form-text text-muted">{{ requerimento_form.cnj.help_text }}</small>
+                                            {% endif %}
+                                            {% if requerimento_form.cnj.errors %}
+                                                <div class="text-danger small">
+                                                    {% for error in requerimento_form.cnj.errors %}{{ error }}{% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="d-flex justify-content-end">
                                     <button type="button" class="btn btn-secondary me-2" data-bs-toggle="collapse" data-bs-target="#novoRequerimentoForm">
                                         <i class="fas fa-times me-1"></i>Cancelar
@@ -956,6 +972,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Cliente</th>
+                                    <th>CNJ Requerimento</th>
                                     <th>Tipo de Pedido</th>
                                     <th>Valor</th>
                                     <th>Deságio</th>
@@ -976,6 +993,13 @@
                                                 <small class="text-muted">CPF ou CNPJ: {{ requerimento.cliente.cpf }}</small>
                                             </div>
                                         </div>
+                                    </td>
+                                    <td>
+                                        {% if requerimento.cnj %}
+                                            <span class="fw-bold text-info">{{ requerimento.cnj }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         {% if requerimento.pedido %}

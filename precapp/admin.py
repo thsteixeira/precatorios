@@ -34,7 +34,7 @@ class RequerimentoInline(admin.TabularInline):
     """Inline for managing requerimentos within precatorio admin"""
     model = Requerimento
     extra = 0
-    fields = ('cliente', 'pedido', 'valor', 'desagio', 'fase', 'fase_alterada_por')
+    fields = ('cliente', 'pedido', 'valor', 'desagio', 'fase', 'cnj', 'fase_alterada_por')
     readonly_fields = ('fase_alterada_por',)
 
 
@@ -364,18 +364,18 @@ class RequerimentoAdmin(admin.ModelAdmin):
     """Admin configuration for Requerimento model"""
     
     list_display = (
-        'id', 'precatorio', 'cliente_nome', 'pedido_colored', 
+        'id', 'precatorio', 'cliente_nome', 'cnj', 'pedido_colored', 
         'valor_formatted', 'desagio_formatted', 'fase_colored'
     )
     list_filter = ('pedido', 'fase')
-    search_fields = ('precatorio__cnj', 'cliente__nome', 'cliente__cpf', 'pedido')
+    search_fields = ('precatorio__cnj', 'cliente__nome', 'cliente__cpf', 'pedido', 'cnj')
     
     fieldsets = (
         ('Relacionamentos', {
             'fields': ('precatorio', 'cliente')
         }),
         ('Detalhes do Requerimento', {
-            'fields': ('pedido', 'valor', 'desagio', 'fase')
+            'fields': ('pedido', 'valor', 'desagio', 'fase', 'cnj')
         }),
         ('Auditoria de Alterações', {
             'fields': (

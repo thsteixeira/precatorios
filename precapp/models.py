@@ -1336,6 +1336,14 @@ class Requerimento(models.Model):
         help_text="Fase principal atual do requerimento"
     )
     
+    # Optional CNJ field for requerimento
+    cnj = models.CharField(
+        max_length=29,  # CNJ format: NNNNNNN-DD.AAAA.J.TR.OOOO (29 characters)
+        null=True,
+        blank=True,
+        help_text="CNJ do requerimento no formato NNNNNNN-DD.AAAA.J.TR.OOOO"
+    )
+    
     # Audit fields for tracking fase changes
     fase_ultima_alteracao = models.DateTimeField(
         null=True, 

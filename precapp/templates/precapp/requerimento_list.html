@@ -33,6 +33,11 @@
                             <input type="text" class="form-control" id="precatorio" name="precatorio" 
                                    placeholder="Digite o CNJ" value="{{ current_precatorio }}">
                         </div>
+                        <div class="col-md-3">
+                            <label for="cnj_requerimento" class="form-label">CNJ do Requerimento</label>
+                            <input type="text" class="form-control" id="cnj_requerimento" name="cnj_requerimento" 
+                                   placeholder="Digite o CNJ do requerimento" value="{{ current_cnj_requerimento }}">
+                        </div>
                         <div class="col-md-2">
                             <label for="pedido" class="form-label">Tipo de Pedido</label>
                             <select class="form-control" id="pedido" name="pedido">
@@ -59,6 +64,8 @@
                                 <i class="fas fa-undo me-1"></i>Limpar
                             </a>
                         </div>
+                    </div>
+                    <div class="row g-3 mt-2">
                     </form>
                 </div>
             </div>
@@ -89,6 +96,7 @@
                                     <tr>
                                         <th>Cliente</th>
                                         <th>Precatório</th>
+                                        <th>CNJ Requerimento</th>
                                         <th>Tipo de Pedido</th>
                                         <th class="text-end">Valor</th>
                                         <th class="text-center">Deságio</th>
@@ -131,6 +139,16 @@
                                                     {{ requerimento.precatorio.origem|truncatechars:30 }}
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td>
+                                            {% if requerimento.cnj %}
+                                                <div class="fw-bold text-info">{{ requerimento.cnj }}</div>
+                                                <div class="text-muted small">
+                                                    <i class="fas fa-file-alt me-1"></i>CNJ
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
                                         </td>
                                         <td>
                                             {% if requerimento.pedido %}

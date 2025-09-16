@@ -1177,23 +1177,25 @@ def requerimento_list_view(request):
     # Get filter parameters
     cliente_filter = request.GET.get('cliente', '').strip()
     precatorio_filter = request.GET.get('precatorio', '').strip()
+    cnj_requerimento_filter = request.GET.get('cnj_requerimento', '').strip()
     pedido_filter = request.GET.get('pedido', '').strip()
     fase_filter = request.GET.get('fase', '').strip()
     
     # Apply filters
     if cliente_filter:
         requerimentos = requerimentos.filter(cliente__nome__icontains=cliente_filter)
-    
+
     if precatorio_filter:
         requerimentos = requerimentos.filter(precatorio__cnj__icontains=precatorio_filter)
-    
+
+    if cnj_requerimento_filter:
+        requerimentos = requerimentos.filter(cnj__icontains=cnj_requerimento_filter)
+
     if pedido_filter:
         requerimentos = requerimentos.filter(pedido__id=pedido_filter)
-    
+
     if fase_filter:
-        requerimentos = requerimentos.filter(fase__nome=fase_filter)
-    
-    # Get available phases for requerimentos
+        requerimentos = requerimentos.filter(fase__nome=fase_filter)    # Get available phases for requerimentos
     from .models import Fase
     available_fases = Fase.get_fases_for_requerimento()
     
@@ -1225,6 +1227,7 @@ def requerimento_list_view(request):
         # Current filter values for form persistence
         'current_cliente': cliente_filter,
         'current_precatorio': precatorio_filter,
+        'current_cnj_requerimento': cnj_requerimento_filter,
         'current_pedido': pedido_filter,
         'current_fase': fase_filter,
     }
