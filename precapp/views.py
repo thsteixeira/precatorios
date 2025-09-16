@@ -172,6 +172,7 @@ def precatorio_view(request):
     # Apply filters based on GET parameters
     cnj_filter = request.GET.get('cnj', '').strip()
     origem_filter = request.GET.get('origem', '').strip()
+    orcamento_filter = request.GET.get('orcamento', '').strip()
     credito_principal_filter = request.GET.get('credito_principal', '')
     honorarios_contratuais_filter = request.GET.get('honorarios_contratuais', '')
     honorarios_sucumbenciais_filter = request.GET.get('honorarios_sucumbenciais', '')
@@ -184,6 +185,14 @@ def precatorio_view(request):
     
     if origem_filter:
         precatorios = precatorios.filter(origem__icontains=origem_filter)
+    
+    if orcamento_filter:
+        try:
+            orcamento_year = int(orcamento_filter)
+            precatorios = precatorios.filter(orcamento=orcamento_year)
+        except ValueError:
+            # If orcamento_filter is not a valid integer, ignore the filter
+            pass
     
     if credito_principal_filter:
         precatorios = precatorios.filter(credito_principal=credito_principal_filter)
@@ -301,6 +310,7 @@ def precatorio_view(request):
         # Include current filter values to maintain state in form
         'current_cnj': cnj_filter,
         'current_origem': origem_filter,
+        'current_orcamento': orcamento_filter,
         'current_credito_principal': credito_principal_filter,
         'current_honorarios_contratuais': honorarios_contratuais_filter,
         'current_honorarios_sucumbenciais': honorarios_sucumbenciais_filter,

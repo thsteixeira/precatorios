@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% block title %}Consultar Precatórios                         <select class="form-control" id="honorarios_sucumbenciais" name="honorarios_sucumbenciais">
-                            <option value="">Todos</option>
+                                                        <tr class="table-light">
+                                            <td colspan="6" class="py-2">          <option value="">Todos</option>
                             {% for value, label in status_choices %}
                                 <option value="{{ value }}" {% if current_honorarios_sucumbenciais == value %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
@@ -50,6 +51,11 @@
                         <label for="origem" class="form-label">Origem</label>
                         <input type="text" class="form-control" id="origem" name="origem" 
                                placeholder="Digite a origem" value="{{ current_origem }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="orcamento" class="form-label">Orçamento</label>
+                        <input type="text" class="form-control" id="orcamento" name="orcamento" 
+                               placeholder="Digite o ano" value="{{ current_orcamento }}">
                     </div>
                     <div class="col-md-2">
                         <label for="credito_principal" class="form-label">Crédito Principal</label>
@@ -143,6 +149,7 @@
                                 <tr>
                                     <th scope="col">CNJ</th>
                                     <th scope="col">Origem</th>
+                                    <th scope="col">Orçamento</th>
                                     <th scope="col">Tipo</th>
                                     <th scope="col">Valor</th>
                                     <th scope="col">Status de Pagamento</th>
@@ -159,6 +166,11 @@
                                             </a>
                                         </td>
                                         <td>{{ precatorio.origem|truncatechars:25 }}</td>
+                                        <td>
+                                            <span class="badge bg-secondary">
+                                                {{ precatorio.orcamento }}
+                                            </span>
+                                        </td>
                                         <td>
                                             {% if precatorio.tipo %}
                                                 <span class="badge" style="background-color: {{ precatorio.tipo.cor }}; color: white;">
@@ -189,7 +201,7 @@
                                     </tr>
                                     {% if precatorio.requerimento_set.all %}
                                         <tr class="table-light">
-                                            <td colspan="4" class="py-2">
+                                            <td colspan="6" class="py-2">
                                                 <small class="text-muted">
                                                     <i class="fas fa-file-alt me-1"></i><strong>Requerimentos:</strong>
                                                     {% for requerimento in precatorio.requerimento_set.all %}

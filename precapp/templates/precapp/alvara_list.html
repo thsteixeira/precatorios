@@ -109,10 +109,6 @@
                                 <th>Hon. Contratuais</th>
                                 <th>Hon. Sucumbenciais</th>
                                 <th>Tipo</th>
-                                <th>Fase</th>
-                                <th>Fase Hon. Contratuais</th>
-                                <th>Fase Hon. Sucumbenciais</th>
-                                <th>Última Alteração</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -133,13 +129,49 @@
                                     </a>
                                 </td>
                                 <td>
-                                    <span class="text-success fw-bold">R$ {{ alvara.valor_principal|floatformat:2 }}</span>
+                                    <div>
+                                        <span class="text-success fw-bold">R$ {{ alvara.valor_principal|floatformat:2 }}</span>
+                                        <br>
+                                        {% if alvara.fase %}
+                                            <small>
+                                                <span class="badge" style="background-color: {{ alvara.fase.cor }}; color: white; font-size: 0.7em;">
+                                                    {{ alvara.fase.nome }}
+                                                </span>
+                                            </small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </div>
                                 </td>
                                 <td>
-                                    <span class="text-info">R$ {{ alvara.honorarios_contratuais|floatformat:2 }}</span>
+                                    <div>
+                                        <span class="text-info">R$ {{ alvara.honorarios_contratuais|floatformat:2 }}</span>
+                                        <br>
+                                        {% if alvara.fase_honorarios_contratuais %}
+                                            <small>
+                                                <span class="badge" style="background-color: {{ alvara.fase_honorarios_contratuais.cor }}; color: white; font-size: 0.7em;">
+                                                    {{ alvara.fase_honorarios_contratuais.nome }}
+                                                </span>
+                                            </small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </div>
                                 </td>
                                 <td>
-                                    <span class="text-warning">R$ {{ alvara.honorarios_sucumbenciais|floatformat:2 }}</span>
+                                    <div>
+                                        <span class="text-warning">R$ {{ alvara.honorarios_sucumbenciais|floatformat:2 }}</span>
+                                        <br>
+                                        {% if alvara.fase_honorarios_sucumbenciais %}
+                                            <small>
+                                                <span class="badge" style="background-color: {{ alvara.fase_honorarios_sucumbenciais.cor }}; color: white; font-size: 0.7em;">
+                                                    {{ alvara.fase_honorarios_sucumbenciais.nome }}
+                                                </span>
+                                            </small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </div>
                                 </td>
                                 <td>
                                     {% if alvara.tipo == 'aguardando depósito' %}
@@ -161,79 +193,6 @@
                                     {% else %}
                                         <span class="badge bg-secondary">{{ alvara.tipo }}</span>
                                     {% endif %}
-                                </td>
-                                <td>
-                                    {% if alvara.fase %}
-                                        <span class="badge" style="background-color: {{ alvara.fase.cor }}; color: white;">
-                                            {{ alvara.fase.nome }}
-                                        </span>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if alvara.fase_honorarios_contratuais %}
-                                        <span class="badge" style="background-color: {{ alvara.fase_honorarios_contratuais.cor }}; color: white;">
-                                            {{ alvara.fase_honorarios_contratuais.nome }}
-                                        </span>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if alvara.fase_honorarios_sucumbenciais %}
-                                        <span class="badge" style="background-color: {{ alvara.fase_honorarios_sucumbenciais.cor }}; color: white;">
-                                            {{ alvara.fase_honorarios_sucumbenciais.nome }}
-                                        </span>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="text-muted" style="font-size: 0.7rem;">
-                                        {% if alvara.fase_ultima_alteracao %}
-                                            <div>
-                                                <i class="fas fa-clock me-1"></i>
-                                                <strong>Fase:</strong><br>
-                                                {{ alvara.fase_ultima_alteracao|date:"d/m/y" }}
-                                            </div>
-                                            {% if alvara.fase_alterada_por %}
-                                                <div class="mt-1">
-                                                    <i class="fas fa-user me-1"></i>
-                                                    {{ alvara.fase_alterada_por }}
-                                                </div>
-                                            {% endif %}
-                                        {% endif %}
-                                        {% if alvara.fase_honorarios_ultima_alteracao %}
-                                            <div class="text-muted mt-1">
-                                                <i class="fas fa-coins me-1"></i>
-                                                <strong>Hon. Cont.:</strong><br>
-                                                {{ alvara.fase_honorarios_ultima_alteracao|date:"d/m/y" }}
-                                            </div>
-                                            {% if alvara.fase_honorarios_alterada_por %}
-                                                <div class="text-muted">
-                                                    <i class="fas fa-user me-1"></i>
-                                                    {{ alvara.fase_honorarios_alterada_por }}
-                                                </div>
-                                            {% endif %}
-                                        {% endif %}
-                                        {% if alvara.fase_honorarios_sucumbenciais_ultima_alteracao %}
-                                            <div class="text-muted mt-1">
-                                                <i class="fas fa-gavel me-1"></i>
-                                                <strong>Hon. Suc.:</strong><br>
-                                                {{ alvara.fase_honorarios_sucumbenciais_ultima_alteracao|date:"d/m/y" }}
-                                            </div>
-                                            {% if alvara.fase_honorarios_sucumbenciais_alterada_por %}
-                                                <div class="text-muted">
-                                                    <i class="fas fa-user me-1"></i>
-                                                    {{ alvara.fase_honorarios_sucumbenciais_alterada_por }}
-                                                </div>
-                                            {% endif %}
-                                        {% endif %}
-                                        {% if not alvara.fase_ultima_alteracao and not alvara.fase_honorarios_ultima_alteracao and not alvara.fase_honorarios_sucumbenciais_ultima_alteracao %}
-                                            <span class="text-muted">—</span>
-                                        {% endif %}
-                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
