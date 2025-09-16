@@ -1624,8 +1624,13 @@ class Recebimentos(models.Model):
     
     def save(self, *args, **kwargs):
         """
-        Override save to ensure validation and track creation user.
+        Override save to ensure validation, clean document number, and track creation user.
         """
+        # Clean numero_documento to keep only letters and numbers
+        if self.numero_documento:
+            import re
+            self.numero_documento = re.sub(r'[^A-Za-z0-9]', '', self.numero_documento)
+        
         # Track who created the receipt on first save
         if not self.pk:  # New instance
             current_user = getattr(threading.current_thread(), 'user', None)
