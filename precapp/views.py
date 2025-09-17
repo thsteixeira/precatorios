@@ -26,6 +26,28 @@ from .forms import (
 logger = logging.getLogger(__name__)
 
 # ===============================
+# UTILITY FUNCTIONS
+# ===============================
+
+def get_acordo_pedido_names():
+    """Get dynamic list of acordo pedido names from database"""
+    return list(
+        PedidoRequerimento.objects.filter(
+            nome__icontains='Acordo',
+            ativo=True
+        ).values_list('nome', flat=True)
+    )
+
+def get_prioridade_pedido_names():
+    """Get dynamic list of prioridade pedido names from database"""
+    return list(
+        PedidoRequerimento.objects.filter(
+            nome__icontains='Prioridade',
+            ativo=True
+        ).values_list('nome', flat=True)
+    )
+
+# ===============================
 # AUTHENTICATION VIEWS
 # ===============================
 
@@ -178,8 +200,8 @@ def precatorio_view(request):
     honorarios_contratuais_filter = request.GET.get('honorarios_contratuais', '')
     honorarios_sucumbenciais_filter = request.GET.get('honorarios_sucumbenciais', '')
     tipo_filter = request.GET.get('tipo', '')
-    tipo_requerimento_filter = request.GET.get('tipo_requerimento', '')
-    requerimento_deferido_filter = request.GET.get('requerimento_deferido', '')
+    requerimento_filter = request.GET.get('requerimento', '')
+    status_requerimento_filter = request.GET.get('status_requerimento', '')
     
     if cnj_filter:
         precatorios = precatorios.filter(cnj__icontains=cnj_filter)
@@ -207,78 +229,25 @@ def precatorio_view(request):
     if tipo_filter:
         precatorios = precatorios.filter(tipo_id=tipo_filter)
     
-    # Filter by tipo de requerimento and deferimento status
-    # These filters should work together - if both are selected, we need requerimentos that match BOTH conditions
-    if tipo_requerimento_filter and requerimento_deferido_filter:
-        # For "sem_acordo", we need special handling in combined filters
-        if tipo_requerimento_filter == 'sem_acordo':
-            # Handle these cases by applying individual filters sequentially
-            # Apply the "sem" filter first
-            precatorios_com_acordo = Requerimento.objects.filter(
-                pedido__nome__in=['Acordo no Principal', 'Acordo nos Hon. Contratuais', 'Acordo nos Hon. Sucumbenciais']
-            ).values_list('precatorio__cnj', flat=True).distinct()
-            precatorios = precatorios.exclude(cnj__in=precatorios_com_acordo)
-            
-            # Then apply the deferimento filter to the remaining precatorios
-            if requerimento_deferido_filter == 'deferido':
-                precatorios_deferidos = Requerimento.objects.filter(
-                    fase__nome='Deferido'
-                ).values_list('precatorio__cnj', flat=True).distinct()
-                precatorios = precatorios.filter(cnj__in=precatorios_deferidos)
-            elif requerimento_deferido_filter == 'nao_deferido':
-                precatorios_nao_deferidos = Requerimento.objects.exclude(
-                    fase__nome='Deferido'
-                ).values_list('precatorio__cnj', flat=True).distinct()
-                precatorios = precatorios.filter(cnj__in=precatorios_nao_deferidos)
+    # Apply new dynamic requerimento filters
+    if requerimento_filter:
+        if requerimento_filter == 'sem_requerimento':
+            # Filter for precatorios that have NO requerimentos at all
+            precatorios_com_requerimento = Requerimento.objects.values_list('precatorio__cnj', flat=True).distinct()
+            precatorios = precatorios.exclude(cnj__in=precatorios_com_requerimento)
         else:
-            # Combined filter: find requerimentos that match both tipo AND deferimento status
-            requerimento_query = Requerimento.objects.all()
-            
-            # Apply tipo filter
-            if tipo_requerimento_filter == 'acordo':
-                # Filter for acordo requerimentos using PedidoRequerimento model
-                requerimento_query = requerimento_query.filter(
-                    pedido__nome__in=['Acordo no Principal', 'Acordo nos Hon. Contratuais', 'Acordo nos Hon. Sucumbenciais']
-                )
-            
-            # Apply deferimento filter
-            if requerimento_deferido_filter == 'deferido':
-                requerimento_query = requerimento_query.filter(fase__nome='Deferido')
-            elif requerimento_deferido_filter == 'nao_deferido':
-                requerimento_query = requerimento_query.exclude(fase__nome='Deferido')
-            
-            # Get precatorios that have requerimentos matching BOTH conditions
-            precatorios_combined = requerimento_query.values_list('precatorio__cnj', flat=True).distinct()
-            precatorios = precatorios.filter(cnj__in=precatorios_combined)
-        
-    else:
-        # Apply filters individually when only one is selected
-        if tipo_requerimento_filter == 'acordo':
-            # Show only precatorios that have requerimentos with acordo pedidos
-            precatorios_com_acordo = Requerimento.objects.filter(
-                pedido__nome__in=['Acordo no Principal', 'Acordo nos Hon. Contratuais', 'Acordo nos Hon. Sucumbenciais']
+            # Filter by specific requerimento type (pedido)
+            precatorios_com_pedido = Requerimento.objects.filter(
+                pedido_id=requerimento_filter
             ).values_list('precatorio__cnj', flat=True).distinct()
-            precatorios = precatorios.filter(cnj__in=precatorios_com_acordo)
-        elif tipo_requerimento_filter == 'sem_acordo':
-            # Show precatorios that have NO acordo requerimentos (may have other types or none at all)
-            precatorios_com_acordo = Requerimento.objects.filter(
-                pedido__nome__in=['Acordo no Principal', 'Acordo nos Hon. Contratuais', 'Acordo nos Hon. Sucumbenciais']
-            ).values_list('precatorio__cnj', flat=True).distinct()
-            precatorios = precatorios.exclude(cnj__in=precatorios_com_acordo)
-        
-        if requerimento_deferido_filter == 'deferido':
-            # Show only precatorios that have at least one requerimento with 'Deferido' phase
-            precatorios_deferidos = Requerimento.objects.filter(
-                fase__nome='Deferido'
-            ).values_list('precatorio__cnj', flat=True).distinct()
-            precatorios = precatorios.filter(cnj__in=precatorios_deferidos)
-        elif requerimento_deferido_filter == 'nao_deferido':
-            # Show only precatorios that have requerimentos that are NOT 'Deferido'
-            # This includes requerimentos with any other fase or no fase at all
-            precatorios_nao_deferidos = Requerimento.objects.exclude(
-                fase__nome='Deferido'
-            ).values_list('precatorio__cnj', flat=True).distinct()
-            precatorios = precatorios.filter(cnj__in=precatorios_nao_deferidos)
+            precatorios = precatorios.filter(cnj__in=precatorios_com_pedido)
+    
+    if status_requerimento_filter:
+        # Filter by requerimento status (fase)
+        precatorios_com_fase = Requerimento.objects.filter(
+            fase_id=status_requerimento_filter
+        ).values_list('precatorio__cnj', flat=True).distinct()
+        precatorios = precatorios.filter(cnj__in=precatorios_com_fase)
     
     # Calculate summary statistics
     total_precatorios = precatorios.count()
@@ -290,8 +259,14 @@ def precatorio_view(request):
     vendidos_principal = precatorios.filter(credito_principal='vendido').count()
     
     # Calculate prioritarios count (precatorios with prioridade requerimentos)
+    # Get all pedidos that contain "Prioridade" in the name
+    prioridade_pedidos = PedidoRequerimento.objects.filter(
+        nome__icontains='Prioridade', 
+        ativo=True
+    ).values_list('id', flat=True)
+    
     prioritarios_cnjs = Requerimento.objects.filter(
-        pedido__nome__in=['Prioridade por idade', 'Prioridade por doença']
+        pedido_id__in=prioridade_pedidos
     ).values_list('precatorio__cnj', flat=True).distinct()
     prioritarios = precatorios.filter(cnj__in=prioritarios_cnjs).count()
     
@@ -300,6 +275,13 @@ def precatorio_view(request):
     
     # Get all active tipos for the filter dropdown
     tipos = Tipo.get_tipos_ativos()
+    
+    # Get all active pedidos and fases for dynamic dropdowns
+    all_pedidos = PedidoRequerimento.objects.filter(ativo=True).order_by('nome')
+    all_fases = Fase.objects.filter(
+        ativa=True, 
+        tipo__in=['requerimento', 'ambos']
+    ).order_by('nome')
     
     context = {
         'precatorios': precatorios,
@@ -311,6 +293,8 @@ def precatorio_view(request):
         'vendidos_principal': vendidos_principal,
         'prioritarios': prioritarios,
         'tipos': tipos,
+        'all_pedidos': all_pedidos,
+        'all_fases': all_fases,
         'status_choices': Precatorio.STATUS_PAGAMENTO_CHOICES,  # Add status choices for template
         # Include current filter values to maintain state in form
         'current_cnj': cnj_filter,
@@ -320,8 +304,8 @@ def precatorio_view(request):
         'current_honorarios_contratuais': honorarios_contratuais_filter,
         'current_honorarios_sucumbenciais': honorarios_sucumbenciais_filter,
         'current_tipo': tipo_filter,
-        'current_tipo_requerimento': tipo_requerimento_filter,
-        'current_requerimento_deferido': requerimento_deferido_filter,
+        'current_requerimento': requerimento_filter,
+        'current_status_requerimento': status_requerimento_filter,
     }
     
     return render(request, 'precapp/precatorio_list.html', context)
@@ -796,6 +780,9 @@ def clientes_view(request):
         'precatorios__requerimento_set__fase'
     )
     
+    # Get pedido names dynamically  
+    prioridade_pedido_names = get_prioridade_pedido_names()
+    
     # Apply filters based on GET parameters
     nome_filter = request.GET.get('nome', '').strip()
     cpf_filter = request.GET.get('cpf', '').strip()
@@ -846,14 +833,14 @@ def clientes_view(request):
         if requerimento_prioridade_filter == 'deferido':
             # Find clientes that have priority requerimentos with 'Deferido' phase
             clientes_deferidos = Requerimento.objects.filter(
-                pedido__nome__in=['Prioridade por idade', 'Prioridade por doença'],
+                pedido__nome__in=prioridade_pedido_names,
                 fase__nome='Deferido'
             ).values_list('cliente__cpf', flat=True).distinct()
             clientes = clientes.filter(cpf__in=clientes_deferidos)
         elif requerimento_prioridade_filter == 'nao_deferido':
             # Find clientes that have priority requerimentos that are NOT 'Deferido'
             clientes_nao_deferidos = Requerimento.objects.filter(
-                pedido__nome__in=['Prioridade por idade', 'Prioridade por doença']
+                pedido__nome__in=prioridade_pedido_names
             ).exclude(
                 fase__nome='Deferido'
             ).values_list('cliente__cpf', flat=True).distinct()
@@ -861,7 +848,7 @@ def clientes_view(request):
         elif requerimento_prioridade_filter == 'sem_requerimento':
             # Find clientes that have NO priority requerimentos at all
             clientes_com_requerimentos = Requerimento.objects.filter(
-                pedido__nome__in=['Prioridade por idade', 'Prioridade por doença']
+                pedido__nome__in=prioridade_pedido_names
             ).values_list('cliente__cpf', flat=True).distinct()
             clientes = clientes.exclude(cpf__in=clientes_com_requerimentos)
     

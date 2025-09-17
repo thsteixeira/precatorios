@@ -91,19 +91,22 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label for="tipo_requerimento" class="form-label">Requerimento Acordo</label>
-                        <select class="form-control" id="tipo_requerimento" name="tipo_requerimento">
+                        <label for="requerimento" class="form-label">Requerimento</label>
+                        <select class="form-control" id="requerimento" name="requerimento">
                             <option value="">Todos</option>
-                            <option value="acordo" {% if current_tipo_requerimento == 'acordo' %}selected{% endif %}>Requerimento Acordo</option>
-                            <option value="sem_acordo" {% if current_tipo_requerimento == 'sem_acordo' %}selected{% endif %}>Sem Requerimento de Acordo</option>
+                            <option value="sem_requerimento" {% if current_requerimento == 'sem_requerimento' %}selected{% endif %}>Sem Requerimento</option>
+                            {% for pedido in all_pedidos %}
+                                <option value="{{ pedido.id }}" {% if current_requerimento == pedido.id|stringformat:"s" %}selected{% endif %}>{{ pedido.nome }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label for="requerimento_deferido" class="form-label">Status Deferimento</label>
-                        <select class="form-control" id="requerimento_deferido" name="requerimento_deferido">
+                        <label for="status_requerimento" class="form-label">Status Requerimento</label>
+                        <select class="form-control" id="status_requerimento" name="status_requerimento">
                             <option value="">Todos</option>
-                            <option value="deferido" {% if current_requerimento_deferido == 'deferido' %}selected{% endif %}>Deferido</option>
-                            <option value="nao_deferido" {% if current_requerimento_deferido == 'nao_deferido' %}selected{% endif %}>Não Deferido</option>
+                            {% for fase in all_fases %}
+                                <option value="{{ fase.id }}" {% if current_status_requerimento == fase.id|stringformat:"s" %}selected{% endif %}>{{ fase.nome }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
