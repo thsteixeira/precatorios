@@ -2030,6 +2030,33 @@
     </div>
 </div>
 
+<!-- Fase Changed Warning Modal -->
+<div class="modal fade" id="faseChangedModal" tabindex="-1" aria-labelledby="faseChangedModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title text-dark" id="faseChangedModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Atenção - Verificar Status de Pagamento
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle fa-2x text-warning me-3"></i>
+                    <div>
+                        <h6 class="mb-2">Alvará criado ou modificado!</h6>
+                        <p class="mb-0">Verifique a necessidade de alterar os <strong>Status dos Pagamentos</strong> do precatório para manter a consistência dos dados.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-warning" data-bs-dismiss="modal">
+                    <i class="fas fa-check me-1"></i>Entendi
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_css %}
@@ -2156,5 +2183,19 @@ function confirmFileDelete() {
         document.getElementById('delete-file-form').submit();
     }
 }
+
+// Check for fase_changed parameter and show modal
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('fase_changed') === 'true') {
+        const modal = new bootstrap.Modal(document.getElementById('faseChangedModal'));
+        modal.show();
+        
+        // Remove the parameter from URL after showing modal
+        const url = new URL(window.location);
+        url.searchParams.delete('fase_changed');
+        window.history.replaceState({}, document.title, url);
+    }
+});
 </script>
 {% endblock %}

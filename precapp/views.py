@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 from django.db.models import Q, Sum
 from django.utils import timezone
 from django.core.management import call_command
+from django.urls import reverse
 from django.conf import settings
 import tempfile
 import os
@@ -567,7 +568,8 @@ def precatorio_detalhe_view(request, precatorio_cnj):
                     alvara.cliente = cliente
                     alvara.save()
                     messages.success(request, f'Alvará criado com sucesso para {cliente.nome}!')
-                    return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
+                    # When creating a new alvará, always show the fase changed modal
+                    return redirect(f"{reverse('precatorio_detalhe', kwargs={'precatorio_cnj': precatorio.cnj})}?fase_changed=true")
                 except Cliente.DoesNotExist:
                     messages.error(request, f'Cliente com CPF {cpf} não encontrado. Verifique se o CPF está correto e se o cliente está cadastrado.')
             else:
@@ -638,7 +640,11 @@ def precatorio_detalhe_view(request, precatorio_cnj):
                 messages.success(request, f'Alvará do cliente {alvara.cliente.nome} atualizado com sucesso!')
                 
                 if fase_changed:
-                    messages.warning(request, 'Verifique a necessidade de alterar os Status de Pagamento')
+                    # Instead of showing a warning message, we'll redirect with a flag to show modal
+                    return redirect(f"{reverse('precatorio_detalhe', kwargs={'precatorio_cnj': precatorio.cnj})}?fase_changed=true")
+                else:
+                    # Regular redirect when no fase change occurred
+                    return redirect('precatorio_detalhe', precatorio_cnj=precatorio.cnj)
 
             except Alvara.DoesNotExist:
                 messages.error(request, 'Alvará não encontrado.')
