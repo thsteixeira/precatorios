@@ -294,12 +294,16 @@ def precatorio_view(request):
     ).values_list('precatorio__cnj', flat=True).distinct()
     prioritarios = precatorios.filter(cnj__in=prioritarios_cnjs).count()
     
+    # Calculate total value of displayed precatorios
+    total_valor_precatorios = sum(precatorio.valor_de_face or 0 for precatorio in precatorios)
+    
     # Get all active tipos for the filter dropdown
     tipos = Tipo.get_tipos_ativos()
     
     context = {
         'precatorios': precatorios,
         'total_precatorios': total_precatorios,
+        'total_valor_precatorios': total_valor_precatorios,
         'pendentes_principal': pendentes_principal,
         'quitados_principal': quitados_principal,
         'parciais_principal': parciais_principal,
@@ -335,6 +339,11 @@ def precatorio_detalhe_view(request, precatorio_cnj):
         'cliente', 'fase', 'fase_honorarios_contratuais'
     ).order_by('-id')
     
+    # Calculate alvarás totals
+    alvaras_total_principal = sum(alvara.valor_principal or 0 for alvara in alvaras)
+    alvaras_total_contratuais = sum(alvara.honorarios_contratuais or 0 for alvara in alvaras)
+    alvaras_total_sucumbenciais = sum(alvara.honorarios_sucumbenciais or 0 for alvara in alvaras)
+
     # Get all requerimentos associated with this precatorio
     requerimentos = Requerimento.objects.filter(precatorio=precatorio).select_related(
         'cliente', 'fase', 'pedido'
@@ -721,6 +730,9 @@ def precatorio_detalhe_view(request, precatorio_cnj):
         'clientes': associated_clientes,
         'associated_clientes': associated_clientes,
         'alvaras': alvaras,
+        'alvaras_total_principal': alvaras_total_principal,
+        'alvaras_total_contratuais': alvaras_total_contratuais,
+        'alvaras_total_sucumbenciais': alvaras_total_sucumbenciais,
         'requerimentos': requerimentos,
         'alvara_fases': Fase.get_fases_for_alvara(),
         'requerimento_fases': Fase.get_fases_for_requerimento(),

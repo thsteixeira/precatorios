@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load brazilian_filters %}
 
 {% block title %}Lista de Requerimentos{% endblock %}
 
@@ -163,12 +164,12 @@
                                         </td>
                                         <td class="text-end">
                                             <div class="fw-bold text-success">
-                                                R$ {{ requerimento.valor|floatformat:2 }}
+                                                R$ {{ requerimento.valor|brazilian_currency }}
                                             </div>
                                         </td>
                                         <td class="text-center">
                                             <span class="badge bg-warning text-dark">
-                                                {{ requerimento.desagio|floatformat:2 }}%
+                                                {{ requerimento.desagio|brazilian_number }}%
                                             </span>
                                         </td>
                                         <td class="text-center">
@@ -221,7 +222,7 @@
             <div class="card text-center border-success">
                 <div class="card-body">
                     <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
-                    <h5 class="text-success">R$ {{ valor_total|floatformat:2 }}</h5>
+                    <h5 class="text-success">R$ {{ valor_total|brazilian_currency }}</h5>
                     <small class="text-muted">Valor Total dos Requerimentos</small>
                 </div>
             </div>
@@ -230,7 +231,7 @@
             <div class="card text-center border-warning">
                 <div class="card-body">
                     <i class="fas fa-percentage fa-2x text-warning mb-2"></i>
-                    <h5 class="text-warning">{{ desagio_medio|floatformat:2 }}%</h5>
+                    <h5 class="text-warning">{{ desagio_medio|brazilian_number }}%</h5>
                     <small class="text-muted">Deságio Médio</small>
                 </div>
             </div>

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load brazilian_filters %}
 
 {% block title %}Lista de Alvarás{% endblock %}
 
@@ -130,7 +131,7 @@
                                 </td>
                                 <td>
                                     <div>
-                                        <span class="text-success fw-bold">R$ {{ alvara.valor_principal|floatformat:2 }}</span>
+                                        <span class="text-success fw-bold">R$ {{ alvara.valor_principal|brazilian_currency }}</span>
                                         <br>
                                         {% if alvara.fase %}
                                             <small>
@@ -145,7 +146,7 @@
                                 </td>
                                 <td>
                                     <div>
-                                        <span class="text-info">R$ {{ alvara.honorarios_contratuais|floatformat:2 }}</span>
+                                        <span class="text-info">R$ {{ alvara.honorarios_contratuais|brazilian_currency }}</span>
                                         <br>
                                         {% if alvara.fase_honorarios_contratuais %}
                                             <small>
@@ -160,7 +161,7 @@
                                 </td>
                                 <td>
                                     <div>
-                                        <span class="text-warning">R$ {{ alvara.honorarios_sucumbenciais|floatformat:2 }}</span>
+                                        <span class="text-warning">R$ {{ alvara.honorarios_sucumbenciais|brazilian_currency }}</span>
                                         <br>
                                         {% if alvara.fase_honorarios_sucumbenciais %}
                                             <small>
@@ -222,7 +223,7 @@
             <div class="card text-center border-success">
                 <div class="card-body">
                     <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
-                    <h5 class="text-success">R$ {{ total_valor_principal|floatformat:2 }}</h5>
+                    <h5 class="text-success">R$ {{ total_valor_principal|brazilian_currency }}</h5>
                     <small class="text-muted">Total Valor Principal</small>
                 </div>
             </div>
@@ -231,7 +232,7 @@
             <div class="card text-center border-info">
                 <div class="card-body">
                     <i class="fas fa-handshake fa-2x text-info mb-2"></i>
-                    <h5 class="text-info">R$ {{ total_honorarios_contratuais|floatformat:2 }}</h5>
+                    <h5 class="text-info">R$ {{ total_honorarios_contratuais|brazilian_currency }}</h5>
                     <small class="text-muted">Total Honorários Contratuais</small>
                 </div>
             </div>
@@ -240,7 +241,7 @@
             <div class="card text-center border-warning">
                 <div class="card-body">
                     <i class="fas fa-gavel fa-2x text-warning mb-2"></i>
-                    <h5 class="text-warning">R$ {{ total_honorarios_sucumbenciais|floatformat:2 }}</h5>
+                    <h5 class="text-warning">R$ {{ total_honorarios_sucumbenciais|brazilian_currency }}</h5>
                     <small class="text-muted">Total Honorários Sucumbenciais</small>
                 </div>
             </div>

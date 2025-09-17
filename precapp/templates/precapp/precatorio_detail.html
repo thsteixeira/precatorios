@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load l10n %}
+{% load brazilian_filters %}
 
 {% block title %}Detalhes do Precatório - {{ precatorio.cnj }}{% endblock %}
 
@@ -298,11 +299,11 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <strong><i class="fas fa-money-bill-wave me-1"></i>Valor de Face:</strong><br>
-                            <span class="text-success fs-5 fw-bold">R$ {{ precatorio.valor_de_face|floatformat:2 }}</span>
+                            <span class="text-success fs-5 fw-bold">R$ {{ precatorio.valor_de_face|brazilian_currency }}</span>
                         </div>
                         <div class="col-md-6 mb-3">
                             <strong><i class="fas fa-chart-line me-1"></i>Última Atualização Monetária:</strong><br>
-                            <span class="text-success fs-5 fw-bold">R$ {{ precatorio.ultima_atualizacao|floatformat:2 }}</span>
+                            <span class="text-success fs-5 fw-bold">R$ {{ precatorio.ultima_atualizacao|brazilian_currency }}</span>
                         </div>
                         <div class="col-md-6 mb-3">
                             <strong><i class="fas fa-calendar-check me-1"></i>Data da Última Atualização:</strong><br>
@@ -312,15 +313,15 @@
                         <!-- Percentage Fields -->
                         <div class="col-md-6 mb-3">
                             <strong><i class="fas fa-percentage me-1"></i>Percentual Contratuais Assinado:</strong><br>
-                            <span class="text-info fs-5 fw-bold">{{ precatorio.percentual_contratuais_assinado|floatformat:2 }}%</span>
+                            <span class="text-info fs-5 fw-bold">{{ precatorio.percentual_contratuais_assinado|brazilian_number }}%</span>
                         </div>
                         <div class="col-md-6 mb-3">
                             <strong><i class="fas fa-percentage me-1"></i>Percentual Contratuais Apartado:</strong><br>
-                            <span class="text-warning fs-5 fw-bold">{{ precatorio.percentual_contratuais_apartado|floatformat:2 }}%</span>
+                            <span class="text-warning fs-5 fw-bold">{{ precatorio.percentual_contratuais_apartado|brazilian_number }}%</span>
                         </div>
                         <div class="col-md-6 mb-3">
                             <strong><i class="fas fa-percentage me-1"></i>Percentual Sucumbenciais:</strong><br>
-                            <span class="text-danger fs-5 fw-bold">{{ precatorio.percentual_sucumbenciais|floatformat:2 }}%</span>
+                            <span class="text-danger fs-5 fw-bold">{{ precatorio.percentual_sucumbenciais|brazilian_number }}%</span>
                         </div>
                         
                         <!-- Status dos Pagamentos -->
@@ -522,7 +523,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
-                <h5 class="text-success">R$ {{ precatorio.valor_de_face|floatformat:2 }}</h5>
+                <h5 class="text-success">R$ {{ precatorio.valor_de_face|brazilian_currency }}</h5>
                 <small class="text-muted">Valor de Face</small>
             </div>
         </div>
@@ -531,7 +532,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
-                <h5 class="text-info">R$ {{ precatorio.ultima_atualizacao|floatformat:2 }}</h5>
+                <h5 class="text-info">R$ {{ precatorio.ultima_atualizacao|brazilian_currency }}</h5>
                 <small class="text-muted">Valor Atualizado</small>
             </div>
         </div>
@@ -544,7 +545,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i class="fas fa-percentage fa-2x text-primary mb-2"></i>
-                <h5 class="text-primary">{{ precatorio.percentual_contratuais_assinado|floatformat:2 }}%</h5>
+                <h5 class="text-primary">{{ precatorio.percentual_contratuais_assinado|brazilian_number }}%</h5>
                 <small class="text-muted">% Contratuais Assinado</small>
             </div>
         </div>
@@ -553,7 +554,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i class="fas fa-percentage fa-2x text-warning mb-2"></i>
-                <h5 class="text-warning">{{ precatorio.percentual_contratuais_apartado|floatformat:2 }}%</h5>
+                <h5 class="text-warning">{{ precatorio.percentual_contratuais_apartado|brazilian_number }}%</h5>
                 <small class="text-muted">% Contratuais Apartado</small>
             </div>
         </div>
@@ -562,7 +563,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i class="fas fa-percentage fa-2x text-danger mb-2"></i>
-                <h5 class="text-danger">{{ precatorio.percentual_sucumbenciais|floatformat:2 }}%</h5>
+                <h5 class="text-danger">{{ precatorio.percentual_sucumbenciais|brazilian_number }}%</h5>
                 <small class="text-muted">% Sucumbenciais</small>
             </div>
         </div>
@@ -1011,10 +1012,10 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <span class="text-success fw-bold">R$ {{ requerimento.valor|floatformat:2 }}</span>
+                                        <span class="text-success fw-bold">R$ {{ requerimento.valor|brazilian_currency }}</span>
                                     </td>
                                     <td>
-                                        <span class="text-warning">{{ requerimento.desagio|floatformat:2 }}%</span>
+                                        <span class="text-warning">{{ requerimento.desagio|brazilian_number }}%</span>
                                     </td>
                                     <td>
                                         {% if requerimento.fase %}
@@ -1206,7 +1207,7 @@
                                                         {% else %}
                                                             Não informado
                                                         {% endif %}<br>
-                                                        <strong>Valor:</strong> R$ {{ requerimento.valor|floatformat:2 }}
+                                                        <strong>Valor:</strong> R$ {{ requerimento.valor|brazilian_currency }}
                                                     </p>
                                                     <div class="alert alert-warning mt-3">
                                                         <small><i class="fas fa-warning me-1"></i>Esta ação não pode ser desfeita!</small>
@@ -1453,13 +1454,13 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <span class="text-success fw-bold">R$ {{ alvara.valor_principal|floatformat:2 }}</span>
+                                        <span class="text-success fw-bold">R$ {{ alvara.valor_principal|brazilian_currency }}</span>
                                     </td>
                                     <td>
-                                        <span class="text-info">R$ {{ alvara.honorarios_contratuais|floatformat:2 }}</span>
+                                        <span class="text-info">R$ {{ alvara.honorarios_contratuais|brazilian_currency }}</span>
                                     </td>
                                     <td>
-                                        <span class="text-warning">R$ {{ alvara.honorarios_sucumbenciais|floatformat:2 }}</span>
+                                        <span class="text-warning">R$ {{ alvara.honorarios_sucumbenciais|brazilian_currency }}</span>
                                     </td>
                                     <td>
                                         {% if alvara.tipo == 'aguardando depósito' %}
@@ -1724,7 +1725,7 @@
                                                     <h6>Tem certeza que deseja excluir este alvará?</h6>
                                                     <p class="text-muted mb-0">
                                                         <strong>Cliente:</strong> {{ alvara.cliente.nome }}<br>
-                                                        <strong>Valor:</strong> R$ {{ alvara.valor_principal|floatformat:2 }}
+                                                        <strong>Valor:</strong> R$ {{ alvara.valor_principal|brazilian_currency }}
                                                     </p>
                                                     <div class="alert alert-warning mt-3">
                                                         <small><i class="fas fa-warning me-1"></i>Esta ação não pode ser desfeita!</small>
@@ -1943,7 +1944,7 @@
                                 <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
                                 <h6 class="mb-0">Valor Principal Total</h6>
                                 <span class="text-success fw-bold">
-                                    R$ {% for alvara in alvaras %}{{ alvara.valor_principal|add:0 }}{% if not forloop.last %}+{% endif %}{% empty %}0.00{% endfor %}
+                                    R$ {{ alvaras_total_principal|brazilian_currency }}
                                 </span>
                             </div>
                         </div>
@@ -1952,7 +1953,7 @@
                                 <i class="fas fa-handshake fa-2x text-info mb-2"></i>
                                 <h6 class="mb-0">Hon. Contratuais Total</h6>
                                 <span class="text-info fw-bold">
-                                    R$ {% for alvara in alvaras %}{{ alvara.honorarios_contratuais|add:0 }}{% if not forloop.last %}+{% endif %}{% empty %}0.00{% endfor %}
+                                    R$ {{ alvaras_total_contratuais|brazilian_currency }}
                                 </span>
                             </div>
                         </div>
@@ -1961,7 +1962,7 @@
                                 <i class="fas fa-gavel fa-2x text-warning mb-2"></i>
                                 <h6 class="mb-0">Hon. Sucumbenciais Total</h6>
                                 <span class="text-warning fw-bold">
-                                    R$ {% for alvara in alvaras %}{{ alvara.honorarios_sucumbenciais|add:0 }}{% if not forloop.last %}+{% endif %}{% empty %}0.00{% endfor %}
+                                    R$ {{ alvaras_total_sucumbenciais|brazilian_currency }}
                                 </span>
                             </div>
                         </div>
@@ -2001,7 +2002,7 @@
                 <div class="alert alert-warning">
                     <strong><i class="fas fa-gavel me-2"></i>Precatório:</strong> {{ precatorio.cnj }}<br>
                     <strong><i class="fas fa-building me-2"></i>Origem:</strong> {{ precatorio.origem|default:"Não informado" }}<br>
-                    <strong><i class="fas fa-money-bill-wave me-2"></i>Valor de Face:</strong> R$ {{ precatorio.valor_de_face|floatformat:2 }}
+                    <strong><i class="fas fa-money-bill-wave me-2"></i>Valor de Face:</strong> R$ {{ precatorio.valor_de_face|brazilian_currency }}
                 </div>
                 
                 <div class="alert alert-danger">

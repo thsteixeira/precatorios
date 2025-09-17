@@ -1,12 +1,7 @@
 {% extends 'base.html' %}
+{% load brazilian_filters %}
 
-{% block title %}Consultar Precatórios                         <select class="form-control" id="honorarios_sucumbenciais" name="honorarios_sucumbenciais">
-                                                        <tr class="table-light">
-                                            <td colspan="6" class="py-2">          <option value="">Todos</option>
-                            {% for value, label in status_choices %}
-                                <option value="{{ value }}" {% if current_honorarios_sucumbenciais == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>ole de Precatórios{% endblock %}
+{% block title %}Consultar Precatórios - Controle de Precatórios{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -182,7 +177,7 @@
                                         </td>
                                         <td>
                                             <span class="text-success fw-bold">
-                                                R$ {{ precatorio.valor_de_face|floatformat:2 }}
+                                                R$ {{ precatorio.valor_de_face|brazilian_currency }}
                                             </span>
                                         </td>
                                         <td>
@@ -272,6 +267,23 @@
             <div class="card-body">
                 <h5 class="text-info">{{ prioritarios }}</h5>
                 <small class="text-muted">Prioritários</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Financial Summary Card -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white text-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-calculator me-2"></i>Valor Total dos Precatórios Exibidos
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <h2 class="text-primary mb-0">R$ {{ total_valor_precatorios|brazilian_currency }}</h2>
+                <small class="text-muted">Soma de todos os valores de face dos precatórios na consulta atual</small>
             </div>
         </div>
     </div>
