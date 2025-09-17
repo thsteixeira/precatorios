@@ -15,9 +15,11 @@
                     <button type="button" class="btn btn-primary" onclick="updatePriority()" title="Atualizar todos os clientes com mais de 60 anos para status prioritário">
                         <i class="fas fa-star me-1"></i>Atualizar Prioritários
                     </button>
+                    {% if user.is_superuser %}
                     <a href="{% url 'export_clientes_excel' %}" class="btn btn-info" title="Exportar lista completa de clientes em Excel">
                         <i class="fas fa-file-export me-1"></i>Exportar Excel
                     </a>
+                    {% endif %}
                 </div>
             </div>
         </div>

@@ -2401,6 +2401,8 @@ def export_precatorios_excel(request):
     """
     Export comprehensive precatorios and related data to Excel format.
     
+    This view is restricted to superusers only for security purposes.
+    
     Creates a detailed Excel report with multiple sheets containing:
     - Complete precatorios data with client information
     - Client summary with associated precatorios count
@@ -2433,6 +2435,11 @@ def export_precatorios_excel(request):
     from openpyxl.utils import get_column_letter
     from django.utils import timezone
     import io
+    
+    # Check if user is superuser
+    if not request.user.is_superuser:
+        messages.error(request, 'Acesso negado. Apenas superusuários podem exportar dados.')
+        return redirect('precatorio_view')
     
     # Create workbook
     wb = Workbook()
@@ -2796,7 +2803,72 @@ def export_precatorios_excel(request):
     # Auto-adjust column widths
     for col in range(1, len(alvara_headers) + 1):
         ws_alvaras.column_dimensions[get_column_letter(col)].width = 18
+
+    # ==================== RECEBIMENTOS SHEET ====================
+    ws_recebimentos = wb.create_sheet(title="Recebimentos")
     
+    # Headers for recebimentos sheet
+    recebimento_headers = [
+        'Número Documento', 'Alvará ID', 'Data', 'Conta Bancária', 
+        'Valor', 'Tipo', 'Cliente Nome', 'Cliente CPF',
+        'Precatório CNJ', 'Criado Em', 'Criado Por'
+    ]
+    
+    # Write headers
+    for col, header in enumerate(recebimento_headers, 1):
+        cell = ws_recebimentos.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="795548", end_color="795548", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+    
+    # Get recebimentos data with related information
+    recebimentos = Recebimentos.objects.select_related(
+        'alvara', 'alvara__cliente', 'alvara__precatorio', 'conta_bancaria'
+    ).all().order_by('-data', 'numero_documento')
+    
+    # Write recebimentos data
+    for row, recebimento in enumerate(recebimentos, 2):
+        data = [
+            recebimento.numero_documento,
+            f"ALV-{recebimento.alvara.id}" if recebimento.alvara else '',
+            recebimento.data.strftime('%d/%m/%Y') if recebimento.data else '',
+            f"{recebimento.conta_bancaria.banco} - {recebimento.conta_bancaria.agencia}/{recebimento.conta_bancaria.conta}" if recebimento.conta_bancaria else '',
+            float(recebimento.valor) if recebimento.valor else 0,
+            recebimento.get_tipo_display(),
+            recebimento.alvara.cliente.nome if recebimento.alvara and recebimento.alvara.cliente else '',
+            recebimento.alvara.cliente.cpf if recebimento.alvara and recebimento.alvara.cliente else '',
+            recebimento.alvara.precatorio.cnj if recebimento.alvara and recebimento.alvara.precatorio else '',
+            recebimento.criado_em.strftime('%d/%m/%Y %H:%M') if recebimento.criado_em else '',
+            recebimento.criado_por or ''
+        ]
+        
+        for col, value in enumerate(data, 1):
+            cell = ws_recebimentos.cell(row=row, column=col, value=value)
+            cell.border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin')
+            )
+            
+            # Format currency column
+            if col == 5:  # Valor
+                if value is not None and value != 0:
+                    cell.number_format = 'R$ #,##0.00'
+            
+            # Color code by tipo
+            if col == 6:  # Tipo
+                if 'contratuais' in str(value).lower():
+                    cell.fill = PatternFill(start_color="E3F2FD", end_color="E3F2FD", fill_type="solid")
+                elif 'sucumbenciais' in str(value).lower():
+                    cell.fill = PatternFill(start_color="F3E5F5", end_color="F3E5F5", fill_type="solid")
+    
+    # Auto-adjust column widths
+    for col in range(1, len(recebimento_headers) + 1):
+        ws_recebimentos.column_dimensions[get_column_letter(col)].width = 15
+
     # ==================== STATISTICS SHEET ====================
     ws_stats = wb.create_sheet(title="Estatísticas")
     
@@ -2806,12 +2878,14 @@ def export_precatorios_excel(request):
     total_diligencias = Diligencias.objects.count()
     total_requerimentos = Requerimento.objects.count()
     total_alvaras = Alvara.objects.count()
+    total_recebimentos = Recebimentos.objects.count()
     clientes_prioritarios = Cliente.objects.filter(prioridade=True).count()
     diligencias_pendentes = Diligencias.objects.filter(concluida=False).count()
     diligencias_concluidas = Diligencias.objects.filter(concluida=True).count()
     valor_total_precatorios = sum(p.ultima_atualizacao or 0 for p in Precatorio.objects.all())
     valor_total_requerimentos = sum(r.valor or 0 for r in Requerimento.objects.all())
     valor_total_alvaras = sum((a.valor_principal or 0) + (a.honorarios_contratuais or 0) + (a.honorarios_sucumbenciais or 0) for a in Alvara.objects.all())
+    valor_total_recebimentos = sum(r.valor or 0 for r in Recebimentos.objects.all())
     
     # Requerimentos by status
     requerimentos_com_fase = Requerimento.objects.exclude(fase__isnull=True).count()
@@ -2822,6 +2896,12 @@ def export_precatorios_excel(request):
     alvaras_deposito_judicial = Alvara.objects.filter(tipo__icontains='depósito').count()
     alvaras_recebido_cliente = Alvara.objects.filter(tipo__icontains='recebido').count()
     
+    # Recebimentos by type
+    recebimentos_contratuais = Recebimentos.objects.filter(tipo='Hon. contratuais').count()
+    recebimentos_sucumbenciais = Recebimentos.objects.filter(tipo='Hon. sucumbenciais').count()
+    valor_recebimentos_contratuais = sum(r.valor or 0 for r in Recebimentos.objects.filter(tipo='Hon. contratuais'))
+    valor_recebimentos_sucumbenciais = sum(r.valor or 0 for r in Recebimentos.objects.filter(tipo='Hon. sucumbenciais'))
+    
     # Statistics data
     stats_data = [
         ['Estatística', 'Valor'],
@@ -2830,6 +2910,7 @@ def export_precatorios_excel(request):
         ['Total de Precatórios', total_precatorios],
         ['Total de Requerimentos', total_requerimentos],
         ['Total de Alvarás', total_alvaras],
+        ['Total de Recebimentos', total_recebimentos],
         ['', ''],
         ['### CLIENTES ###', ''],
         ['Total de Clientes', total_clientes],
@@ -2849,10 +2930,17 @@ def export_precatorios_excel(request):
         ['Alvarás - Depósito Judicial', alvaras_deposito_judicial],
         ['Alvarás - Recebido pelo Cliente', alvaras_recebido_cliente],
         ['', ''],
+        ['### RECEBIMENTOS ###', ''],
+        ['Recebimentos - Hon. Contratuais', recebimentos_contratuais],
+        ['Recebimentos - Hon. Sucumbenciais', recebimentos_sucumbenciais],
+        ['', ''],
         ['### VALORES FINANCEIROS ###', ''],
         ['Valor Total dos Precatórios', valor_total_precatorios],
         ['Valor Total dos Requerimentos', valor_total_requerimentos],
         ['Valor Total dos Alvarás', valor_total_alvaras],
+        ['Valor Total dos Recebimentos', valor_total_recebimentos],
+        ['Valor Recebimentos Contratuais', valor_recebimentos_contratuais],
+        ['Valor Recebimentos Sucumbenciais', valor_recebimentos_sucumbenciais],
         ['', ''],
         ['### RELATÓRIO ###', ''],
         ['Data do Relatório', timezone.now().strftime('%d/%m/%Y %H:%M')],
@@ -2924,6 +3012,8 @@ def export_clientes_excel(request):
     """
     Export comprehensive clientes data to Excel format.
     
+    This view is restricted to superusers only for security purposes.
+    
     Creates a detailed Excel report focused on client information with:
     - Complete client data with associated precatorios
     - Client diligencias summary
@@ -2946,6 +3036,11 @@ def export_clientes_excel(request):
     from django.utils import timezone
     from datetime import date, timedelta
     import io
+    
+    # Check if user is superuser
+    if not request.user.is_superuser:
+        messages.error(request, 'Acesso negado. Apenas superusuários podem exportar dados.')
+        return redirect('clientes_view')
     
     # Create workbook
     wb = Workbook()
@@ -3217,10 +3312,77 @@ def export_clientes_excel(request):
     # Auto-adjust column widths
     ws_stats.column_dimensions['A'].width = 30
     ws_stats.column_dimensions['B'].width = 25
+
+    # ==================== DILIGENCIAS SHEET ====================
+    ws_diligencias = wb.create_sheet(title="Diligências")
     
-    # ==================== PREPARE RESPONSE ====================
+    # Headers for diligencias sheet
+    diligencia_headers = [
+        'Cliente Nome', 'Cliente CPF', 'Tipo Diligência', 'Descrição',
+        'Data Final', 'Urgência', 'Status', 'Data Conclusão',
+        'Responsável', 'Criado Por', 'Data Criação', 'Observações'
+    ]
     
-    # Create response
+    # Write headers
+    for col, header in enumerate(diligencia_headers, 1):
+        cell = ws_diligencias.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="D32F2F", end_color="D32F2F", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+    
+    # Get all diligencias data with related information
+    all_diligencias = Diligencias.objects.select_related(
+        'cliente', 'tipo', 'responsavel'
+    ).all().order_by('cliente__nome', 'data_final')
+    
+    # Write diligencias data
+    for row, diligencia in enumerate(all_diligencias, 2):
+        data = [
+            diligencia.cliente.nome,
+            diligencia.cliente.cpf,
+            diligencia.tipo.nome,
+            diligencia.descricao[:100] + '...' if diligencia.descricao and len(diligencia.descricao) > 100 else diligencia.descricao or '',
+            diligencia.data_final.strftime('%d/%m/%Y') if diligencia.data_final else '',
+            diligencia.get_urgencia_display() if hasattr(diligencia, 'urgencia') and diligencia.urgencia else 'Normal',
+            'Concluída' if diligencia.concluida else 'Pendente',
+            diligencia.data_conclusao.strftime('%d/%m/%Y %H:%M') if diligencia.data_conclusao else '',
+            diligencia.responsavel.get_full_name() if diligencia.responsavel else '',
+            diligencia.criado_por or '',
+            diligencia.criado_em.strftime('%d/%m/%Y %H:%M') if hasattr(diligencia, 'criado_em') and diligencia.criado_em else '',
+            diligencia.observacoes[:50] + '...' if hasattr(diligencia, 'observacoes') and diligencia.observacoes and len(diligencia.observacoes) > 50 else (diligencia.observacoes if hasattr(diligencia, 'observacoes') else '')
+        ]
+        
+        for col, value in enumerate(data, 1):
+            cell = ws_diligencias.cell(row=row, column=col, value=value)
+            cell.border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin')
+            )
+            
+            # Color code by status
+            if col == 7:  # Status column
+                if value == 'Concluída':
+                    cell.fill = PatternFill(start_color="D4EDDA", end_color="D4EDDA", fill_type="solid")
+                elif value == 'Pendente':
+                    # Check if overdue
+                    if diligencia.data_final and diligencia.data_final < date.today():
+                        cell.fill = PatternFill(start_color="F8D7DA", end_color="F8D7DA", fill_type="solid")
+                    else:
+                        cell.fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+            
+            # Color code priority clients
+            if diligencia.cliente.prioridade and col == 1:  # Cliente Nome column
+                cell.fill = PatternFill(start_color="E3F2FD", end_color="E3F2FD", fill_type="solid")
+    
+    # Auto-adjust column widths
+    for col in range(1, len(diligencia_headers) + 1):
+        ws_diligencias.column_dimensions[get_column_letter(col)].width = 18
+
+    # ==================== PREPARE RESPONSE ====================    # Create response
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
