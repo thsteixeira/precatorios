@@ -78,16 +78,6 @@ Cliente<br>
 └── Diligência (1:N)
         </div>
         
-        <h3>2.2 Relacionamentos Principais</h3>
-        <div class="info-box">
-            <ul class="mb-0">
-                <li><strong>Cliente ↔ Precatório:</strong> Relacionamento N:N (um cliente pode ter vários precatórios)</li>
-                <li><strong>Precatório ↔ Requerimento:</strong> 1:N (um precatório pode ter vários requerimentos)</li>
-                <li><strong>Precatório ↔ Alvará:</strong> 1:N (um precatório pode ter vários alvarás)</li>
-                <li><strong>Alvará ↔ Recebimento:</strong> 1:N (um alvará pode ter vários recebimentos)</li>
-                <li><strong>Cliente ↔ Diligência:</strong> 1:N (um cliente pode ter várias diligências)</li>
-            </ul>
-        </div>
     </section>
 
     <!-- 3. Importação de Dados via Excel -->
@@ -184,33 +174,9 @@ I: Valor de Face
                 <li>Aguarde o processamento (pode levar alguns minutos)</li>
                 <li>Verifique o resultado na mensagem de retorno</li>
             </ol>
-            <div class="info-box">
-                <p><strong>Vantagens da Interface Web:</strong></p>
-                <ul class="mb-0">
-                    <li>Mais fácil de usar</li>
-                    <li>Validação automática de arquivo</li>
-                    <li>Feedback imediato com estatísticas</li>
-                    <li>Não requer acesso ao servidor</li>
-                </ul>
-            </div>
-        </div>
-
-        
-        <h3>3.5 Processo de Importação</h3>
-        
-        <div class="step-box">
-            <h4>O que acontece durante a importação:</h4>
-            <ol>
-                <li><strong>Validação de CNJ:</strong> Verifica formato e unicidade</li>
-                <li><strong>Validação de CPF:</strong> Verifica dígitos verificadores</li>
-                <li><strong>Criação de Precatório:</strong> Cria registro com dados financeiros</li>
-                <li><strong>Criação de Cliente:</strong> Cria cliente se não existir (baseado no CPF)</li>
-                <li><strong>Vinculação:</strong> Associa automaticamente cliente ao precatório</li>
-                <li><strong>Criação de Tipos:</strong> Cria tipos de precatório se não existirem</li>
-            </ol>
         </div>
         
-        <h3>3.6 Tratamento de Erros</h3>
+        <h3>3.5 Tratamento de Erros</h3>
         
         <div class="error-box">
             <h4>Erros comuns e soluções:</h4>
@@ -223,10 +189,10 @@ I: Valor de Face
             </ul>
         </div>
         
-        <h3>3.7 Exemplo de Saída do Sistema</h3>
+        <h3>3.6 Exemplo de Saída do Sistema</h3>
         
         <div class="format-example">
-            <strong>Exemplo de mensagem de sucesso (Interface Web):</strong><br><br>
+            <strong>Exemplo de mensagem de sucesso:</strong><br><br>
             ✓ Importação concluída com sucesso!<br>
             Importados: 150 precatório(s), 147 cliente(s).<br><br>
 
@@ -234,7 +200,7 @@ I: Valor de Face
             ⚠️ Alguns dados já existem no sistema e foram ignorados.
         </div>
         
-        <h3>3.8 Recomendações Importantes</h3>
+        <h3>3.7 Recomendações Importantes</h3>
         
         <div class="info-box">
             <h4>Melhores Práticas:</h4>
@@ -248,7 +214,7 @@ I: Valor de Face
             </ul>
         </div>
         
-        <h3>3.9 Limitações</h3>
+        <h3>3.8 Limitações</h3>
         
         <div class="warning-box">
             <ul class="mb-0">
@@ -276,7 +242,7 @@ I: Valor de Face
             <ol>
                 <li>Primeiro, <a href="{% url 'novo_precatorio' %}">cadastre o precatório</a></li>
                 <li>Acesse os <strong>detalhes do precatório</strong> criado</li>
-                <li>Faça o upload da íntegra do precatório</li>
+                <li>Faça o upload da íntegra do precatório em PDF</li>
                 <li>Na seção <strong>"Clientes Associados"</strong>, clique em <strong>"Novo Cliente"</strong></li>
             </ol>
         </div>
@@ -287,7 +253,7 @@ I: Valor de Face
                 <li><strong>CPF ou CNPJ:</strong> Insira o CPF no formato XXX.XXX.XXX-XX (aceita com ou sem pontuação)</li>
                 <li><strong>Nome Completo:</strong> Digite o nome completo do cliente</li>
                 <li><strong>Data de Nascimento:</strong> Selecione a data no calendário</li>
-                <li><strong>Campos opcionais:</strong> Endereço, telefone, email</li>
+                <li><strong>Campos opcionais:</strong> Cliente com Prioridade Legal e Falecido</li>
             </ul>
         </div>
         
@@ -306,7 +272,7 @@ I: Valor de Face
             <h4>Para vincular um cliente já cadastrado:</h4>
             <ol>
                 <li>Na seção "Clientes Associados", clique em <strong>"Vincular Existente"</strong></li>
-                <li>Digite o <strong>CPF do cliente</strong> existente</li>
+                <li>Digite o <strong>CPF ou CNPJ do cliente</strong> existente</li>
                 <li>Clique em <strong>"Vincular"</strong></li>
                 <li>O cliente será associado ao precatório</li>
             </ol>
@@ -322,7 +288,7 @@ I: Valor de Face
             <h4>Procedimento Alternativo</h4>
             <ol>
                 <li>Navegue para <strong>"<a href="{% url 'clientes' %}">Clientes</a>"</strong> no menu principal</li>
-                <li>Clique em <strong>"<a href="{% url 'novo_cliente' %}">Adicionar Cliente</a>"</strong></li>
+                <li>Clique em <strong>"<a href="{% url 'novo_cliente' %}">Novo Cliente</a>"</strong></li>
                 <li>Preencha todos os dados necessários</li>
                 <li>Salve o cliente</li>
                 <li><em>Posteriormente, vincule o cliente aos precatórios usando a Opção B</em></li>
@@ -332,8 +298,8 @@ I: Valor de Face
         <h3>4.4 Possíveis Erros</h3>
         <div class="error-box">
             <ul class="mb-0">
-                <li><strong>CPF inválido:</strong> Verificar dígitos e formato</li>
-                <li><strong>CPF duplicado:</strong> Cliente já cadastrado no sistema</li>
+                <li><strong>CPF ou CNPJ inválido:</strong> Verificar dígitos e formato</li>
+                <li><strong>CPF ou CNPJ duplicado:</strong> Cliente já cadastrado no sistema</li>
                 <li><strong>Data inválida:</strong> Verificar formato DD/MM/AAAA</li>
             </ul>
         </div>
@@ -342,7 +308,7 @@ I: Valor de Face
     <div class="info-box">
         <p>
             Após cadastrar o precatório e o cliente, analise integralmente o processo para encontrar todos os requerimentos e alvarás já existentes.
-            Verifique se há requerimentos a serem preparados, neste caso inclua o requerimento com a fase Preparar Documento.
+            Verifique se há requerimentos a serem preparados, neste caso inclua o requerimento com a fase "Preparar Documento".
             Verifique também a necessidade de incluir diligências para os clientes vinculados ao precatório.
         </p>
     </div>
@@ -472,14 +438,14 @@ I: Valor de Face
                 <li>Salve o recebimento</li>
             </ol>
             <div class="info-box">
-                <p>O número do documento é obtido no extrato bancário e deve ser único e não pode ser reutilizado.</p>
+                <p>O número do documento é obtido no extrato bancário, deve ser único e não pode ser reutilizado.</p>
             </div>
         </div>
     </section>
 
     <div class="error-box">
             <p><i class="fas fa-solid fa-triangle-exclamation me-2"></i><strong>Importante:</strong>
-                Ao finalizar o cadastro de todas as informações do precatório, atualize os status dos pagamentos</p>
+                Ao finalizar o cadastro de todas as informações do precatório, atualize os status dos pagamentos do precatório.</p>
     </div>
 
     <!-- 8. Cadastro de Diligência -->
@@ -491,7 +457,7 @@ I: Valor de Face
         <div class="step-box">
             <h4>Via Cliente</h4>
             <ol>
-                <li>Entre no perfil do cliente</li>
+                <li>Entre no perfil do <a href="{% url 'clientes' %}">cliente</a></li>
                 <li>Na seção "Diligências", clique em "Nova Diligência"</li>
                 <li>Preencha tipo, descrição, prazo e responsável</li>
                 <li>Defina o nível de urgência</li>
@@ -512,13 +478,17 @@ I: Valor de Face
    ├── <strong>Opção A:</strong> Criar novo cliente diretamente<br>
    └── <strong>Opção B:</strong> Vincular cliente existente (por CPF)<br>
    ↓<br>
-3. Criar Requerimento ← → 4. Criar Alvará<br>
-   ↓                        ↓<br>
-5. Acompanhar Fase         6. Registrar Recebimento<br>
+3. Analisar integralmente o precatório em busca de requerimentos e alvarás<br>
+   ↓<br>
+4. Criar Requerimentos<br>
+   ↓<br>
+5. Criar Alvarás<br>
+   ↓<br>
+6. Registrar Recebimentos<br>
    ↓<br>
 7. Atualizar Status dos Pagamentos<br>
    ↓<br>
-8. Criar Diligências (paralelo ao processo)
+8. Criar Diligências (na ficha do cliente)
         </div>
         
         <h3>9.2 Boas Práticas</h3>
@@ -589,13 +559,17 @@ I: Valor de Face
                 <li>Atualizar dados do precatório existente se necessário</li>
             </ol>
         </div>
-        
-        <h3>10.2 Contatos para Suporte</h3>
-        <div class="info-box">
-            <p><strong>Suporte Técnico:</strong> Entre em contato com o administrador<br>
-            <strong>Suporte Funcional:</strong> Equipe jurídica<br>
-            <strong>Emergências:</strong> Administrador do sistema</p>
-        </div>
+
+        <div class="error-box">
+            <h4>10.1.4 "Erro ao importar Excel"</h4>
+            <p><strong>Causa:</strong> Formato incorreto ou dados inválidos</p>
+            <p><strong>Solução:</strong></p>
+            <ol class="mb-0">
+                <li>Verificar se o arquivo segue o formato especificado</li>
+                <li>Corrigir erros indicados na mensagem de retorno</li>
+                <li>Testar com um arquivo menor para isolar o problema</li>
+                <li>Consultar a seção "Importação de Dados via Excel" para detalhes</li>
+            </ol>
     </section>
 
     <!-- 11. Anexos -->
@@ -628,28 +602,16 @@ I: Valor de Face
             • Sempre no formato brasileiro<br>
             • Validação de datas válidas
         </div>
-        
-        <h3>11.2 Códigos de Status</h3>
 
-        <h4>Precatórios:</h4>
+        <h3>11.2 Arquivos úteis</h3>
+
+        <h4><i class="fas fa-file-excel text-success"></i> Modelo de excel para importação:</h4>
         <div class="info-box">
-            <ul class="mb-0">
-                <li><strong>Pendente:</strong> Aguardando pagamento</li>
-                <li><strong>Quitado:</strong> Totalmente pago</li>
-                <li><strong>Parcial:</strong> Pagamento parcial efetuado</li>
-                <li><strong>Vendido:</strong> Direito creditório cedido</li>
-            </ul>
+            <p>
+                Clique <a href="{% static 'precapp/docs/modelo_importacao.xlsx' %}" download>aqui</a> para baixar o modelo de planilha Excel para importação de precatórios e clientes.
+            </p>
         </div>
-        
-        <h3>11.3 Links Úteis</h3>
-        <div class="info-box">
-            <ul class="mb-0">
-                <li><a href="{% url 'customizacao' %}"><i class="fas fa-cogs me-2"></i>Configurações do Sistema</a></li>
-                <li><a href="{% url 'contas_bancarias' %}"><i class="fas fa-university me-2"></i>Contas Bancárias</a></li>
-                <li><a href="{% url 'tipos_diligencia' %}"><i class="fas fa-list me-2"></i>Tipos de Diligência</a></li>
-                <li><a href="{% url 'import_excel' %}"><i class="fas fa-file-excel me-2"></i>Importar Excel</a></li>
-            </ul>
-        </div>
+
     </section>
 
     <!-- Version Footer -->
