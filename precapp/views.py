@@ -3719,3 +3719,18 @@ def deletar_recebimento_view(request, recebimento_id):
     }
     
     return render(request, 'precapp/confirmar_delete_recebimento.html', context)
+
+
+# ===============================
+# HELP VIEW
+# ===============================
+
+@login_required
+def ajuda_view(request):
+    """View to display help page with POP document link"""
+    context = {
+        'title': 'Ajuda - Sistema de Precatórios',
+        'tipos_requerimento': PedidoRequerimento.get_ativos(),
+    }
+    
+    return render(request, 'precapp/ajuda.html', context)

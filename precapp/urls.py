@@ -20,7 +20,8 @@ from .views import (
     diligencias_list_view, update_priority_by_age, import_excel_view, export_precatorios_excel, export_clientes_excel,
     download_precatorio_file,
     contas_bancarias_view, nova_conta_bancaria_view, editar_conta_bancaria_view, deletar_conta_bancaria_view,
-    novo_recebimento_view, listar_recebimentos_view, editar_recebimento_view, deletar_recebimento_view
+    novo_recebimento_view, listar_recebimentos_view, editar_recebimento_view, deletar_recebimento_view,
+    ajuda_view
 )
 
 urlpatterns = [
@@ -50,6 +51,9 @@ urlpatterns = [
     
     # Customization Page
     path('customizacao/', customizacao_view, name='customizacao'),
+    
+    # Help Page
+    path('ajuda/', ajuda_view, name='ajuda'),
     
     # Phase Management URLs
     path('fases/', fases_view, name='fases'),
