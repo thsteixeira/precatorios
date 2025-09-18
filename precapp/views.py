@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 from django.db.models import Q, Sum
 from django.utils import timezone
 from django.core.management import call_command
+from django.core.paginator import Paginator
 from django.urls import reverse
 from django.conf import settings
 import tempfile
@@ -270,8 +271,24 @@ def precatorio_view(request):
     ).values_list('precatorio__cnj', flat=True).distinct()
     prioritarios = precatorios.filter(cnj__in=prioritarios_cnjs).count()
     
-    # Calculate total value of displayed precatorios
+    # Calculate total value of displayed precatorios (before pagination)
     total_valor_precatorios = sum(precatorio.valor_de_face or 0 for precatorio in precatorios)
+    
+    # Add pagination
+    items_per_page = request.GET.get('per_page', 100)  # Default 100 items per page
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100]:
+            items_per_page = 100
+    except (ValueError, TypeError):
+        items_per_page = 100
+    
+    paginator = Paginator(precatorios, items_per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Update precatorios to use paginated results
+    precatorios = page_obj
     
     # Get all active tipos for the filter dropdown
     tipos = Tipo.get_tipos_ativos()
@@ -285,6 +302,9 @@ def precatorio_view(request):
     
     context = {
         'precatorios': precatorios,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'items_per_page': items_per_page,
         'total_precatorios': total_precatorios,
         'total_valor_precatorios': total_valor_precatorios,
         'pendentes_principal': pendentes_principal,
@@ -855,13 +875,32 @@ def clientes_view(request):
     if precatorio_filter:
         clientes = clientes.filter(precatorios__cnj__icontains=precatorio_filter).distinct()
     
-    # Calculate summary statistics
+    # Calculate summary statistics (before pagination)
     total_clientes = clientes.count()
     clientes_com_prioridade = clientes.filter(prioridade=True).count()
     clientes_sem_prioridade = clientes.filter(prioridade=False).count()
     
+    # Add pagination
+    items_per_page = request.GET.get('per_page', 100)  # Default 100 items per page
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100]:
+            items_per_page = 100
+    except (ValueError, TypeError):
+        items_per_page = 100
+    
+    paginator = Paginator(clientes, items_per_page)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Update clientes to use paginated results
+    clientes = page_obj
+    
     context = {
         'clientes': clientes,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'items_per_page': items_per_page,
         'total_clientes': total_clientes,
         'clientes_com_prioridade': clientes_com_prioridade,
         'clientes_sem_prioridade': clientes_sem_prioridade,
@@ -1113,7 +1152,20 @@ def alvaras_view(request):
     if fase_honorarios_sucumbenciais_filter:
         alvaras = alvaras.filter(fase_honorarios_sucumbenciais__nome=fase_honorarios_sucumbenciais_filter)  # Exact match for dropdown
     
-    # Calculate summary statistics
+    # Pagination
+    items_per_page = request.GET.get('items_per_page', '100')
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100]:
+            items_per_page = 100
+    except (ValueError, TypeError):
+        items_per_page = 100
+    
+    paginator = Paginator(alvaras, items_per_page)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Calculate summary statistics based on filtered results (before pagination)
     total_alvaras = alvaras.count()
     aguardando_deposito = alvaras.filter(tipo='aguardando depósito').count()
     deposito_judicial = alvaras.filter(tipo='depósito judicial').count()
@@ -1126,7 +1178,9 @@ def alvaras_view(request):
     total_honorarios_sucumbenciais = sum([alvara.honorarios_sucumbenciais for alvara in alvaras if alvara.honorarios_sucumbenciais])
     
     context = {
-        'alvaras': alvaras,
+        'alvaras': page_obj,
+        'page_obj': page_obj,
+        'items_per_page': items_per_page,
         'total_alvaras': total_alvaras,
         'aguardando_deposito': aguardando_deposito,
         'deposito_judicial': deposito_judicial,
@@ -1200,12 +1254,27 @@ def requerimento_list_view(request):
         requerimentos = requerimentos.filter(pedido__id=pedido_filter)
 
     if fase_filter:
-        requerimentos = requerimentos.filter(fase__nome=fase_filter)    # Get available phases for requerimentos
+        requerimentos = requerimentos.filter(fase__nome=fase_filter)
+    
+    # Get available phases for requerimentos
     from .models import Fase
     available_fases = Fase.get_fases_for_requerimento()
     
     # Get available pedido requerimento types
     available_pedidos = PedidoRequerimento.get_ativos()
+    
+    # Pagination
+    items_per_page = request.GET.get('items_per_page', '100')
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100]:
+            items_per_page = 100
+    except (ValueError, TypeError):
+        items_per_page = 100
+    
+    paginator = Paginator(requerimentos, items_per_page)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     
     # Calculate financial statistics based on filtered results
     valor_total = sum(r.valor for r in requerimentos if r.valor)
@@ -1224,7 +1293,9 @@ def requerimento_list_view(request):
             messages.error(request, 'Requerimento não encontrado.')
     
     context = {
-        'requerimentos': requerimentos,
+        'requerimentos': page_obj,
+        'page_obj': page_obj,
+        'items_per_page': items_per_page,
         'available_fases': available_fases,
         'available_pedidos': available_pedidos,
         'valor_total': valor_total,
@@ -2236,8 +2307,15 @@ def diligencias_list_view(request):
             pass  # Invalid date format, ignore filter
     
     # Pagination
-    from django.core.paginator import Paginator
-    paginator = Paginator(diligencias, 25)  # 25 diligencias per page
+    items_per_page = request.GET.get('items_per_page', '100')
+    try:
+        items_per_page = int(items_per_page)
+        if items_per_page not in [10, 25, 50, 100]:
+            items_per_page = 100
+    except (ValueError, TypeError):
+        items_per_page = 100
+    
+    paginator = Paginator(diligencias, items_per_page)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -2264,6 +2342,7 @@ def diligencias_list_view(request):
     context = {
         'page_obj': page_obj,
         'diligencias': page_obj,
+        'items_per_page': items_per_page,
         'total_diligencias': total_diligencias,
         'pendentes_diligencias': pendentes_diligencias,
         'concluidas_diligencias': concluidas_diligencias,

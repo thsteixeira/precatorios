@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load url_helpers %}
 
 {% block title %}Lista de Diligências{% endblock title %}
 
@@ -263,57 +264,141 @@
                     </table>
                 </div>
 
-                <!-- Pagination -->
-                {% if page_obj.has_other_pages %}
-                    <div class="card-footer">
-                        <nav aria-label="Navegação da página">
-                            <ul class="pagination pagination-sm justify-content-center mb-0">
-                                {% if page_obj.has_previous %}
-                                    <li class="page-item">
-                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if data_inicio_filter %}data_inicio={{ data_inicio_filter }}&{% endif %}{% if data_fim_filter %}data_fim={{ data_fim_filter }}&{% endif %}page=1">Primeira</a>
-                                    </li>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if data_inicio_filter %}data_inicio={{ data_inicio_filter }}&{% endif %}{% if data_fim_filter %}data_fim={{ data_fim_filter }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
-                                    </li>
+                <!-- Controles de Paginação -->
+                <div class="row mt-4 mb-3">
+                    <div class="col-md-6">
+                        <form method="get" class="d-inline-flex align-items-center" id="itemsPerPageForm">
+                            {% for key, value in request.GET.items %}
+                                {% if key != 'items_per_page' and key != 'page' %}
+                                    <input type="hidden" name="{{ key }}" value="{{ value }}">
                                 {% endif %}
+                            {% endfor %}
+                            <label for="itemsPerPage" class="form-label me-2 mb-0">Itens por página:</label>
+                            <select name="items_per_page" id="itemsPerPage" class="form-select form-select-sm" style="width: auto;" onchange="document.getElementById('itemsPerPageForm').submit();">
+                                <option value="10" {% if items_per_page == 10 %}selected{% endif %}>10</option>
+                                <option value="25" {% if items_per_page == 25 %}selected{% endif %}>25</option>
+                                <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
+                                <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
+                            </select>
+                        </form>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        {% if page_obj %}
+                            <span class="text-muted">
+                                Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }} diligências
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
 
-                                <li class="page-item active">
-                                    <span class="page-link">
-                                        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-                                    </span>
-                                </li>
+                {% if page_obj and page_obj.paginator.num_pages > 1 %}
+                    <div class="row">
+                        <div class="col-12">
+                            <nav aria-label="Navegação de páginas">
+                                <ul class="pagination justify-content-center">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{% url 'diligencias_list' %}{% add_url_params request 'page' 1 %}">
+                                                <span aria-hidden="true">&laquo;</span>
+                                                <span class="sr-only">Primeira</span>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="{% url 'diligencias_list' %}{% add_url_params request 'page' page_obj.previous_page_number %}">
+                                                <span aria-hidden="true">&lsaquo;</span>
+                                                <span class="sr-only">Anterior</span>
+                                            </a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">
+                                                <span aria-hidden="true">&laquo;</span>
+                                                <span class="sr-only">Primeira</span>
+                                            </span>
+                                        </li>
+                                        <li class="page-item disabled">
+                                            <span class="page-link">
+                                                <span aria-hidden="true">&lsaquo;</span>
+                                                <span class="sr-only">Anterior</span>
+                                            </span>
+                                        </li>
+                                    {% endif %}
 
-                                {% if page_obj.has_next %}
-                                    <li class="page-item">
-                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if data_inicio_filter %}data_inicio={{ data_inicio_filter }}&{% endif %}{% if data_fim_filter %}data_fim={{ data_fim_filter }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima</a>
-                                    </li>
-                                    <li class="page-item">
-                                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if urgencia_filter %}urgencia={{ urgencia_filter }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if data_inicio_filter %}data_inicio={{ data_inicio_filter }}&{% endif %}{% if data_fim_filter %}data_fim={{ data_fim_filter }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última</a>
-                                    </li>
-                                {% endif %}
-                            </ul>
-                        </nav>
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if num == page_obj.number %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{% url 'diligencias_list' %}{% add_url_params request 'page' num %}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{% url 'diligencias_list' %}{% add_url_params request 'page' page_obj.next_page_number %}">
+                                                <span aria-hidden="true">&rsaquo;</span>
+                                                <span class="sr-only">Próxima</span>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="{% url 'diligencias_list' %}{% add_url_params request 'page' page_obj.paginator.num_pages %}">
+                                                <span aria-hidden="true">&raquo;</span>
+                                                <span class="sr-only">Última</span>
+                                            </a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">
+                                                <span aria-hidden="true">&rsaquo;</span>
+                                                <span class="sr-only">Próxima</span>
+                                            </span>
+                                        </li>
+                                        <li class="page-item disabled">
+                                            <span class="page-link">
+                                                <span aria-hidden="true">&raquo;</span>
+                                                <span class="sr-only">Última</span>
+                                            </span>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        </div>
                     </div>
                 {% endif %}
-            {% else %}
-                <div class="text-center py-5">
-                    <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">Nenhuma diligência encontrada</h5>
-                    <p class="text-muted">
-                        {% if search_query or status_filter or urgencia_filter or tipo_filter %}
-                            Tente alterar os filtros de pesquisa.
-                        {% else %}
-                            Não há diligências cadastradas no sistema.
+                
+                <div class="row mt-3">
+                    <div class="col-12 text-center">
+                        {% if page_obj %}
+                            <p class="small text-muted">
+                                Total de diligências: {{ page_obj.paginator.count }}
+                            </p>
                         {% endif %}
-                    </p>
-                    {% if not search_query and not status_filter and not urgencia_filter and not tipo_filter %}
-                        <a href="{% url 'clientes' %}" class="btn btn-primary">
-                            <i class="fas fa-plus me-1"></i>Criar primeira diligência
-                        </a>
-                    {% endif %}
+                    </div>
                 </div>
-            {% endif %}
+            </div>
         </div>
+        
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Nenhuma diligência encontrada</h5>
+                <p class="text-muted">
+                    {% if search_query or status_filter or urgencia_filter or tipo_filter %}
+                        Tente alterar os filtros de pesquisa.
+                    {% else %}
+                        Não há diligências cadastradas no sistema.
+                    {% endif %}
+                </p>
+                {% if not search_query and not status_filter and not urgencia_filter and not tipo_filter %}
+                    <a href="{% url 'clientes' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Criar primeira diligência
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
     </div>
 
     <!-- Help Card -->
