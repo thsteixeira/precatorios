@@ -213,8 +213,11 @@
                         </a>
                     </div>
                 </div>
-                
-                <!-- Controles de Paginação -->
+            {% endif %}
+        </div>
+        
+        <!-- Controles de Paginação -->
+        {% if alvaras %}
         <div class="row mt-4 mb-3">
             <div class="col-md-6">
                 <form method="get" class="d-inline-flex align-items-center" id="itemsPerPageForm">
@@ -329,6 +332,7 @@
             </div>
         </div>
     </div>
+{% endif %}
 
     <!-- Financial Summary -->
     {% if alvaras %}
