@@ -372,16 +372,16 @@ class Command(BaseCommand):
                 'ordem': 6
             },
             {
-                'nome': 'Recebido Pelo Cliente',
-                'descricao': 'Valor foi recebido pelo cliente',
-                'cor': "#001aff",
+                'nome': 'Alvará no Escritório',
+                'descricao': 'Alvará no escritório aguardando saque',
+                'cor': "#00ff2a",
                 'ativa': True,
                 'ordem': 7
             },
             {
-                'nome': 'Alvará no Escritório',
-                'descricao': 'Alvará no escritório aguardando retirada pelo cliente',
-                'cor': "#00ff2a",
+                'nome': 'Quitado integralmente',
+                'descricao': 'Valor foi recebido pelo escritório',
+                'cor': "#001aff",
                 'ativa': True,
                 'ordem': 8
             }
