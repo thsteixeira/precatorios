@@ -284,32 +284,67 @@ class Command(BaseCommand):
                 'ordem': 1
             },
             {
+                'nome': 'Aguardando Atualização da Contadoria',
+                'descricao': 'Aguardando cálculos de atualização pela contadoria',
+                'cor': "#ff07ea",
+                'ativa': True,
+                'ordem': 2
+            },
+            {
+                'nome': 'Para manifestar de cálculos',
+                'descricao': 'Aguardando manifestação sobre os cálculos',
+                'cor': '#fd7e14',
+                'ativa': True,
+                'ordem': 3
+            },
+            {
+                'nome': 'Cálculos impugnados',
+                'descricao': 'Cálculos foram impugnados',
+                'cor': '#dc3545',
+                'ativa': True,
+                'ordem': 4
+            },
+            {
+                'nome': 'Para informar conta',
+                'descricao': 'Solicitado informações de conta bancária',
+                'cor': "#a220c9",
+                'ativa': True,
+                'ordem': 5
+            },
+            {
+                'nome': 'Contas bancárias informadas',
+                'descricao': 'Informações bancárias foram fornecidas',
+                'cor': '#6f42c1',
+                'ativa': True,
+                'ordem': 6
+            },
+            {
                 'nome': 'Aguardando Pagamento ao Cliente',
                 'descricao': 'Aguardando pagamento ao Cliente pelo tribunal',
                 'cor': "#ff00dd",
                 'ativa': True,
-                'ordem': 2
+                'ordem': 7
             },
             {
                 'nome': 'Cobrar Cliente',
                 'descricao': 'Cobrar do cliente o pagamento dos honorários contratuais',
                 'cor': '#fd7e14',
                 'ativa': True,
-                'ordem': 3
+                'ordem': 8
             },
             {
                 'nome': 'Quitado parcialmente',
                 'descricao': 'Honorários contratuais pagos parcialmente',
                 'cor': "#ff0707",
                 'ativa': True,
-                'ordem': 4
+                'ordem': 9
             },
             {
                 'nome': 'Quitado integralmente',
                 'descricao': 'Honorários contratuais pagos integralmente',
                 'cor': "#0004ff",
                 'ativa': True,
-                'ordem': 5
+                'ordem': 10
             }
         ]
         
