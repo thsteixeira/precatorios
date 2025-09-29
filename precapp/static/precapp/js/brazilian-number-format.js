@@ -7,14 +7,15 @@
 function formatBrazilianNumber(value) {
     if (!value || value === '') return '';
     
-    // Clean the input by removing all formatting
-    let cleanValue = value.toString().replace(/\./g, '').replace(',', '.');
-    let num = parseFloat(cleanValue);
+    // Use the same logic as parseBrazilianNumber to properly convert to standard format
+    let standardValue = parseBrazilianNumber(value);
+    let num = parseFloat(standardValue);
     
     if (isNaN(num)) return '';
     
-    // Only add decimals if the original value had them or if it's a currency field
-    let hasDecimals = cleanValue.includes('.') || cleanValue.includes(',');
+    // Check if original value had decimal separators to preserve user intent
+    let originalValue = value.toString();
+    let hasDecimals = originalValue.includes('.') || originalValue.includes(',');
     
     if (hasDecimals) {
         return num.toLocaleString('pt-BR', {
@@ -22,19 +23,11 @@ function formatBrazilianNumber(value) {
             maximumFractionDigits: 2
         });
     } else {
-        // For whole numbers, check if user typed a decimal separator
-        if (value.toString().includes(',') || value.toString().includes('.')) {
-            return num.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-        } else {
-            // Just format as integer with thousand separators
-            return num.toLocaleString('pt-BR', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2
-            });
-        }
+        // For whole numbers, just format with thousand separators
+        return num.toLocaleString('pt-BR', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        });
     }
 }
 
@@ -42,8 +35,53 @@ function formatBrazilianNumber(value) {
 function parseBrazilianNumber(value) {
     if (!value || value === '') return '';
     
-    // Remove thousand separators and replace comma with dot
-    return value.toString().replace(/\./g, '').replace(',', '.');
+    let stringValue = value.toString().trim();
+    
+    // Handle different decimal separator patterns
+    if (stringValue.includes(',') && stringValue.includes('.')) {
+        // Brazilian format: 50.000,50 (dots for thousands, comma for decimal)
+        // Find the last comma (should be decimal separator)
+        let lastCommaIndex = stringValue.lastIndexOf(',');
+        let decimalPart = stringValue.substring(lastCommaIndex + 1);
+        let integerPart = stringValue.substring(0, lastCommaIndex);
+        
+        // Remove dots from integer part (thousand separators)
+        integerPart = integerPart.replace(/\./g, '');
+        
+        return integerPart + '.' + decimalPart;
+    } else if (stringValue.includes(',')) {
+        // Only comma present - could be decimal separator
+        let parts = stringValue.split(',');
+        if (parts.length === 2 && parts[1].length <= 2) {
+            // Looks like decimal separator: 50000,50
+            return parts[0] + '.' + parts[1];
+        } else {
+            // Multiple commas or long decimal part - treat as malformed, remove commas
+            return stringValue.replace(/,/g, '');
+        }
+    } else if (stringValue.includes('.')) {
+        // Only dots present - need to determine if last dot is decimal separator
+        let parts = stringValue.split('.');
+        if (parts.length >= 2) {
+            let lastPart = parts[parts.length - 1];
+            // If last part after dot has 1-2 digits, likely a decimal separator
+            if (lastPart.length <= 2 && lastPart.length > 0 && !isNaN(lastPart)) {
+                // Treat last dot as decimal separator
+                let decimalPart = parts.pop();
+                let integerPart = parts.join(''); // Remove all dots from integer part
+                return integerPart + '.' + decimalPart;
+            } else {
+                // All dots are thousand separators
+                return stringValue.replace(/\./g, '');
+            }
+        } else {
+            // Single number, no dots to process
+            return stringValue;
+        }
+    } else {
+        // No separators, return as-is
+        return stringValue;
+    }
 }
 
 // Apply Brazilian formatting to input field
