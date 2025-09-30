@@ -468,6 +468,14 @@ class Precatorio(models.Model):
         verbose_name="Nome do arquivo original"
     )
     
+    # Track when the integra_precatorio file was uploaded
+    integra_precatorio_uploaded_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Data e hora em que a íntegra do precatório foi enviada",
+        verbose_name="Data de upload da íntegra"
+    )
+    
     clientes = models.ManyToManyField('Cliente', related_name='precatorios')
 
     def __str__(self):
@@ -492,7 +500,7 @@ class Precatorio(models.Model):
 # Signal handlers for automatic file cleanup
 @receiver(pre_save, sender=Precatorio)
 def precatorio_pre_save(sender, instance, **kwargs):
-    """Delete old integra_precatorio file when a new one is uploaded"""
+    """Delete old integra_precatorio file when a new one is uploaded and track upload timestamp"""
     if instance.pk:  # Only for existing instances (updates)
         try:
             # Get the old instance from database
@@ -506,12 +514,29 @@ def precatorio_pre_save(sender, instance, **kwargs):
                 if default_storage.exists(old_instance.integra_precatorio.name):
                     default_storage.delete(old_instance.integra_precatorio.name)
                     logger.info(f"Deleted old precatorio file: {old_instance.integra_precatorio.name}")
+            
+            # Check if a new file was uploaded (file field changed and new file exists)
+            if (instance.integra_precatorio and 
+                old_instance.integra_precatorio != instance.integra_precatorio):
+                # Set the upload timestamp for new file
+                instance.integra_precatorio_uploaded_at = timezone.now()
+                logger.info(f"Set upload timestamp for new integra_precatorio file: {instance.integra_precatorio.name}")
+            
+            # If file was removed (cleared), also clear the timestamp
+            elif not instance.integra_precatorio and old_instance.integra_precatorio:
+                instance.integra_precatorio_uploaded_at = None
+                logger.info("Cleared upload timestamp as integra_precatorio file was removed")
                     
         except Precatorio.DoesNotExist:
             # New instance, no old file to delete
             pass
         except Exception as e:
             logger.error(f"Error in precatorio_pre_save signal: {str(e)}")
+    else:
+        # New instance - if file is being uploaded, set timestamp
+        if instance.integra_precatorio:
+            instance.integra_precatorio_uploaded_at = timezone.now()
+            logger.info(f"Set upload timestamp for new Precatorio with integra_precatorio file: {instance.integra_precatorio.name}")
 
 
 @receiver(post_delete, sender=Precatorio)

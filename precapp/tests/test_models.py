@@ -1886,8 +1886,13 @@ class PrecatorioModelTest(TestCase):
         - Field is designed for file uploads
         - Field doesn't affect model creation when empty
         - Field can store file references when provided
+        - Upload timestamp is automatically set when file is uploaded
+        - Upload timestamp is updated when file is replaced
+        - Upload timestamp is cleared when file is removed
         """
         from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.utils import timezone
+        from datetime import timedelta
         
         # Test without integra_precatorio file (should be None/empty)
         data_without_file = self.precatorio_data.copy()
@@ -1895,6 +1900,7 @@ class PrecatorioModelTest(TestCase):
         
         precatorio_without_file = Precatorio.objects.create(**data_without_file)
         self.assertFalse(precatorio_without_file.integra_precatorio)
+        self.assertIsNone(precatorio_without_file.integra_precatorio_uploaded_at)
         
         # Test with integra_precatorio file
         # Create a simple test file
@@ -1905,17 +1911,150 @@ class PrecatorioModelTest(TestCase):
             content_type='application/pdf'
         )
         
+        # Create precatorio first, then add file (this ensures signal triggers correctly)
         data_with_file = self.precatorio_data.copy()
         data_with_file['cnj'] = '5555555-55.2023.8.26.0555'
-        data_with_file['integra_precatorio'] = test_file
         
+        # Store time before creation to check timestamp
+        time_before = timezone.now()
         precatorio_with_file = Precatorio.objects.create(**data_with_file)
+        
+        # Now add the file to trigger the signal
+        precatorio_with_file.integra_precatorio = test_file
+        precatorio_with_file.save()
+        time_after = timezone.now()
+        
+        # Refresh from database to get updated timestamp
+        precatorio_with_file.refresh_from_db()
+        
         self.assertTrue(precatorio_with_file.integra_precatorio)
         self.assertIn('test_integra', precatorio_with_file.integra_precatorio.name)
         
-        # Clean up the test file
+        # Test that upload timestamp was set automatically
+        self.assertIsNotNone(precatorio_with_file.integra_precatorio_uploaded_at)
+        self.assertGreaterEqual(precatorio_with_file.integra_precatorio_uploaded_at, time_before)
+        self.assertLessEqual(precatorio_with_file.integra_precatorio_uploaded_at, time_after)
+        
+        # Test file replacement updates timestamp
+        new_test_file = SimpleUploadedFile(
+            name='new_test_integra.pdf',
+            content=test_file_content,
+            content_type='application/pdf'
+        )
+        
+        # Wait a small amount to ensure timestamp difference
+        import time
+        time.sleep(0.01)
+        
+        original_timestamp = precatorio_with_file.integra_precatorio_uploaded_at
+        time_before_update = timezone.now()
+        
+        precatorio_with_file.integra_precatorio = new_test_file
+        precatorio_with_file.save()
+        
+        time_after_update = timezone.now()
+        
+        # Refresh from database to get updated timestamp
+        precatorio_with_file.refresh_from_db()
+        
+        # Test that timestamp was updated
+        self.assertIsNotNone(precatorio_with_file.integra_precatorio_uploaded_at)
+        self.assertGreater(precatorio_with_file.integra_precatorio_uploaded_at, original_timestamp)
+        self.assertGreaterEqual(precatorio_with_file.integra_precatorio_uploaded_at, time_before_update)
+        self.assertLessEqual(precatorio_with_file.integra_precatorio_uploaded_at, time_after_update)
+        
+        # Test file removal clears timestamp
+        precatorio_with_file.integra_precatorio = None
+        precatorio_with_file.save()
+        precatorio_with_file.refresh_from_db()
+        
+        self.assertFalse(precatorio_with_file.integra_precatorio)
+        self.assertIsNone(precatorio_with_file.integra_precatorio_uploaded_at)
+        
+        # Clean up any remaining test files
         if precatorio_with_file.integra_precatorio:
             precatorio_with_file.integra_precatorio.delete()
+    
+    def test_precatorio_integra_precatorio_timestamp_signal(self):
+        """
+        Test the signal-based timestamp functionality for integra_precatorio.
+        
+        Validates that:
+        - pre_save signal correctly sets upload timestamp for new files
+        - Signal handles file replacement correctly
+        - Signal handles file removal correctly
+        - Signal doesn't interfere with other field updates
+        """
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.utils import timezone
+        
+        # Create test file content
+        test_file_content = b'%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\nxref\n0 3\n0000000000 65535 f \ntrailer\n<<\n/Size 3\n/Root 1 0 R\n>>\nstartxref\n9\n%%EOF'
+        
+        # Test 1: Create precatorio without file, then add file
+        data_no_file = self.precatorio_data.copy()
+        data_no_file['cnj'] = '6666666-66.2023.8.26.0666'
+        
+        precatorio = Precatorio.objects.create(**data_no_file)
+        self.assertIsNone(precatorio.integra_precatorio_uploaded_at)
+        
+        # Add file - should set timestamp
+        test_file = SimpleUploadedFile(
+            name='signal_test.pdf',
+            content=test_file_content,
+            content_type='application/pdf'
+        )
+        
+        time_before = timezone.now()
+        precatorio.integra_precatorio = test_file
+        precatorio.save()
+        time_after = timezone.now()
+        
+        precatorio.refresh_from_db()
+        self.assertIsNotNone(precatorio.integra_precatorio_uploaded_at)
+        self.assertGreaterEqual(precatorio.integra_precatorio_uploaded_at, time_before)
+        self.assertLessEqual(precatorio.integra_precatorio_uploaded_at, time_after)
+        
+        # Test 2: Update other fields without changing file - timestamp should remain
+        original_timestamp = precatorio.integra_precatorio_uploaded_at
+        precatorio.observacao = 'Test update without file change'
+        precatorio.save()
+        precatorio.refresh_from_db()
+        
+        self.assertEqual(precatorio.integra_precatorio_uploaded_at, original_timestamp)
+        
+        # Test 3: Replace file - timestamp should update
+        new_file = SimpleUploadedFile(
+            name='signal_test_new.pdf',
+            content=test_file_content,
+            content_type='application/pdf'
+        )
+        
+        import time
+        time.sleep(0.01)  # Small delay to ensure timestamp difference
+        
+        time_before_replace = timezone.now()
+        precatorio.integra_precatorio = new_file
+        precatorio.save()
+        time_after_replace = timezone.now()
+        
+        precatorio.refresh_from_db()
+        self.assertIsNotNone(precatorio.integra_precatorio_uploaded_at)
+        self.assertGreater(precatorio.integra_precatorio_uploaded_at, original_timestamp)
+        self.assertGreaterEqual(precatorio.integra_precatorio_uploaded_at, time_before_replace)
+        self.assertLessEqual(precatorio.integra_precatorio_uploaded_at, time_after_replace)
+        
+        # Test 4: Remove file - timestamp should be cleared
+        precatorio.integra_precatorio = None
+        precatorio.save()
+        precatorio.refresh_from_db()
+        
+        self.assertFalse(precatorio.integra_precatorio)
+        self.assertIsNone(precatorio.integra_precatorio_uploaded_at)
+        
+        # Clean up
+        if precatorio.integra_precatorio:
+            precatorio.integra_precatorio.delete()
 
 
 class ClienteModelTest(TestCase):

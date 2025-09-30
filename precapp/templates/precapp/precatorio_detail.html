@@ -429,6 +429,11 @@
                                         </button>
                                     </div>
                                     <small class="text-muted d-block mt-1">{{ precatorio.integra_precatorio.name|slice:"20:" }}</small>
+                                    {% if precatorio.integra_precatorio_uploaded_at %}
+                                        <small class="text-muted d-block">
+                                            <i class="fas fa-clock me-1"></i>Enviado em: {{ precatorio.integra_precatorio_uploaded_at|date:"d/m/Y à\s H:i" }}
+                                        </small>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-muted d-block mb-2">Nenhum arquivo disponível</span>
                                     <button type="button" class="btn btn-outline-success btn-sm" onclick="toggleFileEdit()">

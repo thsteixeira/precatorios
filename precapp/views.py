@@ -457,7 +457,10 @@ def precatorio_detalhe_view(request, precatorio_cnj):
                 uploaded_file = request.FILES['integra_precatorio']
                 precatorio.integra_precatorio = uploaded_file
                 precatorio.integra_precatorio_filename = uploaded_file.name
-                precatorio.save(update_fields=['integra_precatorio', 'integra_precatorio_filename'])
+                # Set timestamp manually since update_fields bypasses pre_save signal
+                from django.utils import timezone
+                precatorio.integra_precatorio_uploaded_at = timezone.now()
+                precatorio.save(update_fields=['integra_precatorio', 'integra_precatorio_filename', 'integra_precatorio_uploaded_at'])
                 
                 messages.success(request, f'Arquivo "{uploaded_file.name}" enviado com sucesso!')
                 logger.info(f"Stored original filename: {uploaded_file.name}")
@@ -483,7 +486,9 @@ def precatorio_detalhe_view(request, precatorio_cnj):
                 # Clear the file fields
                 precatorio.integra_precatorio = None
                 precatorio.integra_precatorio_filename = None
-                precatorio.save(update_fields=['integra_precatorio', 'integra_precatorio_filename'])
+                # Clear timestamp when file is deleted
+                precatorio.integra_precatorio_uploaded_at = None
+                precatorio.save(update_fields=['integra_precatorio', 'integra_precatorio_filename', 'integra_precatorio_uploaded_at'])
                 
                 messages.success(request, f'Arquivo "{filename}" excluído com sucesso!')
             else:
